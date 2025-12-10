@@ -42,11 +42,16 @@
           };
         };
         displayManager = {
+          lightd;
           lightdm = {
             enable = true;
           };
         };
         enable = true;
+        xkb = {
+          layout = "us";
+          variant = "";
+        }
       };
     };
   };
