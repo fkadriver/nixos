@@ -42,7 +42,7 @@
           };
         };
         displayManager = {
-          lightd;
+          defaultSession = "xfce";
           lightdm = {
             enable = true;
           };
@@ -51,7 +51,7 @@
         xkb = {
           layout = "us";
           variant = "";
-        }
+        };
       };
     };
   };
