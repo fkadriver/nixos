@@ -22,6 +22,7 @@
       };
     };
     services = {
+      displayManager.defaultSession = "xfce";
       pipewire = {
         alsa = {
           enable = true;
@@ -42,7 +43,6 @@
           };
         };
         displayManager = {
-          defaultSession = "xfce";
           lightdm = {
             enable = true;
           };
