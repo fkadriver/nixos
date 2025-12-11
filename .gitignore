@@ -2,5 +2,8 @@
 result
 result-*
 
+# Ignore any vm builds
+*.qcow2
+
 # Ignore automatically generated direnv output
 .direnv
