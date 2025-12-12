@@ -8,6 +8,17 @@ let
       inputs.self.nixosModules.user-scott
     ];
     config = {
+      hardware = {
+        logitech = {
+          wireless = {
+            enable = true;
+            enableGraphical = true;
+          };
+        };
+      };
+      networking = {
+        hostName = "latitude-nixos";
+      };
       system = {
         stateVersion = "25.04";
       };
