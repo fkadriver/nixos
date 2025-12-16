@@ -5,17 +5,10 @@
       syncthing = {
         dataDir = /home/scott;
         enable = true;
-        guiAddress = "0.0.0.0:8384";
-        overrideDevices = true;
-        overrideFolders = true;
-        settings = {
-          folders = "Documents" = {
-          path = "/home/scott/Documents";
-          ignorPerms = true;
-        };
+        overrideDevices = false;
+        overrideFolders = false;
+        user = "scott";
       };
-      user = "scott";
     };
   };
-};
 }
