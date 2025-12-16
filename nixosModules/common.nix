@@ -1,5 +1,9 @@
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }: {
+  imports = [
+    inputs.self.nixosModules.Syncthing
+    inputs.self.nixosModules.tailscale
+  ];
   config = {
     environment = {
       systemPackages = [
@@ -22,11 +26,6 @@
         LC_PAPER = "en_US.UTF-8";
         LC_TELEPHONE = "en_US.UTF-8";
         LC_TIME = "en_US.UTF-8";
-      };
-    };
-    services = {
-      tailscale = {
-        enable = true;
       };
     };
     time = {

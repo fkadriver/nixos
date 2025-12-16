@@ -22,7 +22,6 @@
       };
     };
     services = {
-      displayManager.defaultSession = "xfce";
       pipewire = {
         alsa = {
           enable = true;
@@ -48,10 +47,6 @@
           };
         };
         enable = true;
-        xkb = {
-          layout = "us";
-          variant = "";
-        };
       };
     };
   };

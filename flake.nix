@@ -18,8 +18,10 @@
         latitude-nixos = import ./nixosConfigurations/latitude-nixos.nix flakeContext;
       };
       nixosModules = {
+        Syncthing = import ./nixosModules/Syncthing.nix flakeContext;
         common = import ./nixosModules/common.nix flakeContext;
         desktop = import ./nixosModules/desktop.nix flakeContext;
+        tailscale = import ./nixosModules/tailscale.nix flakeContext;
         user-scott = import ./nixosModules/user-scott.nix flakeContext;
       };
     };
