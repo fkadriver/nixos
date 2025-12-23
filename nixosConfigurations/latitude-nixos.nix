@@ -2,9 +2,9 @@
 let
   nixosModule = { config, lib, pkgs, ... }: {
     imports = [
-      ./latitude-nixos-hardware.nix
       inputs.self.nixosModules.common
       inputs.self.nixosModules.desktop
+      inputs.self.nixosModules.latitude-nixos-hardware
       inputs.self.nixosModules.user-scott
     ];
     config = {
