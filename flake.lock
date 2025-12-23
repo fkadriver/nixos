@@ -4,7 +4,8 @@
     "root": {
       "inputs": {
         "nixpkgs": "nixpkgs_2",
-        "home-manager": "home-manager"
+        "home-manager": "home-manager",
+        "nixos-hardware": "nixos-hardware"
       }
     },
     "nixpkgs": {
@@ -52,6 +53,20 @@
       },
       "original": {
         "id": "home-manager",
+        "type": "indirect"
+      }
+    },
+    "nixos-hardware": {
+      "locked": {
+        "rev": "9154f4569b6cdfd3c595851a6ba51bfaa472d9f3",
+        "repo": "nixos-hardware",
+        "type": "github",
+        "owner": "NixOS",
+        "narHash": "sha256-ZlJTNLUKQRANlLDomuRWLBCH5792x+6XUJ4YdFRjtO4=",
+        "lastModified": 1764440730
+      },
+      "original": {
+        "id": "nixos-hardware",
         "type": "indirect"
       }
     }
