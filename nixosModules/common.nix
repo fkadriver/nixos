@@ -1,8 +1,7 @@
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }: {
   imports = [
-    inputs.self.nixosModules.syncthing
-    inputs.self.nixosModules.tailscale
+  inputs.self.nixosModules.tailscale
   ];
   config = {
     environment = {
