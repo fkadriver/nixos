@@ -4,8 +4,7 @@
     environment = {
       systemPackages = [
         pkgs.vscodium
-        pkgs.cmake
-        pkgs.python3
+        pkgs.python3Minimal
       ];
     };
     networking = {

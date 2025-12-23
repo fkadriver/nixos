@@ -1,7 +1,7 @@
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }: {
   imports = [
-  inputs.self.nixosModules.tailscale
+    inputs.self.nixosModules.tailscale
   ];
   config = {
     environment = {
@@ -28,7 +28,11 @@
         LC_TIME = "en_US.UTF-8";
       };
     };
-    nix.settings.experimental-features = [ "nix-command" "flakes" ];
+    nix = {
+      settings = {
+        experimental-features = [ "nix-command" "flakes" ];
+      };
+    };
     time = {
       timeZone = "America/Chicago";
     };
