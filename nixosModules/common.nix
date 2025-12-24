@@ -9,6 +9,7 @@
         pkgs.direnv
         pkgs.git
         pkgs.htop
+        pkgs.tmux
         pkgs.tree
         pkgs.vim
         pkgs.wget
