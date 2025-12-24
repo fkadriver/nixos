@@ -7,6 +7,7 @@
     environment = {
       systemPackages = [
         pkgs.direnv
+        pkgs.nix-direnv
         pkgs.git
         pkgs.htop
         pkgs.tmux
