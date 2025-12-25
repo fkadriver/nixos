@@ -7,10 +7,8 @@
     environment = {
       systemPackages = [
         pkgs.direnv
-        pkgs.nix-direnv
         pkgs.git
         pkgs.htop
-        pkgs.tmux
         pkgs.tree
         pkgs.vim
         pkgs.wget
@@ -33,6 +31,11 @@
     nix = {
       settings = {
         experimental-features = [ "nix-command" "flakes" ];
+      };
+    };
+    programs = {
+      direnv = {
+        enable = true;
       };
     };
     time = {
