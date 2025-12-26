@@ -5,6 +5,7 @@
       systemPackages = [
         pkgs.vscodium
         pkgs.python3Minimal
+        pkgs.claude-code
       ];
     };
     networking = {
