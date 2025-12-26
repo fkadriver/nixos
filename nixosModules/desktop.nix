@@ -2,10 +2,10 @@
 { config, lib, pkgs, ... }: {
   config = {
     environment = {
-      systemPackages = [
-        pkgs.vscodium
-        pkgs.python3Minimal
-        pkgs.claude-code
+      systemPackages = with pkgs; [
+        vscodium
+        python3Minimal
+        claude-code
       ];
     };
     networking = {

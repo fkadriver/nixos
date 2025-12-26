@@ -5,16 +5,17 @@
   ];
   config = {
     environment = {
-      systemPackages = [
-        pkgs.direnv
-        pkgs.git
-        pkgs.htop
-        pkgs.tree
-        pkgs.vim
-        pkgs.wget
-        pkgs.jq
+      systemPackages = with pkgs; [
+        direnv
+        git
+        htop
+        jq
+        tree
+        vim
+        wget
       ];
     };
+    nixpkgs.config.allowUnfree = true;
     i18n = {
       defaultLocale = "en_US.UTF-8";
       extraLocaleSettings = {
