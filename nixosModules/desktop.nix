@@ -17,6 +17,13 @@
       firefox = {
         enable = true;
       };
+      nix-ld.enable = true;
+      nix-ld.libraries = with pkgs; [
+        # Add common libraries that the binary might need
+        stdenv.cc.cc.lib
+        zlib
+        openssl
+  ];
     };
     security = {
       rtkit = {
