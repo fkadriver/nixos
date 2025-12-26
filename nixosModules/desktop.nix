@@ -6,6 +6,7 @@
         vscodium
         python3Minimal
         claude-code
+        shotwell
       ];
     };
     networking = {
