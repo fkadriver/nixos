@@ -55,6 +55,7 @@
           lightdm = {
             enable = true;
           };
+          startx.enable = true;
         };
         enable = true;
       };
