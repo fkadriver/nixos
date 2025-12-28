@@ -7,6 +7,7 @@
         python3Minimal
         claude-code
         shotwell
+        xorg.xhost
       ];
     };
     networking = {
