@@ -46,5 +46,6 @@
     time = {
       timeZone = "America/Chicago";
     };
+    virtualisation.docker.enable = true;
   };
 }
