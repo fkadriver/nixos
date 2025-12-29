@@ -14,6 +14,7 @@
     {
       nixosConfigurations = {
         latitude-nixos = import ./nixosConfigurations/latitude-nixos.nix flakeContext;
+        airbook-nixos = import ./nixosConfigurations/airbook-nixos.nix flakeContext;
       };
       nixosModules = {
         common = import ./nixosModules/common.nix flakeContext;
