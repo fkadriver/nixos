@@ -6,6 +6,8 @@
         vscodium
         python3Minimal
         claude-code
+        heroic
+        lutris
         shotwell
         xorg.xhost
       ];
