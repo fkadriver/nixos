@@ -9,6 +9,9 @@
         heroic
         lutris
         shotwell
+        unzip
+        wineWowPackages.stable
+        winetricks
         xorg.xhost
       ];
     };
