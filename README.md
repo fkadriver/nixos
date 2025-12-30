@@ -174,6 +174,76 @@ nix build .#nixosConfigurations.airbook.config.system.build.vm
 nix flake check
 ```
 
+## Installation Guide (MacBook Air)
+
+After booting from the ISO USB drive:
+
+### 1. Connect to WiFi
+```bash
+sudo systemctl start NetworkManager
+nmtui  # Connect to JEN_ACRES
+```
+
+### 2. Partition the Disk
+```bash
+# Check disk name (likely /dev/sda)
+lsblk
+
+# Create GPT partition table and partitions
+sudo parted /dev/sda -- mklabel gpt
+sudo parted /dev/sda -- mkpart ESP fat32 1MiB 512MiB
+sudo parted /dev/sda -- set 1 esp on
+sudo parted /dev/sda -- mkpart primary 512MiB 100%
+```
+
+### 3. Format Partitions
+```bash
+sudo mkfs.fat -F 32 -n boot /dev/sda1
+sudo mkfs.ext4 -L nixos /dev/sda2
+```
+
+### 4. Mount Filesystems
+```bash
+sudo mount /dev/disk/by-label/nixos /mnt
+sudo mkdir -p /mnt/boot
+sudo mount /dev/disk/by-label/boot /mnt/boot
+```
+
+### 5. Install Configuration
+```bash
+# Generate hardware config (for reference)
+sudo nixos-generate-config --root /mnt
+
+# Clone your NixOS configuration
+nix-shell -p git
+cd /mnt/etc/nixos
+sudo mv configuration.nix configuration.nix.backup
+sudo git clone https://github.com/fkadriver/nixos.git .
+```
+
+### 6. Enable Bootloader
+```bash
+# Edit the hardware configuration
+sudo nano /mnt/etc/nixos/hosts/airbook-hardware.nix
+
+# Uncomment these two lines (around line 19-20):
+# boot.loader.systemd-boot.enable = true;
+# boot.loader.efi.canTouchEfiVariables = true;
+```
+
+### 7. Install NixOS
+```bash
+sudo nixos-install --flake /mnt/etc/nixos#airbook
+```
+
+### 8. Reboot
+```bash
+# Set root password when prompted, then:
+sudo reboot
+```
+
+After reboot, remove the USB drive and boot into your new NixOS installation!
+
 ## Hardware-Specific Notes
 
 ### MacBook Air 7,2
