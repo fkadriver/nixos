@@ -90,6 +90,24 @@ Future integration points for:
 
 Can be extended with sops-nix or agenix for encrypted secrets management.
 
+#### idrive-e360.nix
+Enterprise cloud backup service integration for offsite backups.
+
+**Features:**
+- iDrive e360 thin client for Linux
+- Systemd service for background backup daemon
+- Optional scheduled automatic backups via systemd timers
+- Security hardening (PrivateTmp, restricted filesystem access)
+
+**Configuration Options:**
+- Custom backup schedules (daily, weekly, custom times)
+- User-specific backup settings
+- Config and data directory customization
+
+**Usage:**
+Requires downloading the .deb package from your iDrive e360 console.
+See "iDrive e360 Cloud Backup" section below for setup instructions.
+
 #### syncthing.nix
 File synchronization service configuration.
 
@@ -269,15 +287,20 @@ After reboot, remove the USB drive and boot into your new NixOS installation!
 │   ├── latitude-hardware.nix
 │   ├── airbook.nix          # MacBook Air 7,2 configuration
 │   └── airbook-hardware.nix
-└── modules/
-    ├── common.nix                 # Base configuration (server-safe)
-    ├── laptop.nix                 # Laptop-specific configuration
-    ├── hyprland.nix               # Hyprland desktop environment
-    ├── bitwarden.nix              # Secrets management
-    ├── shell-aliases.nix          # System-wide aliases
-    ├── syncthing.nix              # File synchronization
-    ├── tailscale.nix              # VPN configuration
-    └── user-scott.nix             # User account
+├── modules/
+│   ├── common.nix                 # Base configuration (server-safe)
+│   ├── laptop.nix                 # Laptop-specific configuration
+│   ├── hyprland.nix               # Hyprland desktop environment
+│   ├── hyprland-config.nix        # Default Hyprland keybindings
+│   ├── bitwarden.nix              # Secrets management
+│   ├── idrive-e360.nix            # Cloud backup service
+│   ├── shell-aliases.nix          # System-wide aliases
+│   ├── syncthing.nix              # File synchronization
+│   ├── tailscale.nix              # VPN configuration
+│   └── user-scott.nix             # User account
+└── pkgs/
+    └── idrive-e360/
+        └── default.nix            # iDrive e360 package definition
 ```
 
 ## Hyprland Usage
@@ -323,6 +346,155 @@ sudo tailscale up
 ```
 
 Then authenticate via the provided URL.
+
+## iDrive e360 Cloud Backup
+
+iDrive e360 provides enterprise-grade offsite backup for your laptops and servers. The configuration includes a custom NixOS module for seamless integration.
+
+### Initial Setup
+
+1. **Download the iDrive e360 Client**
+
+   Log into your iDrive e360 account at [https://www.idrive.com/endpoint-backup/](https://www.idrive.com/endpoint-backup/):
+   - Click "Add Devices"
+   - Select the "Linux" tab
+   - Download the `.deb` package for Ubuntu/Debian
+   - Save it to a known location (e.g., `/home/scott/Downloads/idrive360.deb`)
+
+2. **Enable iDrive e360 in Your Configuration**
+
+   Add the iDrive e360 module to your host configuration. For example, in `hosts/latitude.nix`:
+
+   ```nix
+   imports = [
+     ./latitude-hardware.nix
+     inputs.self.modules.common
+     inputs.self.modules.laptop
+     inputs.self.modules.user-scott
+     inputs.self.modules.idrive-e360  # Add this line
+   ];
+   ```
+
+3. **Configure iDrive e360**
+
+   Add configuration options to your host file:
+
+   ```nix
+   config = {
+     networking = {
+       hostName = "latitude-nixos";
+     };
+
+     # iDrive e360 configuration
+     services.idrive-e360 = {
+       enable = true;
+       debFile = /home/scott/Downloads/idrive360.deb;  # Path to downloaded .deb
+       user = "scott";
+
+       # Optional: Enable scheduled backups
+       scheduledBackup = {
+         enable = true;
+         schedule = "daily";  # Options: "daily", "weekly", "hourly", "Mon 09:00", etc.
+       };
+     };
+
+     system = {
+       stateVersion = "25.04";
+     };
+   };
+   ```
+
+4. **Rebuild Your System**
+
+   ```bash
+   sudo nixos-rebuild switch --flake .#latitude
+   ```
+
+5. **Configure Backup Settings**
+
+   After the system rebuild, the iDrive e360 client will be available. Run the initial configuration:
+
+   ```bash
+   # The binary name may vary - check available commands:
+   which idrive360
+
+   # Run the client to configure your backup settings
+   idrive360
+   ```
+
+   Follow the prompts to:
+   - Authenticate with your iDrive e360 account
+   - Select folders to backup
+   - Configure backup schedule (if not using systemd timers)
+   - Set retention policies
+
+### Managing Backups
+
+**Check Service Status:**
+```bash
+systemctl status idrive-e360
+```
+
+**View Backup Logs:**
+```bash
+journalctl -u idrive-e360 -f
+```
+
+**Manual Backup:**
+```bash
+# Trigger an immediate backup
+systemctl start idrive-e360-backup
+```
+
+**Check Timer Status (if scheduled backups enabled):**
+```bash
+systemctl list-timers idrive-e360-backup
+```
+
+### Configuration Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enable` | boolean | false | Enable iDrive e360 service |
+| `debFile` | path | null | Path to downloaded .deb file |
+| `user` | string | "scott" | User account for backups |
+| `configDir` | string | "/home/user/.idrive360" | Config directory |
+| `dataDir` | string | "/home/user" | Root directory to backup |
+| `autoStart` | boolean | true | Auto-start service on boot |
+| `scheduledBackup.enable` | boolean | false | Enable scheduled backups |
+| `scheduledBackup.schedule` | string | "daily" | Backup schedule (systemd timer format) |
+
+### Security Notes
+
+- The iDrive e360 service runs with restricted permissions
+- Configuration directory has 700 permissions (user-only access)
+- Service uses `PrivateTmp` and `ProtectSystem=strict` for isolation
+- Only specified directories have read/write access
+
+### Troubleshooting
+
+**Service Won't Start:**
+```bash
+# Check for errors
+journalctl -u idrive-e360 --since "1 hour ago"
+
+# Verify the binary exists
+ls -la /nix/store/*/bin/idrive360
+```
+
+**Permission Issues:**
+```bash
+# Ensure config directory exists with correct permissions
+ls -la ~/.idrive360
+```
+
+**Package Build Failures:**
+
+If the initial build fails, you may need to adjust the package definition in `pkgs/idrive-e360/default.nix` based on the actual structure of the .deb file. Inspect your .deb:
+
+```bash
+dpkg-deb -c /path/to/idrive360.deb
+```
 
 ## Future Enhancements
 
