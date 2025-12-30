@@ -26,16 +26,16 @@
 
 stdenv.mkDerivation rec {
   pname = "idrive-e360";
-  version = "1.0.0"; # Update this based on your downloaded version
+  version = "2025.12.04"; # Based on file timestamps in the package
 
-  # Default source - you'll need to replace this with either:
-  # 1. A direct download URL from your iDrive e360 console, or
-  # 2. Override 'src' to point to a locally downloaded .deb file
+  # Source can be overridden by passing 'src' parameter
+  # Example: callPackage ./pkgs/idrive-e360 { src = /path/to/local/file.deb; }
   src = fetchurl {
-    # PLACEHOLDER - Replace with actual URL from your iDrive e360 console
-    # Get this from: https://www.idrive.com/endpoint-backup/ -> Add Devices -> Linux tab
-    url = "https://www.idrive.com/downloads/idrive360-linux-latest.deb";
-    sha256 = lib.fakeSha256; # Will fail on first build - update with actual hash
+    # Direct download URL from iDrive e360 console
+    # Replace BBAVCS39384 with your actual account ID from the console
+    url = "https://webapp.idrive360.com/api/v1/download/setup/deb/BBAVCS39384?encryption=false";
+    sha256 = "06h2fcp5yng2ypv6da0f831by22xym4bfvxz7px6xb6pzg3w6s4s";
+    name = "IDrive360.deb";
   };
 
   nativeBuildInputs = [
@@ -65,27 +65,46 @@ stdenv.mkDerivation rec {
     runHook preInstall
 
     # Create directory structure
-    mkdir -p $out/{bin,lib,share}
+    mkdir -p $out/{bin,lib,share/idrive360}
 
-    # Copy iDrive files (adjust paths based on actual .deb structure)
-    # These paths may vary - inspect your .deb with: dpkg-deb -c idrive360.deb
-    if [ -d opt/idrive360 ]; then
-      cp -r opt/idrive360/* $out/
-    elif [ -d usr/local/idrive360 ]; then
-      cp -r usr/local/idrive360/* $out/
-    elif [ -d usr/bin ]; then
-      cp -r usr/bin/* $out/bin/
-    fi
+    # Copy all iDrive360 files to share directory
+    cp -r opt/idrive360/* $out/share/idrive360/
 
-    # Look for the main binary and create wrapper
-    # Common locations: idrive360, IDriveE2Backup, idevsutil, etc.
-    for binary in $out/bin/* $out/*bin $out/scripts/*; do
-      if [ -f "$binary" ] && [ -x "$binary" ]; then
-        wrapProgram "$binary" \
-          --prefix PATH : ${lib.makeBinPath [ curl coreutils gnutar gzip cron bash perl ]} \
-          --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [ openssl zlib sqlite stdenv.cc.cc.lib ]}
-      fi
-    done
+    # Create wrapper scripts for main Perl scripts in bin/
+    # Based on inspection, the main scripts are .pl files in /opt/idrive360/
+
+    # Main entry point script (wrapper)
+    cat > $out/bin/idrive360 <<'WRAPPER'
+    #!/usr/bin/env bash
+    IDRIVE_DIR="${lib.getBin placeholder "out"}/share/idrive360"
+    cd "$IDRIVE_DIR"
+    exec ${perl}/bin/perl "$IDRIVE_DIR/account_setting.pl" "$@"
+    WRAPPER
+    chmod +x $out/bin/idrive360
+
+    # Backup script wrapper
+    cat > $out/bin/idrive360-backup <<'WRAPPER'
+    #!/usr/bin/env bash
+    IDRIVE_DIR="${lib.getBin placeholder "out"}/share/idrive360"
+    cd "$IDRIVE_DIR"
+    exec ${perl}/bin/perl "$IDRIVE_DIR/Backup_Script.pl" "$@"
+    WRAPPER
+    chmod +x $out/bin/idrive360-backup
+
+    # Restore script wrapper
+    cat > $out/bin/idrive360-restore <<'WRAPPER'
+    #!/usr/bin/env bash
+    IDRIVE_DIR="${lib.getBin placeholder "out"}/share/idrive360"
+    cd "$IDRIVE_DIR"
+    exec ${perl}/bin/perl "$IDRIVE_DIR/Restore_Script.pl" "$@"
+    WRAPPER
+    chmod +x $out/bin/idrive360-restore
+
+    # Make all Perl scripts in share/idrive360 executable
+    chmod +x $out/share/idrive360/*.pl
+
+    # Set proper permissions for subdirectories
+    chmod +x $out/share/idrive360/Idrivelib/dependencies/evsbin/*
 
     runHook postInstall
   '';

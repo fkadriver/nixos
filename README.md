@@ -353,13 +353,24 @@ iDrive e360 provides enterprise-grade offsite backup for your laptops and server
 
 ### Initial Setup
 
-1. **Download the iDrive e360 Client**
+1. **Get Your iDrive e360 Account ID**
 
    Log into your iDrive e360 account at [https://www.idrive.com/endpoint-backup/](https://www.idrive.com/endpoint-backup/):
    - Click "Add Devices"
    - Select the "Linux" tab
-   - Download the `.deb` package for Ubuntu/Debian
+   - Note the download link URL which contains your account ID (e.g., `BBAVCS39384`)
+
+   You have two options:
+
+   **Option A: Use Direct URL (Recommended)**
+   - No manual download needed
+   - Update the account ID in `pkgs/idrive-e360/default.nix` (line 36)
+   - The package will fetch automatically during build
+
+   **Option B: Download Locally**
+   - Download the `.deb` package
    - Save it to a known location (e.g., `/home/scott/Downloads/idrive360.deb`)
+   - Use `debFile` option in configuration (see step 3)
 
 2. **Enable iDrive e360 in Your Configuration**
 
@@ -379,16 +390,16 @@ iDrive e360 provides enterprise-grade offsite backup for your laptops and server
 
    Add configuration options to your host file:
 
+   **If using Option A (Direct URL):**
    ```nix
    config = {
      networking = {
        hostName = "latitude-nixos";
      };
 
-     # iDrive e360 configuration
+     # iDrive e360 configuration (using direct URL from package)
      services.idrive-e360 = {
        enable = true;
-       debFile = /home/scott/Downloads/idrive360.deb;  # Path to downloaded .deb
        user = "scott";
 
        # Optional: Enable scheduled backups
@@ -400,6 +411,23 @@ iDrive e360 provides enterprise-grade offsite backup for your laptops and server
 
      system = {
        stateVersion = "25.04";
+     };
+   };
+   ```
+
+   **If using Option B (Local .deb file):**
+   ```nix
+   config = {
+     # iDrive e360 configuration (using local .deb file)
+     services.idrive-e360 = {
+       enable = true;
+       debFile = /home/scott/Downloads/idrive360.deb;  # Path to your downloaded .deb
+       user = "scott";
+
+       scheduledBackup = {
+         enable = true;
+         schedule = "daily";
+       };
      };
    };
    ```
