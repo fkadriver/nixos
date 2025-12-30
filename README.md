@@ -4,8 +4,8 @@ A modular NixOS configuration for laptops with Hyprland, supporting multiple har
 
 ## Supported Hardware
 
-- **latitude-nixos**: Dell Latitude 7480
-- **airbook-nixos**: Apple MacBook Air 7,2 (13-inch, Early 2015/Mid 2017)
+- **latitude**: Dell Latitude 7480
+- **airbook**: Apple MacBook Air 7,2 (13-inch, Early 2015/Mid 2017)
 
 ## Module Architecture
 
@@ -75,7 +75,7 @@ System-wide shell aliases for common commands.
 
 **Aliases:**
 - `nas01` - SSH to nas01 via Tailscale
-- `slap` - SSH to latitude-nixos via Tailscale
+- `slap` - SSH to latitude via Tailscale
 - `log01` - SSH to sands-log01 via Tailscale
 - `gpc` - Grep with color output
 
@@ -120,10 +120,10 @@ User account configuration for scott.
 
 ```bash
 # For Dell Latitude 7480
-sudo nixos-rebuild switch --flake .#latitude-nixos
+sudo nixos-rebuild switch --flake .#latitude
 
 # For MacBook Air 7,2
-sudo nixos-rebuild switch --flake .#airbook-nixos
+sudo nixos-rebuild switch --flake .#airbook
 ```
 
 ### Build Installation ISO (MacBook Air only)
@@ -131,7 +131,7 @@ sudo nixos-rebuild switch --flake .#airbook-nixos
 The MacBook Air configuration includes support for building a NixOS installation ISO:
 
 ```bash
-nix build .#nixosConfigurations.airbook-nixos.config.system.build.isoImage
+nix build .#hosts.airbook.config.system.build.isoImage
 ```
 
 The ISO will be in `result/iso/`. To write to a USB drive:
@@ -168,12 +168,12 @@ nix flake check
 ```
 .
 ├── flake.nix                      # Main flake configuration
-├── nixosConfigurations/
-│   ├── latitude-nixos.nix         # Dell Latitude 7480 configuration
-│   ├── latitude-nixos-hardware.nix
-│   ├── airbook-nixos.nix          # MacBook Air 7,2 configuration
-│   └── airbook-nixos-hardware.nix
-└── nixosModules/
+├── hosts/
+│   ├── latitude.nix         # Dell Latitude 7480 configuration
+│   ├── latitude-hardware.nix
+│   ├── airbook.nix          # MacBook Air 7,2 configuration
+│   └── airbook-hardware.nix
+└── modules/
     ├── common.nix                 # Base configuration (server-safe)
     ├── laptop.nix                 # Laptop-specific configuration
     ├── hyprland.nix               # Hyprland desktop environment

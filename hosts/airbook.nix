@@ -2,10 +2,10 @@
 let
   nixosModule = { config, lib, pkgs, ... }: {
     imports = [
-      ./airbook-nixos-hardware.nix
-      inputs.self.nixosModules.common
-      inputs.self.nixosModules.laptop
-      inputs.self.nixosModules.user-scott
+      ./airbook-hardware.nix
+      inputs.self.modules.common
+      inputs.self.modules.laptop
+      inputs.self.modules.user-scott
     ];
     config = {
       networking = {

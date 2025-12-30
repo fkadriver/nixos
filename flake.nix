@@ -13,18 +13,18 @@
     in
     {
       nixosConfigurations = {
-        latitude-nixos = import ./nixosConfigurations/latitude-nixos.nix flakeContext;
-        airbook-nixos = import ./nixosConfigurations/airbook-nixos.nix flakeContext;
+        latitude = import ./hosts/latitude.nix flakeContext;
+        airbook = import ./hosts/airbook.nix flakeContext;
       };
-      nixosModules = {
-        bitwarden = import ./nixosModules/bitwarden.nix flakeContext;
-        common = import ./nixosModules/common.nix flakeContext;
-        hyprland = import ./nixosModules/hyprland.nix flakeContext;
-        laptop = import ./nixosModules/laptop.nix flakeContext;
-        shell-aliases = import ./nixosModules/shell-aliases.nix flakeContext;
-        syncthing = import ./nixosModules/syncthing.nix flakeContext;
-        tailscale = import ./nixosModules/tailscale.nix flakeContext;
-        user-scott = import ./nixosModules/user-scott.nix flakeContext;
+      modules = {
+        bitwarden = import ./modules/bitwarden.nix flakeContext;
+        common = import ./modules/common.nix flakeContext;
+        hyprland = import ./modules/hyprland.nix flakeContext;
+        laptop = import ./modules/laptop.nix flakeContext;
+        shell-aliases = import ./modules/shell-aliases.nix flakeContext;
+        syncthing = import ./modules/syncthing.nix flakeContext;
+        tailscale = import ./modules/tailscale.nix flakeContext;
+        user-scott = import ./modules/user-scott.nix flakeContext;
       };
     };
 }

@@ -1,8 +1,8 @@
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }: {
   imports = [
-    inputs.self.nixosModules.hyprland
-    inputs.self.nixosModules.bitwarden
+    inputs.self.modules.hyprland
+    inputs.self.modules.bitwarden
   ];
 
   config = {
