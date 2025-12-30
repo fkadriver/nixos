@@ -2,9 +2,12 @@
 
 {
   # Default Hyprland configuration
-  # Users can override this by creating ~/.config/hypr/hyprland.conf
+  # This is placed in user's home directory at ~/.config/hypr/hyprland.conf
 
-  environment.etc."hypr/hyprland.conf".text = ''
+  # Create the config directory and file for the user
+  system.activationScripts.hyprlandConfig = ''
+    mkdir -p /home/scott/.config/hypr
+    cat > /home/scott/.config/hypr/hyprland.conf << 'HYPREOF'
     # Monitor configuration
     monitor=,preferred,auto,1
 
@@ -144,5 +147,8 @@
     # Brightness control
     bind = , XF86MonBrightnessUp, exec, brightnessctl set +5%
     bind = , XF86MonBrightnessDown, exec, brightnessctl set 5%-
+HYPREOF
+    chown scott:users /home/scott/.config/hypr/hyprland.conf
+    chmod 644 /home/scott/.config/hypr/hyprland.conf
   '';
 }
