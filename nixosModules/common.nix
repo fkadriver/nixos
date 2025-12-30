@@ -2,8 +2,11 @@
 { config, lib, pkgs, ... }: {
   imports = [
     inputs.self.nixosModules.tailscale
+    inputs.self.nixosModules.syncthing
+    inputs.self.nixosModules.shell-aliases
   ];
   config = {
+    # Core system packages (server-safe, no GUI dependencies)
     environment = {
       systemPackages = with pkgs; [
         direnv
@@ -13,9 +16,17 @@
         tree
         vim
         wget
+        curl
+        rsync
+        tmux
+        ncdu
       ];
     };
+
+    # Allow unfree packages
     nixpkgs.config.allowUnfree = true;
+
+    # Localization
     i18n = {
       defaultLocale = "en_US.UTF-8";
       extraLocaleSettings = {
@@ -29,11 +40,15 @@
         LC_TIME = "en_US.UTF-8";
       };
     };
+
+    # Nix configuration
     nix = {
       settings = {
         experimental-features = [ "nix-command" "flakes" ];
       };
     };
+
+    # Programs
     programs = {
       direnv = {
         enable = true;
@@ -43,9 +58,13 @@
         };
       };
     };
+
+    # Timezone
     time = {
       timeZone = "America/Chicago";
     };
+
+    # Docker virtualization
     virtualisation.docker.enable = true;
   };
 }

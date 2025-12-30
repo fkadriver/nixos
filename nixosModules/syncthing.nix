@@ -3,7 +3,7 @@
   config = {
     services = {
       syncthing = {
-        dataDir = /home/scott;
+        dataDir = "/home/scott";
         enable = true;
         overrideDevices = false;
         overrideFolders = false;
