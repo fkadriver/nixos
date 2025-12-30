@@ -149,11 +149,11 @@ Before installing on hardware, you can test configurations in a virtual machine:
 ```bash
 # Build and run VM for Dell Latitude 7480
 nix build .#nixosConfigurations.latitude.config.system.build.vm
-./result/bin/run-latitude-vm
+./result/bin/run-latitude-nixos-vm
 
 # Build and run VM for MacBook Air 7,2
 nix build .#nixosConfigurations.airbook.config.system.build.vm
-./result/bin/run-airbook-vm
+./result/bin/run-airbook-nixos-vm
 ```
 
 **VM Notes:**
