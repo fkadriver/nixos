@@ -18,7 +18,7 @@
       };
       nixosModules = {
         common = import ./nixosModules/common.nix flakeContext;
-        desktop = import ./nixosModules/desktop.nix flakeContext;
+        laptop = import ./nixosModules/laptop.nix flakeContext;
         syncthing = import ./nixosModules/syncthing.nix flakeContext;
         tailscale = import ./nixosModules/tailscale.nix flakeContext;
         user-scott = import ./nixosModules/user-scott.nix flakeContext;

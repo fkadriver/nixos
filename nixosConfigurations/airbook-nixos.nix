@@ -4,7 +4,7 @@ let
     imports = [
       ./airbook-nixos-hardware.nix
       inputs.self.nixosModules.common
-      inputs.self.nixosModules.desktop
+      inputs.self.nixosModules.laptop
       inputs.self.nixosModules.user-scott
     ];
     config = {
