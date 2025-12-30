@@ -14,9 +14,10 @@
   boot.kernelModules = [ "kvm-intel" "wl" ];
   boot.extraModulePackages = [ config.boot.kernelPackages.broadcom_sta ];
 
-  # Bootloader configuration for installation ISO
-  boot.loader.systemd-boot.enable = true;
-  boot.loader.efi.canTouchEfiVariables = true;
+  # Bootloader configuration (disabled for ISO, handled by installation-cd-minimal.nix)
+  # Uncomment these when installing to actual hardware:
+  # boot.loader.systemd-boot.enable = true;
+  # boot.loader.efi.canTouchEfiVariables = true;
 
   # Broadcom WiFi configuration
   # Blacklist conflicting drivers for broadcom-sta (wl)

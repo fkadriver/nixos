@@ -1,5 +1,9 @@
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }: {
+  imports = [
+    ./hyprland-config.nix
+  ];
+
   config = {
     # Enable Hyprland Wayland compositor
     programs.hyprland = {
@@ -63,6 +67,10 @@
       grim       # Screenshot tool
       slurp      # Screen area selection
       wf-recorder # Screen recording
+
+      # System utilities
+      brightnessctl  # Brightness control
+      wireplumber    # Audio control (needed for wpctl)
 
       # File manager
       xfce.thunar
