@@ -142,6 +142,32 @@ sudo dd if=result/iso/nixos-minimal-*.iso of=/dev/sdX bs=4M status=progress conv
 
 **Important:** Replace `/dev/sdX` with your actual USB drive device.
 
+### Test Configuration in VM
+
+Before installing on hardware, you can test configurations in a virtual machine:
+
+```bash
+# Build and run VM for Dell Latitude 7480
+nix build .#nixosConfigurations.latitude.config.system.build.vm
+./result/bin/run-latitude-vm
+
+# Build and run VM for MacBook Air 7,2
+nix build .#nixosConfigurations.airbook.config.system.build.vm
+./result/bin/run-airbook-vm
+```
+
+**VM Notes:**
+- VM will open in a QEMU window
+- Login with user `scott` and the configured password
+- VM state is stored in the current directory (delete `*.qcow2` files to reset)
+- Press `Ctrl+Alt+G` to release mouse from VM window
+- Close window or run `poweroff` inside VM to shutdown
+
+**Testing the Hyprland Environment:**
+- The VM will boot to the Greetd login screen
+- Select Hyprland and log in to test the desktop environment
+- Useful for validating configuration changes before deployment
+
 ### Check Configuration
 
 ```bash
