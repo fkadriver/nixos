@@ -131,7 +131,7 @@ sudo nixos-rebuild switch --flake .#airbook
 The MacBook Air configuration includes support for building a NixOS installation ISO:
 
 ```bash
-nix build .#hosts.airbook.config.system.build.isoImage
+nix build .#nixosConfigurations.airbook.config.system.build.isoImage
 ```
 
 The ISO will be in `result/iso/`. To write to a USB drive:
