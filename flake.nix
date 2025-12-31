@@ -28,6 +28,7 @@
       nixosConfigurations = {
         latitude = import ./hosts/latitude.nix flakeContext;
         latitude-minimal = import ./hosts/latitude-minimal.nix flakeContext;
+        latitude-hyprland = import ./hosts/latitude-hyprland.nix flakeContext;
         airbook = import ./hosts/airbook.nix flakeContext;
         nas01 = import ./hosts/nas01.nix flakeContext;
         installer = import ./hosts/installer.nix flakeContext;
