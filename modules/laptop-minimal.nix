@@ -1,33 +1,21 @@
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }: {
-  imports = [
-    inputs.self.modules.hyprland
-    inputs.self.modules.bitwarden
-  ];
-
   config = {
-    # Laptop-specific applications
+    # Minimal laptop applications (no Hyprland, no Bitwarden)
     environment.systemPackages = with pkgs; [
       # Development
       vscodium
       python3Minimal
       claude-code
 
-      # Gaming
-      heroic
-      lutris
-      wineWowPackages.stable
-      winetricks
-
-      # Media
-      shotwell
+      # Browser
+      firefox
 
       # Utilities
       unzip
     ];
 
     # WiFi configuration for JEN_ACRES
-    # This needs to stay here to allow network access for bitwarden and other services
     networking.networkmanager.ensureProfiles = {
       profiles = {
         JEN_ACRES = {
@@ -53,9 +41,6 @@
         };
       };
     };
-
-    # Browser
-    programs.firefox.enable = true;
 
     # Dynamic linking support for non-NixOS binaries
     # Required for VSCode extensions with native binaries (like Claude Code)

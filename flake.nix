@@ -39,6 +39,7 @@
         hyprland = import ./modules/hyprland.nix flakeContext;
         idrive-e360 = import ./modules/idrive-e360.nix flakeContext;
         laptop = import ./modules/laptop.nix flakeContext;
+        laptop-minimal = import ./modules/laptop-minimal.nix flakeContext;
         shell-aliases = import ./modules/shell-aliases.nix flakeContext;
         syncthing = import ./modules/syncthing.nix flakeContext;
         tailscale = import ./modules/tailscale.nix flakeContext;
