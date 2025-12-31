@@ -32,21 +32,7 @@
       enable = true;
       settings = {
         default_session = {
-          # Use a wrapper script to debug Hyprland launch
-          command = let
-            hyprland-wrapper = pkgs.writeShellScript "hyprland-wrapper" ''
-              echo "Starting Hyprland at $(date)" >> /tmp/hyprland-launch.log
-              echo "PATH: $PATH" >> /tmp/hyprland-launch.log
-              echo "USER: $USER" >> /tmp/hyprland-launch.log
-              echo "HOME: $HOME" >> /tmp/hyprland-launch.log
-              echo "XDG_RUNTIME_DIR: $XDG_RUNTIME_DIR" >> /tmp/hyprland-launch.log
-
-              # Launch Hyprland with error output
-              ${pkgs.hyprland}/bin/Hyprland 2>&1 | tee -a /tmp/hyprland-launch.log
-
-              echo "Hyprland exited with code $? at $(date)" >> /tmp/hyprland-launch.log
-            '';
-          in "${pkgs.tuigreet}/bin/tuigreet --time --cmd ${hyprland-wrapper}";
+          command = "${lib.getExe pkgs.tuigreet} --time --remember --cmd ${lib.getExe pkgs.hyprland}";
           user = "greeter";
         };
       };
