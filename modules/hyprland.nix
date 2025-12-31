@@ -11,6 +11,9 @@
       xwayland.enable = true;
     };
 
+    # Enable graphics drivers
+    hardware.graphics.enable = true;
+
     # Environment variables for Wayland
     environment.sessionVariables = {
       # Force Wayland backend for applications
@@ -32,7 +35,21 @@
       enable = true;
       settings = {
         default_session = {
-          command = "${lib.getExe pkgs.tuigreet} --time --remember --cmd Hyprland";
+          # Create a proper session wrapper for Hyprland
+          command = let
+            hyprland-session = pkgs.writeShellScript "hyprland-session" ''
+              # Source the system environment
+              . /etc/profile
+
+              # Set up XDG directories
+              export XDG_SESSION_TYPE=wayland
+              export XDG_SESSION_DESKTOP=Hyprland
+              export XDG_CURRENT_DESKTOP=Hyprland
+
+              # Launch Hyprland
+              exec Hyprland
+            '';
+          in "${lib.getExe pkgs.tuigreet} --time --remember --cmd ${hyprland-session}";
           user = "greeter";
         };
       };
