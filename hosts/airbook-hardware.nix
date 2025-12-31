@@ -4,7 +4,6 @@
 {
   imports =
     [ (modulesPath + "/installer/scan/not-detected.nix")
-      (modulesPath + "/installer/cd-dvd/installation-cd-minimal.nix")
     ];
 
   # MacBook Air 7,2 specific kernel modules
@@ -14,10 +13,22 @@
   boot.kernelModules = [ "kvm-intel" "wl" ];
   boot.extraModulePackages = [ config.boot.kernelPackages.broadcom_sta ];
 
-  # Bootloader configuration (disabled for ISO, handled by installation-cd-minimal.nix)
-  # Uncomment these when installing to actual hardware:
-  # boot.loader.systemd-boot.enable = true;
-  # boot.loader.efi.canTouchEfiVariables = true;
+  # Bootloader configuration
+  boot.loader.systemd-boot.enable = lib.mkDefault true;
+  boot.loader.efi.canTouchEfiVariables = lib.mkDefault true;
+
+  # Filesystem configuration (will be overridden by disko or nixos-generate-config)
+  fileSystems."/" = lib.mkDefault {
+    device = "/dev/disk/by-label/nixos";
+    fsType = "ext4";
+  };
+
+  fileSystems."/boot" = lib.mkDefault {
+    device = "/dev/disk/by-label/boot";
+    fsType = "vfat";
+  };
+
+  swapDevices = lib.mkDefault [ ];
 
   # Broadcom WiFi configuration
   # Blacklist conflicting drivers for broadcom-sta (wl)
@@ -34,7 +45,7 @@
 
   # Networking configuration
   networking.useDHCP = lib.mkDefault true;
-  networking.wireless.enable = false; # We'll use NetworkManager instead
+  networking.wireless.enable = lib.mkDefault false; # We'll use NetworkManager instead
 
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
   hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;

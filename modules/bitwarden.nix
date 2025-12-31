@@ -7,6 +7,9 @@ let
   cfg = config.services.bitwarden-secrets;
 in
 {
+  # Import sops-nix module at top level
+  imports = [ inputs.sops-nix.nixosModules.sops ];
+
   options.services.bitwarden-secrets = {
     enable = mkEnableOption "Bitwarden secrets management with sops-nix";
 
@@ -51,9 +54,6 @@ in
       age            # Encryption tool
       ssh-to-age     # Convert SSH keys to age keys
     ];
-
-    # Import sops-nix module
-    imports = [ inputs.sops-nix.nixosModules.sops ];
 
     # Configure sops
     sops = {
