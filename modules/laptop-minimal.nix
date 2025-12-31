@@ -44,6 +44,7 @@
 
     # Dynamic linking support for non-NixOS binaries
     # Required for VSCode extensions with native binaries (like Claude Code)
+    # The nix-ld module automatically sets NIX_LD and NIX_LD_LIBRARY_PATH
     programs.nix-ld = {
       enable = true;
       libraries = with pkgs; [
@@ -79,32 +80,6 @@
         glib
         dbus
       ];
-    };
-
-    # Explicitly set nix-ld environment variables system-wide
-    # This ensures VSCode and other GUI applications can find them
-    environment.sessionVariables = {
-      NIX_LD_LIBRARY_PATH = lib.makeLibraryPath (with pkgs; [
-        stdenv.cc.cc.lib
-        zlib
-        zstd
-        bzip2
-        xz
-        openssl
-        libxcrypt
-        libxcrypt-legacy
-        curl
-        libssh
-        util-linux
-        systemd
-        attr
-        acl
-        libsodium
-        libxml2
-        glib
-        dbus
-      ]);
-      NIX_LD = lib.fileContents "${pkgs.stdenv.cc}/nix-support/dynamic-linker";
     };
   };
 }
