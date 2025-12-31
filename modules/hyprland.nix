@@ -32,7 +32,7 @@
       enable = true;
       settings = {
         default_session = {
-          command = "${lib.getExe pkgs.tuigreet} --time --remember --cmd ${lib.getExe pkgs.hyprland}";
+          command = "${lib.getExe pkgs.tuigreet} --time --remember --cmd Hyprland";
           user = "greeter";
         };
       };
@@ -40,6 +40,9 @@
 
     # Essential packages for Hyprland environment
     environment.systemPackages = with pkgs; [
+      # Hyprland is needed in PATH for greetd
+      hyprland
+
       # Wayland tools
       wayland
       wayland-protocols
