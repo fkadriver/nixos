@@ -609,12 +609,111 @@ If the initial build fails, you may need to adjust the package definition in `pk
 dpkg-deb -c /path/to/idrive360.deb
 ```
 
+## Bitwarden Secrets Management
+
+Manage SSH keys, Tailscale auth keys, WiFi passwords, and other secrets using Bitwarden and sops-nix.
+
+### Quick Start
+
+1. **Enable in your host configuration:**
+
+   ```nix
+   services.bitwarden-secrets = {
+     enable = true;
+     secretsFile = ../secrets/secrets.yaml;
+
+     # SSH keys to install
+     sshKeys = {
+       id_ed25519 = {
+         user = "scott";
+         secretName = "ssh/github_key";
+       };
+     };
+   };
+   ```
+
+2. **Generate age key (done automatically on first build):**
+
+   ```bash
+   # Get your public key after build
+   sudo age-keygen -y /var/lib/sops-nix/key.txt
+   ```
+
+3. **Create .sops.yaml:**
+
+   ```yaml
+   keys:
+     - &admin age1xxxxxxxxxxxxxx  # Your public key
+
+   creation_rules:
+     - path_regex: secrets/secrets\.yaml$
+       key_groups:
+         - age:
+             - *admin
+   ```
+
+4. **Create and encrypt secrets:**
+
+   ```bash
+   # Create secrets template
+   cat > secrets/secrets.yaml <<EOF
+   tailscale:
+     auth_key: tskey-auth-xxxxx
+
+   ssh:
+     github_key: |
+       -----BEGIN OPENSSH PRIVATE KEY-----
+       YOUR_KEY_HERE
+       -----END OPENSSH PRIVATE KEY-----
+
+   wifi:
+     home: your_wifi_password
+   EOF
+
+   # Encrypt with sops
+   sops -e -i secrets/secrets.yaml
+   ```
+
+5. **Extract from Bitwarden:**
+
+   ```bash
+   # Login to Bitwarden
+   export BW_SESSION=$(bw unlock --raw)
+
+   # Get secrets
+   bw get item "GitHub SSH Key" | jq -r '.notes'
+   bw get password "WiFi Password"
+
+   # Edit encrypted file
+   sops secrets/secrets.yaml
+   ```
+
+### Supported Secrets
+
+- **SSH Keys**: Automatically installed to `~/.ssh/`
+- **Tailscale Auth Keys**: Reference with `config.sops.secrets."tailscale/auth_key".path`
+- **WiFi Passwords**: Use in NetworkManager profiles
+- **API Keys**: Any service requiring secrets
+- **Custom Secrets**: Define in `sops.secrets`
+
+### Documentation
+
+- **Comprehensive Guide**: [docs/bitwarden-secrets-setup.md](docs/bitwarden-secrets-setup.md)
+- **Example Configurations**: [docs/bitwarden-examples.nix](docs/bitwarden-examples.nix)
+
+### Key Features
+
+✅ Encrypted secrets in git repository
+✅ Integration with Bitwarden CLI
+✅ Automatic SSH key deployment
+✅ Per-user and per-service secrets
+✅ Automatic service restarts on secret changes
+✅ Multi-machine support with different keys
+
 ## Future Enhancements
 
 - **Home Manager Integration**: For user-specific configuration management
-- **Secrets Management**: Integrate sops-nix or agenix with bitwarden.nix
 - **Hyprland Dotfiles**: Declarative Hyprland configuration via home-manager
-- **Server Configurations**: Create server-specific configurations using common.nix as base
 - **Additional Hardware**: Add support for more hardware configurations
 
 ## Contributing

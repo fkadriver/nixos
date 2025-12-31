@@ -4,6 +4,24 @@ result-*
 
 # Ignore any vm builds
 *.qcow2
+*.qcow2.tmp
 
 # Ignore automatically generated direnv output
 .direnv
+
+# Secrets - DO NOT commit unencrypted secrets!
+secrets/*.tmp
+secrets/*.dec
+secrets/*.backup
+
+# Editor files
+*.swp
+*.swo
+*~
+.*.sw?
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
