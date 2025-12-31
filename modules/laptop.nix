@@ -58,12 +58,41 @@
     programs.firefox.enable = true;
 
     # Dynamic linking support for non-NixOS binaries
+    # Required for VSCode extensions with native binaries (like Claude Code)
     programs.nix-ld = {
       enable = true;
       libraries = with pkgs; [
-        stdenv.cc.cc.lib
+        # Core C/C++ libraries
+        stdenv.cc.cc.lib  # libstdc++, libgcc_s
+
+        # Compression libraries
         zlib
+        zstd
+        bzip2
+        xz
+
+        # Crypto and security
         openssl
+        libxcrypt
+        libxcrypt-legacy
+
+        # Network libraries
+        curl
+        libssh
+
+        # System libraries
+        util-linux
+        systemd
+        attr
+        acl
+        libsodium
+
+        # XML/parsing
+        libxml2
+
+        # Other common dependencies
+        glib
+        dbus
       ];
     };
   };
