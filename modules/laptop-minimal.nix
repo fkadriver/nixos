@@ -1,69 +1,33 @@
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }: {
   config = {
-    # Minimal laptop applications (XFCE desktop, no Hyprland, no Bitwarden)
+  # Enable the X11 windowing system.
+  services.xserver.enable = true;
+
+  # Enable the XFCE Desktop Environment.
+  services.xserver.displayManager.lightdm.enable = true;
+  services.xserver.desktopManager.xfce.enable = true;
+
+  # Configure keymap in X11
+  services.xserver.xkb = {
+    layout = "us";
+    variant = "";
+  };
+
+
+    # Minimal laptop applications (no Hyprland, no Bitwarden)
     environment.systemPackages = with pkgs; [
       # Development
       vscodium
       python3Minimal
       claude-code
 
+      # Browser
+      firefox
+
       # Utilities
       unzip
     ];
-
-    # XFCE Desktop Environment
-    services.xserver = {
-      enable = true;
-      desktopManager.xfce.enable = true;
-      displayManager.lightdm.enable = true;
-      xkb = {
-        layout = "us";
-        variant = "";
-      };
-    };
-
-    # Browser (moved to services for better integration)
-    programs.firefox.enable = true;
-
-    # Sound server (PipeWire)
-    security.rtkit.enable = true;
-    services.pipewire = {
-      enable = true;
-      alsa.enable = true;
-      alsa.support32Bit = true;
-      pulse.enable = true;
-    };
-
-    # Printing support
-    services.printing.enable = true;
-
-    # WiFi configuration for JEN_ACRES
-    networking.networkmanager.ensureProfiles = {
-      profiles = {
-        JEN_ACRES = {
-          connection = {
-            id = "JEN_ACRES";
-            type = "wifi";
-            autoconnect = "true";
-          };
-          wifi = {
-            mode = "infrastructure";
-            ssid = "JEN_ACRES";
-          };
-          wifi-security = {
-            key-mgmt = "wpa-psk";
-            psk = "goatcheese93";
-          };
-          ipv4 = {
-            method = "auto";
-          };
-          ipv6 = {
-            method = "auto";
-          };
-        };
-      };
-    };
 
     # Dynamic linking support for non-NixOS binaries
     # Required for VSCode extensions with native binaries (like Claude Code)
