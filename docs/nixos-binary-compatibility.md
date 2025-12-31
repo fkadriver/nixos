@@ -72,13 +72,17 @@ programs.nix-ld = {
 After updating the configuration, rebuild your system:
 
 ```bash
+# For airbook (with Hyprland + Bitwarden)
 sudo nixos-rebuild switch --flake .#airbook
+
+# For latitude (with Hyprland + Bitwarden)
+sudo nixos-rebuild switch --flake .#latitude
+
+# For latitude-minimal (with XFCE, no Hyprland/Bitwarden)
+sudo nixos-rebuild switch --flake .#latitude-minimal
 ```
 
-Or for other hosts:
-```bash
-sudo nixos-rebuild switch --flake .#latitude
-```
+**Note:** The `latitude-minimal` configuration provides XFCE desktop environment instead of Hyprland, and excludes Bitwarden integration.
 
 ### Troubleshooting
 

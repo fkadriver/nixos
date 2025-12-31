@@ -1,19 +1,42 @@
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }: {
   config = {
-    # Minimal laptop applications (no Hyprland, no Bitwarden)
+    # Minimal laptop applications (XFCE desktop, no Hyprland, no Bitwarden)
     environment.systemPackages = with pkgs; [
       # Development
       vscodium
       python3Minimal
       claude-code
 
-      # Browser
-      firefox
-
       # Utilities
       unzip
     ];
+
+    # XFCE Desktop Environment
+    services.xserver = {
+      enable = true;
+      desktopManager.xfce.enable = true;
+      displayManager.lightdm.enable = true;
+      xkb = {
+        layout = "us";
+        variant = "";
+      };
+    };
+
+    # Browser (moved to services for better integration)
+    programs.firefox.enable = true;
+
+    # Sound server (PipeWire)
+    security.rtkit.enable = true;
+    services.pipewire = {
+      enable = true;
+      alsa.enable = true;
+      alsa.support32Bit = true;
+      pulse.enable = true;
+    };
+
+    # Printing support
+    services.printing.enable = true;
 
     # WiFi configuration for JEN_ACRES
     networking.networkmanager.ensureProfiles = {
