@@ -4,6 +4,10 @@
     nixpkgs.url = "flake:nixpkgs/nixpkgs-unstable";
     home-manager.url = "flake:home-manager";
     nixos-hardware.url = "flake:nixos-hardware";
+    disko = {
+      url = "github:nix-community/disko";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
   outputs = inputs:
     let
@@ -20,10 +24,13 @@
       nixosConfigurations = {
         latitude = import ./hosts/latitude.nix flakeContext;
         airbook = import ./hosts/airbook.nix flakeContext;
+        nas01 = import ./hosts/nas01.nix flakeContext;
+        installer = import ./hosts/installer.nix flakeContext;
       };
       modules = {
         bitwarden = import ./modules/bitwarden.nix flakeContext;
         common = import ./modules/common.nix flakeContext;
+        disko-config = import ./modules/disko-config.nix flakeContext;
         hyprland = import ./modules/hyprland.nix flakeContext;
         idrive-e360 = import ./modules/idrive-e360.nix flakeContext;
         laptop = import ./modules/laptop.nix flakeContext;

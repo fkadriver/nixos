@@ -1,11 +1,18 @@
 # NixOS Flake Configuration
 
-A modular NixOS configuration for laptops with Hyprland, supporting multiple hardware configurations.
+A modular NixOS configuration for laptops and servers with automated installation support via disko.
 
-## Supported Hardware
+## Supported Configurations
 
+### Laptops (with Hyprland Desktop)
 - **latitude**: Dell Latitude 7480
 - **airbook**: Apple MacBook Air 7,2 (13-inch, Early 2015/Mid 2017)
+
+### Servers (Headless)
+- **nas01**: Generic server configuration using common.nix
+
+### Installer
+- **installer**: Bootable ISO with automated disk partitioning and installation
 
 ## Module Architecture
 
@@ -90,6 +97,25 @@ Future integration points for:
 
 Can be extended with sops-nix or agenix for encrypted secrets management.
 
+#### disko-config.nix
+Automated disk partitioning configuration using disko.
+
+**Partition Scheme:**
+- 1 GB `/boot` partition (EFI/FAT32)
+- LVM on remaining space:
+  - 8 GB swap partition
+  - Rest of space for root (`/`) filesystem (ext4)
+
+**Features:**
+- Declarative disk configuration
+- Supports automated installation
+- Resumable hibernation support
+- `noatime` mount option for improved performance
+
+**Usage:**
+Automatically applied during installer ISO installation.
+Can be customized per-host by overriding the `disko.devices.disk.main.device` option.
+
 #### idrive-e360.nix
 Enterprise cloud backup service integration for offsite backups.
 
@@ -142,23 +168,70 @@ sudo nixos-rebuild switch --flake .#latitude
 
 # For MacBook Air 7,2
 sudo nixos-rebuild switch --flake .#airbook
+
+# For NAS server
+sudo nixos-rebuild switch --flake .#nas01
 ```
 
-### Build Installation ISO (MacBook Air only)
+### Build Automated Installer ISO (Recommended)
 
-The MacBook Air configuration includes support for building a NixOS installation ISO:
+The installer ISO includes disko for automated disk partitioning and a menu-driven installation process:
 
 ```bash
-nix build .#nixosConfigurations.airbook.config.system.build.isoImage
+nix build .#nixosConfigurations.installer.config.system.build.isoImage
 ```
 
 The ISO will be in `result/iso/`. To write to a USB drive:
 
 ```bash
-sudo dd if=result/iso/nixos-minimal-*.iso of=/dev/sdX bs=4M status=progress conv=fsync
+sudo dd if=result/iso/nixos-*.iso of=/dev/sdX bs=4M status=progress conv=fsync
 ```
 
 **Important:** Replace `/dev/sdX` with your actual USB drive device.
+
+### Using the Automated Installer
+
+1. **Boot from the USB drive**
+   - Select the NixOS installer from your boot menu
+
+2. **Run the installation script**
+   ```bash
+   nixos-install-helper.sh
+   ```
+
+3. **Follow the prompts:**
+   - Select configuration (latitude, airbook, or nas01)
+   - Choose target disk
+   - Confirm installation
+
+The installer will automatically:
+- Partition the disk using disko (1GB /boot + LVM with 8GB swap + root)
+- Clone the configuration repository
+- Install NixOS
+- Offer to reboot
+
+### Manual Installation with Disko
+
+If you prefer manual installation:
+
+```bash
+# 1. Partition the disk
+sudo nix run github:nix-community/disko -- \
+  --mode disko \
+  --flake /path/to/config#<configuration> \
+  --arg device '"/dev/sdX"'
+
+# 2. Clone configuration
+sudo git clone https://github.com/YOUR_USERNAME/nixos /mnt/etc/nixos
+
+# 3. Install NixOS
+sudo nixos-install --flake /mnt/etc/nixos#<configuration>
+
+# 4. Reboot
+sudo reboot
+```
+
+Replace `<configuration>` with: `latitude`, `airbook`, or `nas01`.
 
 ### Test Configuration in VM
 
@@ -172,6 +245,10 @@ nix build .#nixosConfigurations.latitude.config.system.build.vm
 # Build and run VM for MacBook Air 7,2
 nix build .#nixosConfigurations.airbook.config.system.build.vm
 ./result/bin/run-airbook-nixos-vm
+
+# Build and run VM for NAS server
+nix build .#nixosConfigurations.nas01.config.system.build.vm
+./result/bin/run-nas01-vm
 ```
 
 **VM Notes:**
@@ -180,6 +257,7 @@ nix build .#nixosConfigurations.airbook.config.system.build.vm
 - VM state is stored in the current directory (delete `*.qcow2` files to reset)
 - Press `Ctrl+Alt+G` to release mouse from VM window
 - Close window or run `poweroff` inside VM to shutdown
+- For nas01, SSH is available on forwarded port (check VM output for details)
 
 **Testing the Hyprland Environment:**
 - The VM will boot to the Greetd login screen
@@ -283,24 +361,31 @@ After reboot, remove the USB drive and boot into your new NixOS installation!
 .
 ├── flake.nix                      # Main flake configuration
 ├── hosts/
-│   ├── latitude.nix         # Dell Latitude 7480 configuration
+│   ├── latitude.nix               # Dell Latitude 7480 configuration
 │   ├── latitude-hardware.nix
-│   ├── airbook.nix          # MacBook Air 7,2 configuration
-│   └── airbook-hardware.nix
+│   ├── airbook.nix                # MacBook Air 7,2 configuration
+│   ├── airbook-hardware.nix
+│   ├── nas01.nix                  # NAS server configuration
+│   ├── nas01-hardware.nix
+│   └── installer.nix              # Automated installer ISO
 ├── modules/
 │   ├── common.nix                 # Base configuration (server-safe)
 │   ├── laptop.nix                 # Laptop-specific configuration
 │   ├── hyprland.nix               # Hyprland desktop environment
 │   ├── hyprland-config.nix        # Default Hyprland keybindings
 │   ├── bitwarden.nix              # Secrets management
+│   ├── disko-config.nix           # Automated disk partitioning
 │   ├── idrive-e360.nix            # Cloud backup service
 │   ├── shell-aliases.nix          # System-wide aliases
 │   ├── syncthing.nix              # File synchronization
 │   ├── tailscale.nix              # VPN configuration
 │   └── user-scott.nix             # User account
-└── pkgs/
-    └── idrive-e360/
-        └── default.nix            # iDrive e360 package definition
+├── pkgs/
+│   └── idrive-e360/
+│       ├── default.nix            # iDrive e360 package definition
+│       └── README.md              # Package customization guide
+└── docs/
+    └── idrive-e360-example.nix    # iDrive e360 usage examples
 ```
 
 ## Hyprland Usage
