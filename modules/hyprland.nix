@@ -31,20 +31,16 @@
     };
 
     # Display manager for login
-    services.greetd = {
+    services.xserver = {
       enable = true;
-      settings = {
-        default_session = {
-          command = "${lib.getExe pkgs.tuigreet} --time --remember --cmd 'dbus-run-session Hyprland'";
-          user = "greeter";
-        };
+      displayManager = {
+        lightdm.enable = true;
+        defaultSession = "hyprland";
       };
     };
 
-    # Clean up stale Wayland lock files at boot
-    systemd.tmpfiles.rules = [
-      "r! /run/user/*/wayland-*.lock"
-    ];
+    # Create a session file for Hyprland
+    services.displayManager.sessionPackages = [ pkgs.hyprland ];
 
     # Essential packages for Hyprland environment
     environment.systemPackages = with pkgs; [
