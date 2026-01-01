@@ -293,36 +293,38 @@ sudo dd if=result/iso/nixos-*.iso of=/dev/sdX bs=4M status=progress conv=fsync
 
 2. **Run the installation script**
    ```bash
-   nixos-install-helper.sh
+   /etc/nixos-install-helper.sh
    ```
 
+   Note: The script is located in `/etc/`, not in the home directory.
+
 3. **Follow the prompts:**
+   - Enter git repository URL (e.g., `github:fkadriver/nixos`)
    - Select configuration (latitude, airbook, or nas01)
    - Choose target disk
    - Confirm installation
 
 The installer will automatically:
+- Connect to WiFi (JEN_ACRES network pre-configured)
 - Partition the disk using disko (1GB /boot + LVM with 8GB swap + root)
-- Clone the configuration repository
-- Install NixOS
+- Install NixOS directly from the git repository
 - Offer to reboot
+
+Note: The installer fetches the configuration directly from git, no cloning needed.
 
 ### Manual Installation with Disko
 
 If you prefer manual installation:
 
 ```bash
-# 1. Partition the disk
+# 1. Partition the disk (using git flake directly)
 sudo nix run github:nix-community/disko -- \
   --mode disko \
-  --flake /path/to/config#<configuration> \
+  --flake github:fkadriver/nixos#latitude \
   --arg device '"/dev/sdX"'
 
-# 2. Clone configuration
-sudo git clone https://github.com/YOUR_USERNAME/nixos /mnt/etc/nixos
-
-# 3. Install NixOS
-sudo nixos-install --flake /mnt/etc/nixos#<configuration>
+# 2. Install NixOS (directly from git, no cloning needed)
+sudo nixos-install --flake github:fkadriver/nixos#latitude
 
 # 4. Reboot
 sudo reboot

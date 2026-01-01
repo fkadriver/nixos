@@ -7,12 +7,18 @@ inputs.nixpkgs.lib.nixosSystem {
     "${inputs.nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-minimal.nix"
     inputs.disko.nixosModules.disko
     {
-      # Include the disko configuration
-      imports = [ inputs.self.modules.disko-config ];
+      # Include the disko configuration and wireless support
+      imports = [
+        inputs.self.modules.disko-config
+        inputs.self.modules.wireless
+      ];
 
       # ISO-specific configuration
       isoImage.makeEfiBootable = true;
       isoImage.makeUsbBootable = true;
+
+      # Enable experimental features needed for disko and flakes
+      nix.settings.experimental-features = [ "nix-command" "flakes" ];
 
       # Include necessary packages for installation
       environment.systemPackages = with inputs.nixpkgs.legacyPackages.x86_64-linux; [
@@ -32,6 +38,10 @@ inputs.nixpkgs.lib.nixosSystem {
           set -euo pipefail
 
           echo "=== NixOS Automated Installer ==="
+          echo ""
+          echo "Git repository URL (e.g., github:username/nixos):"
+          read -p "> " GIT_REPO
+
           echo ""
           echo "Available configurations:"
           echo "  1) latitude - Dell Latitude 7480"
@@ -57,6 +67,7 @@ inputs.nixpkgs.lib.nixosSystem {
 
           echo ""
           echo "WARNING: This will ERASE ALL DATA on $DEVICE"
+          echo "Git Repository: $GIT_REPO"
           echo "Configuration: $CONFIG"
           read -p "Continue? (yes/no): " confirm
 
@@ -68,16 +79,12 @@ inputs.nixpkgs.lib.nixosSystem {
           echo ""
           echo "Partitioning disk with disko..."
           sudo nix run github:nix-community/disko -- --mode disko \
-            --flake /etc/nixos#$CONFIG \
+            --flake "$GIT_REPO#$CONFIG" \
             --arg device "\"$DEVICE\""
 
           echo ""
-          echo "Cloning configuration repository..."
-          sudo git clone https://github.com/YOUR_USERNAME/nixos /mnt/etc/nixos
-
-          echo ""
           echo "Installing NixOS..."
-          sudo nixos-install --flake /mnt/etc/nixos#$CONFIG
+          sudo nixos-install --flake "$GIT_REPO#$CONFIG"
 
           echo ""
           echo "Installation complete!"
@@ -99,14 +106,14 @@ inputs.nixpkgs.lib.nixosSystem {
         ==========================================
 
         To start installation, run:
-          nixos-install-helper.sh
+          /etc/nixos-install-helper.sh
 
-        Manual installation steps:
-          1. Partition disk: disko --mode disko --flake .#<config> --arg device '"/dev/sdX"'
-          2. Clone config: git clone <repo> /mnt/etc/nixos
-          3. Install: nixos-install --flake /mnt/etc/nixos#<config>
+        Manual installation (using git flake directly):
+          1. Partition: nix run github:nix-community/disko -- --mode disko --flake github:fkadriver/nixos#<config> --arg device '"/dev/sdX"'
+          2. Install: nixos-install --flake github:fkadriver/nixos#<config>
 
         Available configs: latitude, airbook, nas01
+        WiFi: Pre-configured for JEN_ACRES network
 
       '';
 
