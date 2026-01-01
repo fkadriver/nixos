@@ -41,6 +41,9 @@
               # Source the system environment
               . /etc/profile
 
+              # Clean up stale Wayland lock files
+              rm -f $XDG_RUNTIME_DIR/wayland-*.lock
+
               # Set up XDG directories
               export XDG_SESSION_TYPE=wayland
               export XDG_SESSION_DESKTOP=Hyprland
