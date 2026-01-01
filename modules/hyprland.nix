@@ -35,32 +35,16 @@
       enable = true;
       settings = {
         default_session = {
-          # Create a proper session wrapper for Hyprland
-          command = let
-            hyprland-session = pkgs.writeShellScript "hyprland-session" ''
-              # Debug logging
-              exec 2>/tmp/hyprland-session-debug.log
-              set -x
-
-              # Source the system environment
-              . /etc/profile
-
-              # Clean up stale Wayland lock files
-              rm -f $XDG_RUNTIME_DIR/wayland-*.lock
-
-              # Set up XDG directories
-              export XDG_SESSION_TYPE=wayland
-              export XDG_SESSION_DESKTOP=Hyprland
-              export XDG_CURRENT_DESKTOP=Hyprland
-
-              # Launch Hyprland with logging
-              exec Hyprland > /tmp/hyprland-greetd.log 2>&1
-            '';
-          in "${lib.getExe pkgs.tuigreet} --time --remember --cmd ${hyprland-session}";
+          command = "${lib.getExe pkgs.tuigreet} --time --remember --cmd ${lib.getExe pkgs.hyprland}";
           user = "greeter";
         };
       };
     };
+
+    # Clean up stale Wayland lock files at boot
+    systemd.tmpfiles.rules = [
+      "r! /run/user/*/wayland-*.lock"
+    ];
 
     # Essential packages for Hyprland environment
     environment.systemPackages = with pkgs; [
