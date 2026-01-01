@@ -35,7 +35,7 @@
       enable = true;
       settings = {
         default_session = {
-          command = "${lib.getExe pkgs.tuigreet} --time --remember --cmd ${lib.getExe pkgs.hyprland}";
+          command = "${lib.getExe pkgs.tuigreet} --time --remember --cmd 'dbus-run-session Hyprland'";
           user = "greeter";
         };
       };
