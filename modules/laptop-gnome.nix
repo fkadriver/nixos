@@ -1,7 +1,7 @@
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }: {
   imports = [
-    inputs.self.modules.bitwarden
+    # inputs.self.modules.bitwarden
     inputs.self.modules.wireless
   ];
 
@@ -17,6 +17,11 @@
       epiphany  # GNOME web browser (we use Firefox)
       geary     # Email client
     ];
+
+    # Fix cursor theme (prevents square cursor issue)
+    environment.variables = {
+      XCURSOR_THEME = "Adwaita";
+    };
 
     # Laptop-specific applications
     environment.systemPackages = with pkgs; [
