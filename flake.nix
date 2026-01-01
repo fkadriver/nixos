@@ -28,6 +28,8 @@
       nixosConfigurations = {
         latitude = import ./hosts/latitude.nix flakeContext;
         latitude-minimal = import ./hosts/latitude-minimal.nix flakeContext;
+        latitude-xfce = import ./hosts/latitude-xfce.nix flakeContext;
+        latitude-gnome = import ./hosts/latitude-gnome.nix flakeContext;
         latitude-hyprland = import ./hosts/latitude-hyprland.nix flakeContext;
         airbook = import ./hosts/airbook.nix flakeContext;
         nas01 = import ./hosts/nas01.nix flakeContext;
@@ -39,7 +41,9 @@
         disko-config = import ./modules/disko-config.nix flakeContext;
         hyprland = import ./modules/hyprland.nix flakeContext;
         idrive-e360 = import ./modules/idrive-e360.nix flakeContext;
-        laptop = import ./modules/laptop.nix flakeContext;
+        laptop-hyprland = import ./modules/laptop-hyprland.nix flakeContext;
+        laptop-xfce = import ./modules/laptop-xfce.nix flakeContext;
+        laptop-gnome = import ./modules/laptop-gnome.nix flakeContext;
         laptop-minimal = import ./modules/laptop-minimal.nix flakeContext;
         shell-aliases = import ./modules/shell-aliases.nix flakeContext;
         syncthing = import ./modules/syncthing.nix flakeContext;

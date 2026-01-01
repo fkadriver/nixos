@@ -2,17 +2,28 @@
 let
   nixosModule = { config, lib, pkgs, ... }: {
     imports = [
-      ./airbook-hardware.nix
+      ./latitude-hardware.nix
       inputs.self.modules.common
-      inputs.self.modules.laptop-xfce
+      inputs.self.modules.laptop-gnome
       inputs.self.modules.user-scott
     ];
     config = {
-      networking = {
-        hostName = "airbook-nixos";
+      hardware = {
+        logitech = {
+          wireless = {
+            enable = true;
+            enableGraphical = true;
+          };
+        };
       };
+
+      networking = {
+        hostName = "latitude-nixos";
+      };
+
       system = {
         stateVersion = "25.04";
+        nixos.label = "GNOME";
       };
     };
   };

@@ -4,14 +4,10 @@ let
     imports = [
       ./latitude-hardware.nix
       inputs.self.modules.common
-      inputs.self.modules.laptop
+      inputs.self.modules.laptop-hyprland
       inputs.self.modules.user-scott
     ];
     config = {
-      # Explicitly disable XFCE and LightDM
-      services.xserver.enable = lib.mkForce false;
-      services.xserver.displayManager.lightdm.enable = lib.mkForce false;
-      services.xserver.desktopManager.xfce.enable = lib.mkForce false;
 
       hardware = {
         logitech = {
