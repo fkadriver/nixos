@@ -38,6 +38,10 @@
           # Create a proper session wrapper for Hyprland
           command = let
             hyprland-session = pkgs.writeShellScript "hyprland-session" ''
+              # Debug logging
+              exec 2>/tmp/hyprland-session-debug.log
+              set -x
+
               # Source the system environment
               . /etc/profile
 
@@ -49,8 +53,8 @@
               export XDG_SESSION_DESKTOP=Hyprland
               export XDG_CURRENT_DESKTOP=Hyprland
 
-              # Launch Hyprland
-              exec Hyprland
+              # Launch Hyprland with logging
+              exec Hyprland > /tmp/hyprland-greetd.log 2>&1
             '';
           in "${lib.getExe pkgs.tuigreet} --time --remember --cmd ${hyprland-session}";
           user = "greeter";
