@@ -21,7 +21,6 @@ let
       };
       system = {
         stateVersion = "25.04";
-        nixos.label = "XFCE";
       };
     };
   };

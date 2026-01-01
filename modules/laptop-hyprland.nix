@@ -7,6 +7,9 @@
   ];
 
   config = {
+    # Set boot label
+    system.nixos.label = "Hyprland";
+
     # Laptop-specific applications
     environment.systemPackages = with pkgs; [
       # Development

@@ -6,6 +6,9 @@
   ];
 
   config = {
+    # Set boot label
+    system.nixos.label = "GNOME";
+
     # Enable X11 and GNOME
     services.xserver.enable = true;
     services.displayManager.gdm.enable = true;

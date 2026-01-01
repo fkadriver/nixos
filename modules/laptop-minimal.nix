@@ -1,6 +1,9 @@
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }: {
   config = {
+  # Set boot label
+  system.nixos.label = "XFCE-minimal";
+
   # Enable the X11 windowing system.
   services.xserver.enable = true;
 

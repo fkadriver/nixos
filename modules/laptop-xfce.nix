@@ -6,6 +6,9 @@
   ];
 
   config = {
+    # Set boot label
+    system.nixos.label = "XFCE";
+
     # Enable X11 and XFCE
     services.xserver = {
       enable = true;
