@@ -4,9 +4,13 @@ A modular NixOS configuration for laptops and servers with automated installatio
 
 ## Supported Configurations
 
-### Laptops (with Hyprland Desktop)
-- **latitude**: Dell Latitude 7480
-- **airbook**: Apple MacBook Air 7,2 (13-inch, Early 2015/Mid 2017)
+### Laptops
+- **latitude**: Dell Latitude 7480 (XFCE)
+- **latitude-xfce**: Dell Latitude 7480 with full applications (XFCE)
+- **latitude-gnome**: Dell Latitude 7480 with full applications (GNOME)
+- **latitude-hyprland**: Dell Latitude 7480 with full applications (Hyprland) *[Work in Progress]*
+- **latitude-minimal**: Dell Latitude 7480 minimal testing configuration (XFCE)
+- **airbook**: Apple MacBook Air 7,2 (13-inch, Early 2015/Mid 2017) (XFCE)
 
 ### Servers (Headless)
 - **nas01**: Generic server configuration using common.nix
@@ -33,8 +37,17 @@ Server-compatible base configuration that can be used on any machine, including 
 - `syncthing.nix` - File synchronization service
 - `shell-aliases.nix` - Common command aliases
 
-#### laptop.nix
-Laptop-specific configuration module that serves as a shell for desktop modules.
+### Laptop Modules
+
+The configuration provides three laptop profiles with different desktop environments but identical applications:
+
+#### laptop-xfce.nix
+Full-featured XFCE desktop configuration.
+
+**Desktop Environment:**
+- XFCE Desktop Environment
+- LightDM display manager
+- Boot label: "XFCE"
 
 **Features:**
 - Development tools (VSCodium, Claude Code, Python)
@@ -42,19 +55,73 @@ Laptop-specific configuration module that serves as a shell for desktop modules.
 - Media tools (Shotwell)
 - Firefox browser
 - nix-ld for running non-NixOS binaries
-- JEN_ACRES WiFi auto-connection
 
 **Includes:**
-- `hyprland.nix` - Wayland compositor and desktop environment
 - `bitwarden.nix` - Secrets management
+- `wireless.nix` - WiFi configuration
+
+#### laptop-gnome.nix
+Full-featured GNOME desktop configuration.
+
+**Desktop Environment:**
+- GNOME Desktop Environment
+- GDM display manager
+- Boot label: "GNOME"
+
+**Features:**
+- Same applications as laptop-xfce
+- GNOME-specific utilities (gnome-tweaks, appindicator extension)
+- Excludes default apps (gnome-tour, epiphany, geary)
+- Adwaita cursor theme (fixes square cursor issue)
+
+**Includes:**
+- `bitwarden.nix` - Secrets management
+- `wireless.nix` - WiFi configuration
+
+#### laptop-hyprland.nix
+Hyprland Wayland desktop configuration. **[Work in Progress - Currently not working]**
+
+**Desktop Environment:**
+- Hyprland Wayland compositor
+- LightDM display manager
+- Boot label: "Hyprland"
+
+**Features:**
+- Same applications as laptop-xfce
+- Wayland-native environment
+- Full Hyprland desktop tools
+
+**Includes:**
+- `hyprland.nix` - Hyprland compositor and desktop environment
+- `bitwarden.nix` - Secrets management
+- `wireless.nix` - WiFi configuration
+
+**Status:** Hyprland launches successfully from TTY but encounters issues when launched through LightDM. Troubleshooting in progress.
+
+#### laptop-minimal.nix
+Minimal XFCE configuration for testing.
+
+**Desktop Environment:**
+- Basic XFCE Desktop Environment
+- LightDM display manager
+- Boot label: "XFCE-minimal"
+
+**Features:**
+- Minimal applications (VSCodium, Claude Code, Python, Firefox)
+- No gaming tools
+- No Bitwarden integration
+- No WiFi auto-configuration
+
+### Desktop Environment Modules
 
 #### hyprland.nix
 Complete Hyprland Wayland desktop environment.
 
 **Features:**
 - Hyprland compositor with XWayland support
-- Greetd with TUIgreet login manager
+- LightDM display manager with Hyprland session
 - Full Wayland environment setup
+- Graphics drivers enabled
 - PipeWire audio (with ALSA, PulseAudio, JACK support)
 - XDG portals for screen sharing and file pickers
 - GNOME Keyring for credential storage
@@ -77,6 +144,19 @@ Complete Hyprland Wayland desktop environment.
 - Font Awesome
 - Nerd Fonts (JetBrains Mono, Fira Code)
 
+### Utility Modules
+
+#### wireless.nix
+WiFi network configuration for JEN_ACRES network.
+
+**Features:**
+- Auto-connect configuration for JEN_ACRES WiFi
+- WPA-PSK security
+- IPv4 and IPv6 auto-configuration
+
+**Usage:**
+Automatically imported by all laptop profiles (except laptop-minimal).
+
 #### shell-aliases.nix
 System-wide shell aliases for common commands.
 
@@ -87,15 +167,20 @@ System-wide shell aliases for common commands.
 - `gpc` - Grep with color output
 
 #### bitwarden.nix
-Secrets management module (currently includes Bitwarden CLI).
+Secrets management module with sops-nix integration.
 
-Future integration points for:
-- Syncthing device IDs and folder configurations
+**Features:**
+- Encrypted secrets in git repository
+- Integration with Bitwarden CLI
+- Automatic SSH key deployment
+- Per-user and per-service secrets
+- Automatic service restarts on secret changes
+
+**Supported Secrets:**
+- SSH keys
 - Tailscale auth keys
 - WiFi passwords
-- SSH keys
-
-Can be extended with sops-nix or agenix for encrypted secrets management.
+- API keys and service credentials
 
 #### disko-config.nix
 Automated disk partitioning configuration using disko.
@@ -163,8 +248,20 @@ User account configuration for scott.
 ### Build NixOS Configuration
 
 ```bash
-# For Dell Latitude 7480
+# For Dell Latitude 7480 with XFCE (default)
 sudo nixos-rebuild switch --flake .#latitude
+
+# For Dell Latitude 7480 with full XFCE
+sudo nixos-rebuild switch --flake .#latitude-xfce
+
+# For Dell Latitude 7480 with GNOME
+sudo nixos-rebuild switch --flake .#latitude-gnome
+
+# For Dell Latitude 7480 with Hyprland (work in progress)
+sudo nixos-rebuild switch --flake .#latitude-hyprland
+
+# For Dell Latitude 7480 minimal testing
+sudo nixos-rebuild switch --flake .#latitude-minimal
 
 # For MacBook Air 7,2
 sudo nixos-rebuild switch --flake .#airbook
@@ -238,8 +335,12 @@ Replace `<configuration>` with: `latitude`, `airbook`, or `nas01`.
 Before installing on hardware, you can test configurations in a virtual machine:
 
 ```bash
-# Build and run VM for Dell Latitude 7480
-nix build .#nixosConfigurations.latitude.config.system.build.vm
+# Build and run VM for Dell Latitude 7480 with XFCE
+nix build .#nixosConfigurations.latitude-xfce.config.system.build.vm
+./result/bin/run-latitude-nixos-vm
+
+# Build and run VM for Dell Latitude 7480 with GNOME
+nix build .#nixosConfigurations.latitude-gnome.config.system.build.vm
 ./result/bin/run-latitude-nixos-vm
 
 # Build and run VM for MacBook Air 7,2
@@ -259,86 +360,62 @@ nix build .#nixosConfigurations.nas01.config.system.build.vm
 - Close window or run `poweroff` inside VM to shutdown
 - For nas01, SSH is available on forwarded port (check VM output for details)
 
-**Testing the Hyprland Environment:**
-- The VM will boot to the Greetd login screen
-- Select Hyprland and log in to test the desktop environment
-- Useful for validating configuration changes before deployment
-
 ### Check Configuration
 
 ```bash
 nix flake check
 ```
 
-## Installation Guide (MacBook Air)
+## Boot Menu Labels
 
-After booting from the ISO USB drive:
+The boot menu will display configurations with clear labels:
+- **XFCE** - Full XFCE desktop with all applications
+- **GNOME** - Full GNOME desktop with all applications
+- **Hyprland** - Hyprland Wayland compositor (work in progress)
+- **XFCE-minimal** - Minimal XFCE for testing
 
-### 1. Connect to WiFi
+## Network Configuration
+
+### WiFi
+
+The JEN_ACRES WiFi network is configured to auto-connect in all full laptop profiles via the `wireless.nix` module. To add additional networks:
+
+1. Use NetworkManager's `nmtui` or `nmcli` tools
+2. Or add additional profiles to `wireless.nix` following the JEN_ACRES pattern
+
+### Tailscale
+
+Tailscale is enabled by default. After first boot:
+
 ```bash
-sudo systemctl start NetworkManager
-nmtui  # Connect to JEN_ACRES
+sudo tailscale up
 ```
 
-### 2. Partition the Disk
-```bash
-# Check disk name (likely /dev/sda)
-lsblk
+Then authenticate via the provided URL.
 
-# Create GPT partition table and partitions
-sudo parted /dev/sda -- mklabel gpt
-sudo parted /dev/sda -- mkpart ESP fat32 1MiB 512MiB
-sudo parted /dev/sda -- set 1 esp on
-sudo parted /dev/sda -- mkpart primary 512MiB 100%
-```
+## Hyprland Usage (Work in Progress)
 
-### 3. Format Partitions
-```bash
-sudo mkfs.fat -F 32 -n boot /dev/sda1
-sudo mkfs.ext4 -L nixos /dev/sda2
-```
+**Current Status:** Hyprland successfully launches from TTY2 but encounters issues when launched through LightDM. The desktop environment is fully configured but needs display manager troubleshooting.
 
-### 4. Mount Filesystems
-```bash
-sudo mount /dev/disk/by-label/nixos /mnt
-sudo mkdir -p /mnt/boot
-sudo mount /dev/disk/by-label/boot /mnt/boot
-```
+### Testing Hyprland Manually
 
-### 5. Install Configuration
-```bash
-# Generate hardware config (for reference)
-sudo nixos-generate-config --root /mnt
+You can test Hyprland by launching it manually:
 
-# Clone your NixOS configuration
-nix-shell -p git
-cd /mnt/etc/nixos
-sudo mv configuration.nix configuration.nix.backup
-sudo git clone https://github.com/fkadriver/nixos.git .
-```
+1. Boot into any configuration
+2. Switch to TTY2 with `Ctrl+Alt+F2`
+3. Login as your user
+4. Run: `Hyprland`
 
-### 6. Enable Bootloader
-```bash
-# Edit the hardware configuration
-sudo nano /mnt/etc/nixos/hosts/airbook-hardware.nix
+This will launch Hyprland successfully, confirming the compositor and configuration are working correctly.
 
-# Uncomment these two lines (around line 19-20):
-# boot.loader.systemd-boot.enable = true;
-# boot.loader.efi.canTouchEfiVariables = true;
-```
+### Key Applications (when working)
 
-### 7. Install NixOS
-```bash
-sudo nixos-install --flake /mnt/etc/nixos#airbook
-```
-
-### 8. Reboot
-```bash
-# Set root password when prompted, then:
-sudo reboot
-```
-
-After reboot, remove the USB drive and boot into your new NixOS installation!
+- **Super + Enter** - Launch terminal (Kitty)
+- **Super + R** - Application launcher (Rofi)
+- **Super + Q** - Close window
+- **Super + E** - File manager (Thunar)
+- **Print** - Screenshot selection
+- **Shift + Print** - Full screenshot
 
 ## Hardware-Specific Notes
 
@@ -361,19 +438,27 @@ After reboot, remove the USB drive and boot into your new NixOS installation!
 .
 ├── flake.nix                      # Main flake configuration
 ├── hosts/
-│   ├── latitude.nix               # Dell Latitude 7480 configuration
-│   ├── latitude-hardware.nix
+│   ├── latitude.nix               # Dell Latitude 7480 (XFCE default)
+│   ├── latitude-xfce.nix          # Dell Latitude 7480 (XFCE full)
+│   ├── latitude-gnome.nix         # Dell Latitude 7480 (GNOME full)
+│   ├── latitude-hyprland.nix      # Dell Latitude 7480 (Hyprland - WIP)
+│   ├── latitude-minimal.nix       # Dell Latitude 7480 (minimal testing)
+│   ├── latitude-hardware.nix      # Hardware configuration
 │   ├── airbook.nix                # MacBook Air 7,2 configuration
-│   ├── airbook-hardware.nix
+│   ├── airbook-hardware.nix       # Hardware configuration
 │   ├── nas01.nix                  # NAS server configuration
-│   ├── nas01-hardware.nix
+│   ├── nas01-hardware.nix         # Hardware configuration
 │   └── installer.nix              # Automated installer ISO
 ├── modules/
 │   ├── common.nix                 # Base configuration (server-safe)
-│   ├── laptop.nix                 # Laptop-specific configuration
+│   ├── laptop-xfce.nix            # XFCE laptop configuration
+│   ├── laptop-gnome.nix           # GNOME laptop configuration
+│   ├── laptop-hyprland.nix        # Hyprland laptop configuration
+│   ├── laptop-minimal.nix         # Minimal testing configuration
 │   ├── hyprland.nix               # Hyprland desktop environment
 │   ├── hyprland-config.nix        # Default Hyprland keybindings
 │   ├── bitwarden.nix              # Secrets management
+│   ├── wireless.nix               # WiFi configuration
 │   ├── disko-config.nix           # Automated disk partitioning
 │   ├── idrive-e360.nix            # Cloud backup service
 │   ├── shell-aliases.nix          # System-wide aliases
@@ -385,52 +470,9 @@ After reboot, remove the USB drive and boot into your new NixOS installation!
 │       ├── default.nix            # iDrive e360 package definition
 │       └── README.md              # Package customization guide
 └── docs/
-    └── idrive-e360-example.nix    # iDrive e360 usage examples
+    ├── bitwarden-secrets-setup.md # Comprehensive secrets guide
+    └── bitwarden-examples.nix     # Example configurations
 ```
-
-## Hyprland Usage
-
-### First Login
-
-After installation, you'll be greeted by TUIgreet. Select "Hyprland" and log in with your user credentials.
-
-### Key Applications
-
-- **Super + Enter** - Launch terminal (Kitty) - *Note: Configure in Hyprland config*
-- **Super + D** - Application launcher (Rofi) - *Note: Configure in Hyprland config*
-- **Screenshots** - Use `grim` and `slurp` commands
-- **File Manager** - Run `thunar` from terminal or launcher
-- **Network Manager** - Access via `nm-applet` in system tray
-- **Audio Control** - Use `pavucontrol` for audio settings
-
-### Customization
-
-Hyprland configuration is managed declaratively through NixOS. To customize:
-
-1. Create a Hyprland configuration file in your home directory or add home-manager
-2. Configure keybindings, monitors, workspaces, etc.
-3. Reference the example configurations:
-   - [Fortydeux-NixOS-System-Flake](https://github.com/WhatstheUse/Fortydeux-NixOS-System-Flake)
-   - [hyprvibe](https://github.com/ChrisLAS/hyprvibe)
-
-## Network Configuration
-
-### WiFi
-
-The JEN_ACRES WiFi network is configured to auto-connect in `laptop.nix`. To add additional networks:
-
-1. Use NetworkManager's `nmtui` or `nmcli` tools
-2. Or add additional profiles to `laptop.nix` following the JEN_ACRES pattern
-
-### Tailscale
-
-Tailscale is enabled by default. After first boot:
-
-```bash
-sudo tailscale up
-```
-
-Then authenticate via the provided URL.
 
 ## iDrive e360 Cloud Backup
 
@@ -459,13 +501,13 @@ iDrive e360 provides enterprise-grade offsite backup for your laptops and server
 
 2. **Enable iDrive e360 in Your Configuration**
 
-   Add the iDrive e360 module to your host configuration. For example, in `hosts/latitude.nix`:
+   Add the iDrive e360 module to your host configuration. For example, in `hosts/latitude-xfce.nix`:
 
    ```nix
    imports = [
      ./latitude-hardware.nix
      inputs.self.modules.common
-     inputs.self.modules.laptop
+     inputs.self.modules.laptop-xfce
      inputs.self.modules.user-scott
      inputs.self.modules.idrive-e360  # Add this line
    ];
@@ -520,7 +562,7 @@ iDrive e360 provides enterprise-grade offsite backup for your laptops and server
 4. **Rebuild Your System**
 
    ```bash
-   sudo nixos-rebuild switch --flake .#latitude
+   sudo nixos-rebuild switch --flake .#latitude-xfce
    ```
 
 5. **Configure Backup Settings**
@@ -583,31 +625,6 @@ systemctl list-timers idrive-e360-backup
 - Configuration directory has 700 permissions (user-only access)
 - Service uses `PrivateTmp` and `ProtectSystem=strict` for isolation
 - Only specified directories have read/write access
-
-### Troubleshooting
-
-**Service Won't Start:**
-```bash
-# Check for errors
-journalctl -u idrive-e360 --since "1 hour ago"
-
-# Verify the binary exists
-ls -la /nix/store/*/bin/idrive360
-```
-
-**Permission Issues:**
-```bash
-# Ensure config directory exists with correct permissions
-ls -la ~/.idrive360
-```
-
-**Package Build Failures:**
-
-If the initial build fails, you may need to adjust the package definition in `pkgs/idrive-e360/default.nix` based on the actual structure of the .deb file. Inspect your .deb:
-
-```bash
-dpkg-deb -c /path/to/idrive360.deb
-```
 
 ## Bitwarden Secrets Management
 
@@ -698,8 +715,9 @@ Manage SSH keys, Tailscale auth keys, WiFi passwords, and other secrets using Bi
 
 ### Documentation
 
-- **Comprehensive Guide**: [docs/bitwarden-secrets-setup.md](docs/bitwarden-secrets-setup.md)
-- **Example Configurations**: [docs/bitwarden-examples.nix](docs/bitwarden-examples.nix)
+- **Comprehensive Setup Guide**: [docs/bitwarden-secrets-setup.md](docs/bitwarden-secrets-setup.md) - Step-by-step instructions for setting up sops-nix with Bitwarden
+- **Example Configurations**: [docs/bitwarden-examples.nix](docs/bitwarden-examples.nix) - 10 practical examples for common use cases
+- **Quick Reference**: [docs/SECRETS-QUICKREF.md](docs/SECRETS-QUICKREF.md) - Command cheat sheet for daily use
 
 ### Key Features
 
@@ -712,6 +730,7 @@ Manage SSH keys, Tailscale auth keys, WiFi passwords, and other secrets using Bi
 
 ## Future Enhancements
 
+- **Hyprland Display Manager**: Fix LightDM integration for Hyprland to enable automatic desktop launch
 - **Home Manager Integration**: For user-specific configuration management
 - **Hyprland Dotfiles**: Declarative Hyprland configuration via home-manager
 - **Additional Hardware**: Add support for more hardware configurations
