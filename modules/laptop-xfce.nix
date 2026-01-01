@@ -2,6 +2,7 @@
 { config, lib, pkgs, ... }: {
   imports = [
     inputs.self.modules.bitwarden
+    inputs.self.modules.wireless
   ];
 
   config = {
@@ -31,34 +32,6 @@
       # Utilities
       unzip
     ];
-
-    # WiFi configuration for JEN_ACRES
-    # This needs to stay here to allow network access for bitwarden and other services
-    networking.networkmanager.ensureProfiles = {
-      profiles = {
-        JEN_ACRES = {
-          connection = {
-            id = "JEN_ACRES";
-            type = "wifi";
-            autoconnect = "true";
-          };
-          wifi = {
-            mode = "infrastructure";
-            ssid = "JEN_ACRES";
-          };
-          wifi-security = {
-            key-mgmt = "wpa-psk";
-            psk = "goatcheese93";
-          };
-          ipv4 = {
-            method = "auto";
-          };
-          ipv6 = {
-            method = "auto";
-          };
-        };
-      };
-    };
 
     # Browser
     programs.firefox.enable = true;
