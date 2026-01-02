@@ -25,3 +25,6 @@ secrets/*.backup
 # OS files
 .DS_Store
 Thumbs.db
+
+# Temp photos
+*.JPEG
