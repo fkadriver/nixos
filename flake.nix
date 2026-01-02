@@ -51,6 +51,12 @@
         user-scott = import ./modules/user-scott.nix flakeContext;
         wireless = import ./modules/wireless.nix flakeContext;
       };
+      # Expose disko configurations for standalone disko command
+      diskConfigurations = {
+        latitude = (inputs.self.nixosConfigurations.latitude.config.disko or {});
+        airbook = (inputs.self.nixosConfigurations.airbook.config.disko or {});
+        nas01 = (inputs.self.nixosConfigurations.nas01.config.disko or {});
+      };
       overlays.default = overlay;
     };
 }
