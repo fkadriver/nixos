@@ -4,6 +4,7 @@ let
     imports = [
       ./latitude-hardware.nix
       inputs.self.modules.common
+      inputs.self.modules.disko-config
       inputs.self.modules.laptop-xfce
       inputs.self.modules.user-scott
     ];
