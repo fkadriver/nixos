@@ -1,0 +1,4 @@
+[    0.120766] Spectre V2 : Enabling Restricted Speculation for firmware calls
+[    0.161787] ACPI: [Firmware Bug]: BIOS _OSI(Linux) query ignored
+[    0.191144] acpi PNP0A08:00: [Firmware Info]: ECAM [mem 0xe0000000-0xe9bfffff] for domain 0000 [bus 00-9b] only partially covers this bridge
+[   34.702701] systemd[1]: Clear Stale Hibernate Storage Info was skipped because of an unmet condition check (ConditionPathExists=/sys/firmware/efi/efivars/HibernateLocation-8cf2644b-4b0b-428f-9387-6d876050dc67).

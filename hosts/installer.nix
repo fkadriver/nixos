@@ -6,7 +6,7 @@ inputs.nixpkgs.lib.nixosSystem {
   modules = [
     "${inputs.nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-minimal.nix"
     inputs.disko.nixosModules.disko
-    {
+    ({ config, lib, pkgs, ... }: {
       # Include the disko configuration and wireless support
       imports = [
         inputs.self.modules.disko-config
@@ -20,6 +20,49 @@ inputs.nixpkgs.lib.nixosSystem {
       # Enable experimental features needed for disko and flakes
       nix.settings.experimental-features = [ "nix-command" "flakes" ];
 
+      # Enable NetworkManager for WiFi connectivity
+      networking.networkmanager = {
+        enable = true;
+        # NetworkManager will use its own wpa_supplicant
+        wifi.backend = "wpa_supplicant";
+      };
+
+      # Use systemd.network to set the link as WiFi type
+      systemd.network.links."10-broadcom-wifi" = {
+        matchConfig = {
+          Driver = "wl";
+        };
+        linkConfig = {
+          Name = "wlan0";
+        };
+      };
+
+      # Support for Broadcom WiFi (MacBook Air)
+      boot.kernelModules = [ "wl" ];
+      boot.extraModulePackages = [ config.boot.kernelPackages.broadcom_sta ];
+      boot.blacklistedKernelModules = [ "b43" "b43legacy" "ssb" "bcm43xx" "brcm80211" "brcmfmac" "brcmsmac" "bcma" ];
+      hardware.enableRedistributableFirmware = true;
+
+      # Ensure WiFi is unblocked on boot
+      systemd.services.unblock-wifi = {
+        description = "Unblock WiFi devices";
+        wantedBy = [ "multi-user.target" ];
+        after = [ "network-pre.target" ];
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = "${pkgs.util-linux}/bin/rfkill unblock wifi";
+        };
+      };
+
+      # Allow unfree broadcom-sta driver
+      nixpkgs.config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
+        "broadcom-sta"
+      ];
+      nixpkgs.config.permittedInsecurePackages = [
+        "broadcom-sta-6.30.223.271-59-6.12.60"
+        "broadcom-sta-6.30.223.271-59-6.12.63"
+      ];
+
       # Include necessary packages for installation
       environment.systemPackages = with inputs.nixpkgs.legacyPackages.x86_64-linux; [
         git
@@ -29,6 +72,9 @@ inputs.nixpkgs.lib.nixosSystem {
         parted
         gptfdisk
         lvm2
+        # WiFi utilities
+        networkmanager
+        util-linux  # includes rfkill
       ];
 
       # Add installation helper script
@@ -127,6 +173,6 @@ inputs.nixpkgs.lib.nixosSystem {
       users.users.root.password = "nixos";
 
       networking.hostName = "nixos-installer";
-    }
+    })
   ];
 }

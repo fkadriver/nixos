@@ -1,0 +1,26 @@
+● NetworkManager.service - Network Manager
+     Loaded: loaded (/etc/systemd/system/NetworkManager.service; enabled; preset: ignored)
+    Drop-In: /nix/store/jrpc1zlfsrl90sr3ny0h212y99gm7qqn-system-units/NetworkManager.service.d
+             └─NetworkManager-ovs.conf, overrides.conf
+     Active: active (running) since Fri 2026-01-02 00:16:47 UTC; 49min ago
+ Invocation: c75f3625e5ed4622ab5a93d65960b670
+       Docs: man:NetworkManager(8)
+   Main PID: 1194 (NetworkManager)
+         IP: 0B in, 0B out
+         IO: 5.5M read, 0B written
+      Tasks: 4 (limit: 8979)
+     Memory: 14.1M (peak: 15M)
+        CPU: 264ms
+     CGroup: /system.slice/NetworkManager.service
+             └─1194 /nix/store/6xvfiryipl146igckr8zh6sa067mikcv-networkmanager-1.54.3/sbin/NetworkManager --no-daemon
+
+Jan 02 00:17:00 nixos-installer NetworkManager[1194]: <warn>  [1767313020.7972] device (wlan0): re-acquiring supplicant interface (#1).
+Jan 02 00:17:03 nixos-installer NetworkManager[1194]: <error> [1767313023.8002] device (wlan0): Couldn't initialize supplicant interface: Failed to D-Bus activate wpa_supplicant service
+Jan 02 00:17:13 nixos-installer NetworkManager[1194]: <warn>  [1767313033.7932] device (wlan0): re-acquiring supplicant interface (#2).
+Jan 02 00:17:16 nixos-installer NetworkManager[1194]: <error> [1767313036.7966] device (wlan0): Couldn't initialize supplicant interface: Failed to D-Bus activate wpa_supplicant service
+Jan 02 00:17:26 nixos-installer NetworkManager[1194]: <warn>  [1767313046.7963] device (wlan0): re-acquiring supplicant interface (#3).
+Jan 02 00:17:29 nixos-installer NetworkManager[1194]: <error> [1767313049.7997] device (wlan0): Couldn't initialize supplicant interface: Failed to D-Bus activate wpa_supplicant service
+Jan 02 00:17:39 nixos-installer NetworkManager[1194]: <warn>  [1767313059.7972] device (wlan0): re-acquiring supplicant interface (#4).
+Jan 02 00:17:42 nixos-installer NetworkManager[1194]: <error> [1767313062.8005] device (wlan0): Couldn't initialize supplicant interface: Failed to D-Bus activate wpa_supplicant service
+Jan 02 00:17:52 nixos-installer NetworkManager[1194]: <warn>  [1767313072.7892] device (wlan0): re-acquiring supplicant interface (#5).
+Jan 02 00:17:55 nixos-installer NetworkManager[1194]: <error> [1767313075.7913] device (wlan0): Couldn't initialize supplicant interface: Failed to D-Bus activate wpa_supplicant service
