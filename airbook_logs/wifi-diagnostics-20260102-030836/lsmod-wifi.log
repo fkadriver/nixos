@@ -1,5 +1,0 @@
-btbcm                  24576  1 btusb
-bluetooth            1089536  6 btrtl,btmtk,btintel,btbcm,btusb
-bcm5974                28672  0
-wl                   6520832  0
-cfg80211             1413120  1 wl

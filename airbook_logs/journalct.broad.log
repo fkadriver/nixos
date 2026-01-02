@@ -1,5 +1,0 @@
-Jan 02 00:16:41 nixos-installer kernel: Performance Events: PEBS fmt2+, Broadwell events, 16-deep LBR, full-width counters, Intel PMU driver.
-Jan 02 00:16:41 nixos-installer kernel: IPI shorthand broadcast: enabled
-Jan 02 00:16:42 nixos-installer kernel: You are using the Broadcom STA wireless driver, which is not maintained and is incompatible with Linux kernel security mitigations. It is heavily recommended to replace the hardware and remove the driver. Proceed at your own risk!
-Jan 02 00:16:42 nixos-installer kernel: eth0: Broadcom BCM43a0 802.11 Hybrid Wireless Controller 6.30.223.271 (r587334)
-Jan 02 00:16:47 nixos-installer kernel: i915 0000:00:02.0: [drm] Found BROADWELL/ULT (device ID 1626) display version 8.00 stepping N/A
