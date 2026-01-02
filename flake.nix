@@ -52,10 +52,11 @@
         wireless = import ./modules/wireless.nix flakeContext;
       };
       # Expose disko configurations for standalone disko command
-      diskConfigurations = {
-        latitude = (inputs.self.nixosConfigurations.latitude.config.disko or {});
-        airbook = (inputs.self.nixosConfigurations.airbook.config.disko or {});
-        nas01 = (inputs.self.nixosConfigurations.nas01.config.disko or {});
+      # This allows: nix run github:nix-community/disko -- --flake .#airbook
+      diskoConfigurations = {
+        latitude = inputs.self.nixosConfigurations.latitude;
+        airbook = inputs.self.nixosConfigurations.airbook;
+        nas01 = inputs.self.nixosConfigurations.nas01;
       };
       overlays.default = overlay;
     };
