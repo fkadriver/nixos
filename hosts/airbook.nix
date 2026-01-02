@@ -4,11 +4,24 @@ let
     imports = [
       ./airbook-hardware.nix
       inputs.self.modules.common
-      inputs.self.modules.disko-config
       inputs.self.modules.laptop-xfce
       inputs.self.modules.user-scott
     ];
     config = {
+      # Filesystem configuration (matches actual partition layout)
+      fileSystems."/" = {
+        device = "/dev/nvme0n1p2";
+        fsType = "ext4";
+      };
+
+      fileSystems."/boot" = {
+        device = "/dev/nvme0n1p1";
+        fsType = "vfat";
+        options = [ "fmask=0077" "dmask=0077" ];
+      };
+
+      swapDevices = [ ];  # No swap partition created
+
       # Allow unfree and insecure packages needed for Broadcom WiFi
       nixpkgs.config = {
         allowUnfree = true;
@@ -32,7 +45,6 @@ let
 in
 inputs.nixpkgs.lib.nixosSystem {
   modules = [
-    inputs.disko.nixosModules.disko
     nixosModule
   ];
   system = "x86_64-linux";
