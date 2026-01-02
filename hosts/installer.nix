@@ -72,6 +72,7 @@ inputs.nixpkgs.lib.nixosSystem {
         parted
         gptfdisk
         lvm2
+        curl
         # WiFi utilities
         networkmanager
         util-linux  # includes rfkill
@@ -123,14 +124,22 @@ inputs.nixpkgs.lib.nixosSystem {
           fi
 
           echo ""
+          echo "Downloading disko configuration..."
+          DISKO_URL="https://raw.githubusercontent.com/fkadriver/nixos/main/disko/$CONFIG.nix"
+          curl -sL "$DISKO_URL" > /tmp/disko-$CONFIG.nix || {
+            echo "ERROR: Failed to download disko configuration from $DISKO_URL"
+            exit 1
+          }
+
           echo "Partitioning disk with disko..."
-          sudo nix run github:nix-community/disko -- --mode disko \
-            --flake "$GIT_REPO#$CONFIG" \
+          sudo nix --experimental-features "nix-command flakes" run github:nix-community/disko/latest -- \
+            --mode destroy,format,mount \
+            /tmp/disko-$CONFIG.nix \
             --arg device "\"$DEVICE\""
 
           echo ""
           echo "Installing NixOS..."
-          sudo nixos-install --flake "$GIT_REPO#$CONFIG"
+          sudo nixos-install --flake "$GIT_REPO#$CONFIG" --no-root-passwd
 
           echo ""
           echo "Installation complete!"

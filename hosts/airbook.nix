@@ -9,6 +9,18 @@ let
       inputs.self.modules.user-scott
     ];
     config = {
+      # Allow unfree and insecure packages needed for Broadcom WiFi
+      nixpkgs.config = {
+        allowUnfree = true;
+        allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
+          "broadcom-sta"
+        ];
+        permittedInsecurePackages = [
+          "broadcom-sta-6.30.223.271-59-6.12.60"
+          "broadcom-sta-6.30.223.271-59-6.12.63"
+        ];
+      };
+
       networking = {
         hostName = "airbook-nixos";
       };
