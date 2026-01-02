@@ -17,18 +17,19 @@
   boot.loader.systemd-boot.enable = lib.mkDefault true;
   boot.loader.efi.canTouchEfiVariables = lib.mkDefault true;
 
-  # Filesystem configuration (will be overridden by disko or nixos-generate-config)
-  fileSystems."/" = lib.mkDefault {
-    device = "/dev/disk/by-label/nixos";
-    fsType = "ext4";
-  };
-
-  fileSystems."/boot" = lib.mkDefault {
-    device = "/dev/disk/by-label/boot";
-    fsType = "vfat";
-  };
-
-  swapDevices = lib.mkDefault [ ];
+  # Filesystem configuration is managed by disko
+  # These are placeholders for reference:
+  # fileSystems."/" = lib.mkDefault {
+  #   device = "/dev/disk/by-label/nixos";
+  #   fsType = "ext4";
+  # };
+  #
+  # fileSystems."/boot" = lib.mkDefault {
+  #   device = "/dev/disk/by-label/boot";
+  #   fsType = "vfat";
+  # };
+  #
+  # swapDevices = lib.mkDefault [ ];
 
   # Broadcom WiFi configuration
   # Blacklist conflicting drivers for broadcom-sta (wl)

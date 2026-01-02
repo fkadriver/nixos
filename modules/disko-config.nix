@@ -1,5 +1,5 @@
 { inputs, ... }@flakeContext:
-{ config, lib, device ? "/dev/sda", ... }:
+{ config, lib, ... }:
 
 {
   # Disko configuration for automated disk partitioning
@@ -13,7 +13,7 @@
     disk = {
       main = {
         type = "disk";
-        device = device;  # Passed as module argument
+        device = lib.mkDefault "/dev/sda";  # Override with --arg device when running disko
         content = {
           type = "gpt";
           partitions = {

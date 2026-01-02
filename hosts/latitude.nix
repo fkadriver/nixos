@@ -28,6 +28,7 @@ let
 in
 inputs.nixpkgs.lib.nixosSystem {
   modules = [
+    inputs.disko.nixosModules.disko
     nixosModule
   ];
   system = "x86_64-linux";
