@@ -18,6 +18,14 @@
                 mountOptions = [ "defaults" "umask=0077" ];
               };
             };
+            swap = {
+              size = "10G";
+              content = {
+                type = "swap";
+                randomEncryption = true;  # Encrypt swap with random key on each boot
+                resumeDevice = true;      # Enable hibernation support
+              };
+            };
             root = {
               size = "100%";
               content = {

@@ -19,14 +19,15 @@
         enableScreensaver = true;
       };
 
-      # Touchpad support for laptops
-      libinput = {
-        enable = true;
-        touchpad = {
-          tapping = true;
-          naturalScrolling = true;
-          disableWhileTyping = true;
-        };
+    };
+
+    # Touchpad support for laptops
+    services.libinput = {
+      enable = true;
+      touchpad = {
+        tapping = true;
+        naturalScrolling = true;
+        disableWhileTyping = true;
       };
     };
 
@@ -50,26 +51,26 @@
       unzip
 
       # XFCE plugins and utilities
-      xfce.xfce4-battery-plugin
-      xfce.xfce4-clipman-plugin
-      xfce.xfce4-cpugraph-plugin
-      xfce.xfce4-netload-plugin
-      xfce.xfce4-pulseaudio-plugin
-      xfce.xfce4-screenshooter
-      xfce.xfce4-systemload-plugin
-      xfce.xfce4-taskmanager
-      xfce.xfce4-weather-plugin
-      xfce.xfce4-whiskermenu-plugin
-      xfce.xfce4-xkb-plugin
+      xfce4-battery-plugin
+      xfce4-clipman-plugin
+      xfce4-cpugraph-plugin
+      xfce4-netload-plugin
+      xfce4-pulseaudio-plugin
+      xfce4-screenshooter
+      xfce4-systemload-plugin
+      xfce4-taskmanager
+      xfce4-weather-plugin
+      xfce4-whiskermenu-plugin
+      xfce4-xkb-plugin
 
       # Thunar file manager plugins
-      xfce.thunar-archive-plugin
-      xfce.thunar-volman
-      xfce.thunar-media-tags-plugin
+      thunar-archive-plugin
+      thunar-volman
+      thunar-media-tags-plugin
 
       # Additional XFCE apps
-      xfce.ristretto   # Image viewer
-      xfce.mousepad    # Text editor
+      ristretto   # Image viewer
+      mousepad    # Text editor
     ];
 
     # Browser

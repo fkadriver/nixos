@@ -9,9 +9,9 @@ let
       inputs.self.modules.user-scott
     ];
     config = {
-      # Filesystem configuration (matches actual partition layout)
+      # Filesystem configuration (matches disko partition layout)
       fileSystems."/" = {
-        device = "/dev/nvme0n1p2";
+        device = "/dev/nvme0n1p3";  # Root is now p3 (after boot and swap)
         fsType = "ext4";
       };
 
@@ -21,7 +21,14 @@ let
         options = [ "fmask=0077" "dmask=0077" ];
       };
 
-      swapDevices = [ ];  # No swap partition created
+      # Encrypted swap partition with hibernation support
+      swapDevices = [{
+        device = "/dev/nvme0n1p2";
+        randomEncryption.enable = true;  # Encrypt with random key on each boot
+      }];
+
+      # Enable hibernation
+      boot.resumeDevice = "/dev/nvme0n1p2";
 
       # Allow unfree and insecure packages needed for Broadcom WiFi
       nixpkgs.config = {
