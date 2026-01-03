@@ -1,3 +1,4 @@
+{ inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }: {
   # Multi-monitor support with autorandr for automatic profile switching
 
@@ -14,16 +15,16 @@
   ];
 
   # Laptop docking configuration
-  services.logind = {
+  services.logind.settings.Login = {
     # Don't suspend when lid is closed while docked
-    lidSwitchDocked = "ignore";
+    HandleLidSwitchDocked = "ignore";
 
     # When undocked, you can set this to "suspend" or "ignore"
     # "ignore" is useful if you want to use the laptop closed with external monitor
-    lidSwitch = lib.mkDefault "suspend";
+    HandleLidSwitch = lib.mkDefault "suspend";
 
     # Don't suspend when docked with external displays
-    lidSwitchExternalPower = lib.mkDefault "ignore";
+    HandleLidSwitchExternalPower = lib.mkDefault "ignore";
   };
 
   # Enable power management for laptops

@@ -80,9 +80,9 @@
       wireplumber    # Audio control (needed for wpctl)
 
       # File manager
-      xfce.thunar
-      xfce.thunar-volman
-      xfce.thunar-archive-plugin
+      thunar
+      thunar-volman
+      thunar-archive-plugin
 
       # Terminal
       kitty

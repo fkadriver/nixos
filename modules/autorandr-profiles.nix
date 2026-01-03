@@ -1,3 +1,4 @@
+{ inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }: {
   # Autorandr profiles for automatic display configuration
   # To get monitor fingerprints, run: autorandr --fingerprint

@@ -1,6 +1,14 @@
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }: {
   config = {
+    # Enable NetworkManager for WiFi management
+    networking.networkmanager.enable = true;
+
+    # Install NetworkManager GUI tools
+    environment.systemPackages = with pkgs; [
+      networkmanagerapplet  # nm-applet for system tray
+    ];
+
     # WiFi configuration for JEN_ACRES
     networking.networkmanager.ensureProfiles = {
       profiles = {
