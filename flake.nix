@@ -36,6 +36,7 @@
         installer = import ./hosts/installer.nix flakeContext;
       };
       modules = {
+        autorandr-profiles = import ./modules/autorandr-profiles.nix flakeContext;
         bitwarden = import ./modules/bitwarden.nix flakeContext;
         common = import ./modules/common.nix flakeContext;
         disko-config = import ./modules/disko-config.nix flakeContext;
@@ -45,6 +46,7 @@
         laptop-xfce = import ./modules/laptop-xfce.nix flakeContext;
         laptop-gnome = import ./modules/laptop-gnome.nix flakeContext;
         laptop-minimal = import ./modules/laptop-minimal.nix flakeContext;
+        multi-monitor = import ./modules/multi-monitor.nix flakeContext;
         shell-aliases = import ./modules/shell-aliases.nix flakeContext;
         syncthing = import ./modules/syncthing.nix flakeContext;
         tailscale = import ./modules/tailscale.nix flakeContext;
