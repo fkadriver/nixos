@@ -5,6 +5,7 @@ let
       ./airbook-hardware.nix
       inputs.self.modules.common
       inputs.self.modules.laptop-xfce
+      inputs.self.modules.wireless
       inputs.self.modules.user-scott
     ];
     config = {
