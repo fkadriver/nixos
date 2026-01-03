@@ -13,7 +13,21 @@
     services.xserver = {
       enable = true;
       displayManager.lightdm.enable = true;
-      desktopManager.xfce.enable = true;
+      desktopManager.xfce = {
+        enable = true;
+        enableXfwm = true;
+        enableScreensaver = true;
+      };
+
+      # Touchpad support for laptops
+      libinput = {
+        enable = true;
+        touchpad = {
+          tapping = true;
+          naturalScrolling = true;
+          disableWhileTyping = true;
+        };
+      };
     };
 
     # Laptop-specific applications
@@ -34,6 +48,29 @@
 
       # Utilities
       unzip
+
+      # XFCE plugins and utilities
+      xfce.xfce4-battery-plugin
+      xfce.xfce4-clipman-plugin
+      xfce.xfce4-cpugraph-plugin
+      xfce.xfce4-datetime-plugin
+      xfce.xfce4-netload-plugin
+      xfce.xfce4-pulseaudio-plugin
+      xfce.xfce4-screenshooter
+      xfce.xfce4-systemload-plugin
+      xfce.xfce4-taskmanager
+      xfce.xfce4-weather-plugin
+      xfce.xfce4-whiskermenu-plugin
+      xfce.xfce4-xkb-plugin
+
+      # Thunar file manager plugins
+      xfce.thunar-archive-plugin
+      xfce.thunar-volman
+      xfce.thunar-media-tags-plugin
+
+      # Additional XFCE apps
+      xfce.ristretto   # Image viewer
+      xfce.mousepad    # Text editor
     ];
 
     # Browser
