@@ -36,10 +36,12 @@
         installer = import ./hosts/installer.nix flakeContext;
       };
       modules = {
+        "3d-printing" = import ./modules/3d-printing.nix flakeContext;
         autorandr-profiles = import ./modules/autorandr-profiles.nix flakeContext;
         bitwarden = import ./modules/bitwarden.nix flakeContext;
         common = import ./modules/common.nix flakeContext;
         disko-config = import ./modules/disko-config.nix flakeContext;
+        home-design = import ./modules/home-design.nix flakeContext;
         hyprland = import ./modules/hyprland.nix flakeContext;
         idrive-e360 = import ./modules/idrive-e360.nix flakeContext;
         laptop-hyprland = import ./modules/laptop-hyprland.nix flakeContext;
@@ -51,6 +53,7 @@
         syncthing = import ./modules/syncthing.nix flakeContext;
         tailscale = import ./modules/tailscale.nix flakeContext;
         user-scott = import ./modules/user-scott.nix flakeContext;
+        vscode = import ./modules/vscode.nix flakeContext;
         wireless = import ./modules/wireless.nix flakeContext;
       };
       # Expose disko configurations for standalone disko command

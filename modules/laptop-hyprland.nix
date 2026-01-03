@@ -1,8 +1,11 @@
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }: {
   imports = [
-    inputs.self.modules.hyprland
+    inputs.self.modules."3d-printing"
     inputs.self.modules.bitwarden
+    inputs.self.modules.home-design
+    inputs.self.modules.hyprland
+    inputs.self.modules.vscode
     inputs.self.modules.wireless
   ];
 
@@ -12,8 +15,7 @@
 
     # Laptop-specific applications
     environment.systemPackages = with pkgs; [
-      # Development
-      vscodium
+      # Development (VSCodium now in vscode module)
       python3Minimal
       claude-code
 

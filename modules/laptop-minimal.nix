@@ -1,5 +1,9 @@
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }: {
+  imports = [
+    inputs.self.modules.vscode  # VSCodium included in minimal
+  ];
+
   config = {
   # Set boot label
   system.nixos.label = "XFCE-minimal";
@@ -18,10 +22,9 @@
   };
 
 
-    # Minimal laptop applications (no Hyprland, no Bitwarden)
+    # Minimal laptop applications (no Hyprland, no Bitwarden, no 3D printing, no home design)
     environment.systemPackages = with pkgs; [
-      # Development
-      vscodium
+      # Development (VSCodium now in vscode module)
       python3Minimal
       claude-code
 
