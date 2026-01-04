@@ -10,6 +10,48 @@
 
         # Grep with color
         gpc = "grep --color=always";
+
+        # Git shortcuts
+        g = "git";
+        gs = "git status";
+        ga = "git add";
+        gaa = "git add -A";
+        gc = "git commit";
+        gcm = "git commit -m";
+        gp = "git push";
+        gpl = "git pull";
+        gd = "git diff";
+        gdc = "git diff --cached";
+        gl = "git log --oneline --graph --decorate";
+        gla = "git log --oneline --graph --decorate --all";
+        gco = "git checkout";
+        gb = "git branch";
+        gba = "git branch -a";
+        gf = "git fetch";
+        gr = "git restore";
+        grs = "git restore --staged";
+
+        # Nix shortcuts
+        nix-build-test = "nix flake check";
+        nix-update = "nix flake update";
+        nix-search = "nix search nixpkgs";
+        nix-shell-python = "nix-shell -p python3 python3Packages.pip";
+
+        # NixOS system shortcuts
+        nos-rebuild = "sudo nixos-rebuild switch --flake .";
+        nos-test = "sudo nixos-rebuild test --flake .";
+        nos-boot = "sudo nixos-rebuild boot --flake .";
+        nos-clean = "sudo nix-collect-garbage -d";
+        nos-optimize = "sudo nix-store --optimize";
+        nos-list-gens = "sudo nix-env --list-generations --profile /nix/var/nix/profiles/system";
+
+        # Common utilities
+        ll = "ls -lah";
+        la = "ls -A";
+        l = "ls -CF";
+        ".." = "cd ..";
+        "..." = "cd ../..";
+        "...." = "cd ../../..";
       };
     };
   };

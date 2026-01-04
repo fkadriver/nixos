@@ -50,8 +50,133 @@
       })
     ];
 
-    # VSCodium settings and keybindings can be managed via home-manager or
-    # manually synced via Settings Sync extension or Git repository
+    # VSCodium user settings
+    # Create default settings.json in /etc/vscodium-settings.json
+    # Users can symlink this or copy it to ~/.config/VSCodium/User/settings.json
+    environment.etc."vscodium-settings.json" = {
+      text = builtins.toJSON {
+        # Editor Settings
+        "editor.fontSize" = 14;
+        "editor.fontFamily" = "'Fira Code', 'Droid Sans Mono', 'monospace', monospace";
+        "editor.fontLigatures" = true;
+        "editor.tabSize" = 2;
+        "editor.insertSpaces" = true;
+        "editor.detectIndentation" = true;
+        "editor.wordWrap" = "on";
+        "editor.minimap.enabled" = true;
+        "editor.renderWhitespace" = "selection";
+        "editor.bracketPairColorization.enabled" = true;
+        "editor.guides.bracketPairs" = true;
+        "editor.formatOnSave" = false;
+        "editor.rulers" = [ 80 120 ];
+        "editor.cursorBlinking" = "smooth";
+        "editor.cursorSmoothCaretAnimation" = "on";
+
+        # Vim Settings
+        "vim.useSystemClipboard" = true;
+        "vim.hlsearch" = true;
+        "vim.leader" = "<space>";
+
+        # Files
+        "files.autoSave" = "afterDelay";
+        "files.autoSaveDelay" = 1000;
+        "files.trimTrailingWhitespace" = true;
+        "files.insertFinalNewline" = true;
+        "files.exclude" = {
+          "**/.git" = true;
+          "**/.svn" = true;
+          "**/.hg" = true;
+          "**/CVS" = true;
+          "**/.DS_Store" = true;
+          "**/node_modules" = true;
+          "**/__pycache__" = true;
+          "**/*.pyc" = true;
+        };
+
+        # Git
+        "git.autofetch" = true;
+        "git.confirmSync" = false;
+        "git.enableSmartCommit" = true;
+        "gitlens.currentLine.enabled" = true;
+        "gitlens.hovers.currentLine.over" = "line";
+
+        # Terminal
+        "terminal.integrated.fontSize" = 13;
+        "terminal.integrated.fontFamily" = "'Fira Code', monospace";
+        "terminal.integrated.cursorBlinking" = true;
+        "terminal.integrated.cursorStyle" = "line";
+
+        # Workbench
+        "workbench.colorTheme" = "Default Dark Modern";
+        "workbench.iconTheme" = "material-icon-theme";
+        "workbench.startupEditor" = "none";
+        "workbench.editor.enablePreview" = false;
+
+        # Python
+        "python.linting.enabled" = true;
+        "python.linting.pylintEnabled" = false;
+        "python.formatting.provider" = "none";
+        "python.analysis.typeCheckingMode" = "basic";
+
+        # Nix
+        "nix.enableLanguageServer" = true;
+        "nix.serverPath" = "nil";
+        "nix.formatterPath" = "nixpkgs-fmt";
+
+        # Prettier
+        "prettier.singleQuote" = true;
+        "prettier.trailingComma" = "es5";
+
+        # ErrorLens
+        "errorLens.enabledDiagnosticLevels" = [ "error" "warning" ];
+
+        # Security
+        "security.workspace.trust.enabled" = true;
+      };
+      mode = "0644";
+    };
+
+    # VSCodium keybindings
+    environment.etc."vscodium-keybindings.json" = {
+      text = builtins.toJSON [
+        {
+          key = "ctrl+shift+f";
+          command = "workbench.action.findInFiles";
+        }
+        {
+          key = "ctrl+p";
+          command = "workbench.action.quickOpen";
+        }
+      ];
+      mode = "0644";
+    };
+
+    # Instructions for users
+    environment.etc."vscodium-setup-instructions.txt" = {
+      text = ''
+        VSCodium Settings Setup
+        ═══════════════════════════════════════════════════════════════
+
+        The NixOS configuration has created default VSCodium settings at:
+          /etc/vscodium-settings.json
+          /etc/vscodium-keybindings.json
+
+        To use these settings, run:
+
+          mkdir -p ~/.config/VSCodium/User
+          ln -sf /etc/vscodium-settings.json ~/.config/VSCodium/User/settings.json
+          ln -sf /etc/vscodium-keybindings.json ~/.config/VSCodium/User/keybindings.json
+
+        Or copy them if you want to customize:
+
+          mkdir -p ~/.config/VSCodium/User
+          cp /etc/vscodium-settings.json ~/.config/VSCodium/User/settings.json
+          cp /etc/vscodium-keybindings.json ~/.config/VSCodium/User/keybindings.json
+
+        ═══════════════════════════════════════════════════════════════
+      '';
+      mode = "0644";
+    };
 
     # Enable the nix-ld module for binary compatibility
     # This is important for extensions with native components
