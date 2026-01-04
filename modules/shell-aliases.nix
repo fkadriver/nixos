@@ -3,6 +3,10 @@
   config = {
     environment = {
       shellAliases = {
+        # Basic
+        wtf = "alias";
+        clr = "clear";
+
         # Tailscale SSH shortcuts
         nas01 = "tailscale ssh nas01";
         slap = "tailscale ssh latitude-nixos";
