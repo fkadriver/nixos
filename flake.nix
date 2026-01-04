@@ -29,7 +29,6 @@
         latitude = import ./hosts/latitude.nix flakeContext;
         latitude-minimal = import ./hosts/latitude-minimal.nix flakeContext;
         latitude-xfce = import ./hosts/latitude-xfce.nix flakeContext;
-        latitude-gnome = import ./hosts/latitude-gnome.nix flakeContext;
         latitude-hyprland = import ./hosts/latitude-hyprland.nix flakeContext;
         airbook = import ./hosts/airbook.nix flakeContext;
         nas01 = import ./hosts/nas01.nix flakeContext;
@@ -44,9 +43,9 @@
         home-design = import ./modules/home-design.nix flakeContext;
         hyprland = import ./modules/hyprland.nix flakeContext;
         idrive-e360 = import ./modules/idrive-e360.nix flakeContext;
+        iphone = import ./modules/iphone.nix flakeContext;
         laptop-hyprland = import ./modules/laptop-hyprland.nix flakeContext;
         laptop-xfce = import ./modules/laptop-xfce.nix flakeContext;
-        laptop-gnome = import ./modules/laptop-gnome.nix flakeContext;
         laptop-minimal = import ./modules/laptop-minimal.nix flakeContext;
         multi-monitor = import ./modules/multi-monitor.nix flakeContext;
         shell-aliases = import ./modules/shell-aliases.nix flakeContext;

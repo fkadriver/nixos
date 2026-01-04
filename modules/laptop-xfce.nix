@@ -4,6 +4,7 @@
     inputs.self.modules."3d-printing"
     inputs.self.modules.bitwarden
     inputs.self.modules.home-design
+    inputs.self.modules.iphone
     inputs.self.modules.vscode
     inputs.self.modules.wireless
   ];
