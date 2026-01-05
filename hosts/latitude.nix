@@ -3,10 +3,9 @@ let
   nixosModule = { config, lib, pkgs, ... }: {
     imports = [
       ./latitude-hardware.nix
-      inputs.self.modules.common
-      inputs.self.modules.disko-config
-      inputs.self.modules.laptop-xfce
-      inputs.self.modules.user-scott
+      inputs.self.nixosModules.common
+      inputs.self.nixosModules.laptop-xfce
+      inputs.self.nixosModules.user-scott
     ];
     config = {
       hardware = {
@@ -28,7 +27,6 @@ let
 in
 inputs.nixpkgs.lib.nixosSystem {
   modules = [
-    inputs.disko.nixosModules.disko
     nixosModule
   ];
   system = "x86_64-linux";

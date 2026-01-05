@@ -12,40 +12,24 @@
           # Language Support
           ms-python.python                    # Python language support
           ms-python.vscode-pylance            # Python language server
+          ms-python.debugpy                   # Python debugger
           jnoortheen.nix-ide                  # Nix language support
-          bbenoist.nix                        # Nix syntax highlighting (alternative)
+          arrterian.nix-env-selector          # Nix environment selector (part of nix extension pack)
 
-          # Code Quality & Formatting
-          esbenp.prettier-vscode              # Code formatter for web dev
-          dbaeumer.vscode-eslint              # JavaScript/TypeScript linting
-
-          # Git Integration
-          eamodio.gitlens                     # Enhanced Git capabilities
-          mhutchie.git-graph                  # Git graph visualization
-          github.vscode-pull-request-github   # GitHub PR integration
-
-          # Remote Development
-          ms-vscode-remote.remote-ssh         # SSH remote development
-
-          # Productivity
-          vscodevim.vim                       # Vim emulation
-          usernamehw.errorlens                # Inline error highlighting
-          oderwat.indent-rainbow              # Colorize indentation levels
-
-          # Markdown & Documentation
-          yzhang.markdown-all-in-one          # Markdown shortcuts and preview
-          bierner.markdown-mermaid            # Mermaid diagram support
-
-          # Docker & Containers
-          ms-azuretools.vscode-docker         # Docker support
-
-          # Themes (optional - customize as needed)
-          pkief.material-icon-theme           # Material Design icons
+          # Development Tools
+          mkhl.direnv                         # direnv integration
 
         ] ++ pkgs.vscode-utils.extensionsFromVscodeMarketplace [
-          # Claude Code extension (if not available in nixpkgs)
-          # Note: You may need to add claude-code separately if it's installed manually
-          # Check your current extensions with: codium --list-extensions
+          # Claude Code extension
+          {
+            name = "claude-code";
+            publisher = "anthropic";
+            version = "latest";
+            sha256 = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+          }
+          # Note: You may need to update the version and sha256 hash above
+          # or install Claude Code manually via the VSCodium marketplace
+          # Check with: codium --list-extensions
         ];
       })
     ];
@@ -72,11 +56,6 @@
         "editor.cursorBlinking" = "smooth";
         "editor.cursorSmoothCaretAnimation" = "on";
 
-        # Vim Settings
-        "vim.useSystemClipboard" = true;
-        "vim.hlsearch" = true;
-        "vim.leader" = "<space>";
-
         # Files
         "files.autoSave" = "afterDelay";
         "files.autoSaveDelay" = 1000;
@@ -97,8 +76,6 @@
         "git.autofetch" = true;
         "git.confirmSync" = false;
         "git.enableSmartCommit" = true;
-        "gitlens.currentLine.enabled" = true;
-        "gitlens.hovers.currentLine.over" = "line";
 
         # Terminal
         "terminal.integrated.fontSize" = 13;
@@ -108,7 +85,6 @@
 
         # Workbench
         "workbench.colorTheme" = "Default Dark Modern";
-        "workbench.iconTheme" = "material-icon-theme";
         "workbench.startupEditor" = "none";
         "workbench.editor.enablePreview" = false;
 
@@ -123,12 +99,16 @@
         "nix.serverPath" = "nil";
         "nix.formatterPath" = "nixpkgs-fmt";
 
-        # Prettier
-        "prettier.singleQuote" = true;
-        "prettier.trailingComma" = "es5";
+        # direnv
+        "direnv.restart.automatic" = true;
 
-        # ErrorLens
-        "errorLens.enabledDiagnosticLevels" = [ "error" "warning" ];
+        # Claude Code
+        "claudeCode.environmentVariables" = [];
+        "claudeCode.useCtrlEnterToSend" = true;
+        "claudeCode.preferredLocation" = "panel";
+
+        # Diff Editor
+        "diffEditor.renderSideBySide" = true;
 
         # Security
         "security.workspace.trust.enabled" = true;

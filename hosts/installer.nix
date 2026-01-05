@@ -9,8 +9,8 @@ inputs.nixpkgs.lib.nixosSystem {
     ({ config, lib, pkgs, ... }: {
       # Include the disko configuration and wireless support
       imports = [
-        inputs.self.modules.disko-config
-        inputs.self.modules.wireless
+        inputs.self.nixosModules.disko-config
+        inputs.self.nixosModules.wireless
       ];
 
       # ISO-specific configuration
@@ -179,7 +179,11 @@ inputs.nixpkgs.lib.nixosSystem {
       };
 
       # Set root password for ISO (change after install)
-      users.users.root.password = "nixos";
+      # Override the base installer config's initialHashedPassword to eliminate warning
+      users.users.root = {
+        initialPassword = "nixos";
+        initialHashedPassword = lib.mkOverride 50 null;
+      };
 
       networking.hostName = "nixos-installer";
     })

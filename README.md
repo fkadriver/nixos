@@ -508,10 +508,10 @@ iDrive e360 provides enterprise-grade offsite backup for your laptops and server
    ```nix
    imports = [
      ./latitude-hardware.nix
-     inputs.self.modules.common
-     inputs.self.modules.laptop-xfce
-     inputs.self.modules.user-scott
-     inputs.self.modules.idrive-e360  # Add this line
+     inputs.self.nixosModules.common
+     inputs.self.nixosModules.laptop-xfce
+     inputs.self.nixosModules.user-scott
+     inputs.self.nixosModules.idrive-e360  # Add this line
    ];
    ```
 

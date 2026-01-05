@@ -144,9 +144,9 @@ In your host configuration (e.g., `hosts/latitude.nix`):
 {
   imports = [
     ./latitude-hardware.nix
-    inputs.self.modules.common
-    inputs.self.modules.laptop
-    inputs.self.modules.user-scott
+    inputs.self.nixosModules.common
+    inputs.self.nixosModules.laptop
+    inputs.self.nixosModules.user-scott
   ];
 
   # Enable Bitwarden secrets management

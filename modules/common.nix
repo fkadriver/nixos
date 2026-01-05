@@ -1,9 +1,9 @@
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }: {
   imports = [
-    inputs.self.modules.tailscale
-    inputs.self.modules.syncthing
-    inputs.self.modules.shell-aliases
+    inputs.self.nixosModules.tailscale
+    inputs.self.nixosModules.syncthing
+    inputs.self.nixosModules.shell-aliases
   ];
   config = {
     # Core system packages (server-safe, no GUI dependencies)

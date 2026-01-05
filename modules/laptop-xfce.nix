@@ -1,12 +1,12 @@
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }: {
   imports = [
-    inputs.self.modules."3d-printing"
-    inputs.self.modules.bitwarden
-    inputs.self.modules.home-design
-    inputs.self.modules.iphone
-    inputs.self.modules.vscode
-    inputs.self.modules.wireless
+    inputs.self.nixosModules."3d-printing"
+    inputs.self.nixosModules.bitwarden
+    inputs.self.nixosModules.home-design
+    inputs.self.nixosModules.iphone
+    inputs.self.nixosModules.vscode
+    inputs.self.nixosModules.wireless
   ];
 
   config = {

@@ -3,9 +3,9 @@ let
   nixosModule = { config, lib, pkgs, ... }: {
     imports = [
       ./latitude-hardware.nix
-      inputs.self.modules.common
-      inputs.self.modules.laptop-hyprland
-      inputs.self.modules.user-scott
+      inputs.self.nixosModules.common
+      inputs.self.nixosModules.laptop-hyprland
+      inputs.self.nixosModules.user-scott
     ];
     config = {
       # Filesystem configuration (not using disko)

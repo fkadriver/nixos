@@ -34,7 +34,7 @@
         nas01 = import ./hosts/nas01.nix flakeContext;
         installer = import ./hosts/installer.nix flakeContext;
       };
-      modules = {
+      nixosModules = {
         "3d-printing" = import ./modules/3d-printing.nix flakeContext;
         autorandr-profiles = import ./modules/autorandr-profiles.nix flakeContext;
         bitwarden = import ./modules/bitwarden.nix flakeContext;
@@ -54,13 +54,6 @@
         user-scott = import ./modules/user-scott.nix flakeContext;
         vscode = import ./modules/vscode.nix flakeContext;
         wireless = import ./modules/wireless.nix flakeContext;
-      };
-      # Expose disko configurations for standalone disko command
-      # This allows: nix run github:nix-community/disko -- --flake .#airbook
-      diskoConfigurations = {
-        latitude = inputs.self.nixosConfigurations.latitude;
-        airbook = inputs.self.nixosConfigurations.airbook;
-        nas01 = inputs.self.nixosConfigurations.nas01;
       };
       overlays.default = overlay;
     };

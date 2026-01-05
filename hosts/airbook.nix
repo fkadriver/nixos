@@ -3,10 +3,10 @@ let
   nixosModule = { config, lib, pkgs, ... }: {
     imports = [
       ./airbook-hardware.nix
-      inputs.self.modules.common
-      inputs.self.modules.laptop-xfce
-      inputs.self.modules.wireless
-      inputs.self.modules.user-scott
+      inputs.self.nixosModules.common
+      inputs.self.nixosModules.laptop-xfce
+      inputs.self.nixosModules.wireless
+      inputs.self.nixosModules.user-scott
     ];
     config = {
       # Filesystem configuration (matches disko partition layout)

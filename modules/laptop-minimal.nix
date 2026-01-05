@@ -1,7 +1,7 @@
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }: {
   imports = [
-    inputs.self.modules.vscode  # VSCodium included in minimal
+    inputs.self.nixosModules.vscode  # VSCodium included in minimal
   ];
 
   config = {

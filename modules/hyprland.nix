@@ -33,11 +33,10 @@
     # Display manager for login
     services.xserver = {
       enable = true;
-      displayManager = {
-        lightdm.enable = true;
-        defaultSession = "hyprland";
-      };
+      displayManager.lightdm.enable = true;
     };
+
+    services.displayManager.defaultSession = "hyprland";
 
     # Create a session file for Hyprland
     services.displayManager.sessionPackages = [ pkgs.hyprland ];

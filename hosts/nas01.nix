@@ -5,10 +5,10 @@ inputs.nixpkgs.lib.nixosSystem {
   specialArgs = { inherit inputs; };
   modules = [
     ./nas01-hardware.nix
-    inputs.self.modules.common
-    inputs.self.modules.user-scott
+    inputs.self.nixosModules.common
+    inputs.self.nixosModules.user-scott
     inputs.disko.nixosModules.disko
-    inputs.self.modules.disko-config
+    inputs.self.nixosModules.disko-config
     {
       config = {
         networking = {

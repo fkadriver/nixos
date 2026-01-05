@@ -51,8 +51,8 @@
 
   # In your host configuration:
   imports = [
-    inputs.self.modules.tailscale
-    inputs.self.modules.bitwarden
+    inputs.self.nixosModules.tailscale
+    inputs.self.nixosModules.bitwarden
   ];
 
   services.bitwarden-secrets.enable = true;
@@ -145,9 +145,9 @@
 
   imports = [
     ./latitude-hardware.nix
-    inputs.self.modules.common
-    inputs.self.modules.laptop
-    inputs.self.modules.user-scott
+    inputs.self.nixosModules.common
+    inputs.self.nixosModules.laptop
+    inputs.self.nixosModules.user-scott
   ];
 
   services.bitwarden-secrets = {
