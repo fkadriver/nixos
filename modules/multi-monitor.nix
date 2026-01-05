@@ -88,7 +88,6 @@
 
   # Enable power management for laptops
   services.upower.enable = true;
-  services.acpid.enable = true;
 
   powerManagement = {
     enable = true;
