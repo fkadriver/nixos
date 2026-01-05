@@ -76,15 +76,22 @@
             -t 10000"
         fi
       else
-        # Lid opened - cancel any pending suspend and re-enable internal display
+        # Lid opened - cancel any pending suspend and restore display configuration
         pkill -f "systemd-run.*suspend" && \
           logger "Lid opened: Cancelled suspend timer"
 
-        # Re-enable internal display
-        INTERNAL_DISPLAY=$(su - "$USER" -c "DISPLAY=$DISPLAY xrandr | grep 'eDP' | awk '{print \$1}'")
-        if [ -n "$INTERNAL_DISPLAY" ]; then
-          su - "$USER" -c "DISPLAY=$DISPLAY xrandr --output $INTERNAL_DISPLAY --auto"
-          logger "Lid opened: Enabled internal display $INTERNAL_DISPLAY"
+        # Use autorandr to restore the proper multi-monitor configuration
+        # This handles positioning correctly (extends instead of mirroring)
+        if command -v autorandr >/dev/null 2>&1; then
+          su - "$USER" -c "DISPLAY=$DISPLAY autorandr --change"
+          logger "Lid opened: Restored display configuration with autorandr"
+        else
+          # Fallback: just enable the internal display
+          INTERNAL_DISPLAY=$(su - "$USER" -c "DISPLAY=$DISPLAY xrandr | grep 'eDP' | awk '{print \$1}'")
+          if [ -n "$INTERNAL_DISPLAY" ]; then
+            su - "$USER" -c "DISPLAY=$DISPLAY xrandr --output $INTERNAL_DISPLAY --auto"
+            logger "Lid opened: Enabled internal display $INTERNAL_DISPLAY (autorandr not available)"
+          fi
         fi
       fi
     '';
