@@ -30,20 +30,7 @@
     # Minimal laptop applications (no Hyprland, no Bitwarden, no 3D printing, no home design)
     environment.systemPackages = with pkgs; [
       # Development
-      # VSCodium with Syncing extension pre-installed for settings/extensions sync
-      (vscode-with-extensions.override {
-        vscode = vscodium;
-        vscodeExtensions = with vscode-extensions; [
-          # Syncing extension for settings sync via GitHub Gists
-        ] ++ vscode-utils.extensionsFromVscodeMarketplace [
-          {
-            name = "syncing";
-            publisher = "nonoroazoro";
-            version = "4.0.1";
-            sha256 = "sha256-gZKjLXyb6lyomo/TEqRL90sgs3AcVZeJgC1ZPZm1e08=";
-          }
-        ];
-      })
+      vscodium          # Install Syncing extension manually: codium --install-extension nonoroazoro.syncing
       python3Minimal
       claude-code
 
