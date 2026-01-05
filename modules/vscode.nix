@@ -5,26 +5,9 @@
     # VSCodium is the open-source build of VSCode without Microsoft telemetry
 
     environment.systemPackages = with pkgs; [
-      # VSCodium base
-      (vscode-with-extensions.override {
-        vscode = vscodium;
-        vscodeExtensions = with vscode-extensions; [
-          # Language Support
-          ms-python.python                    # Python language support
-          ms-python.vscode-pylance            # Python language server
-          ms-python.debugpy                   # Python debugger
-          jnoortheen.nix-ide                  # Nix language support
-          arrterian.nix-env-selector          # Nix environment selector (part of nix extension pack)
-
-          # Development Tools
-          mkhl.direnv                         # direnv integration
-
-        ];
-        # Note: Claude Code extension must be installed manually via VSCodium marketplace
-        # It's not available in nixpkgs and cannot be declaratively installed
-        # Install from: Extensions > Search "Claude Code" > Install
-        # Or from CLI: codium --install-extension anthropic.claude-code
-      })
+      # VSCodium - base installation without extensions
+      # Extensions are managed via the Syncing extension (uses GitHub Gists)
+      vscodium
     ];
 
     # VSCodium user settings
@@ -127,24 +110,46 @@
     # Instructions for users
     environment.etc."vscodium-setup-instructions.txt" = {
       text = ''
-        VSCodium Settings Setup
+        VSCodium Settings & Extension Sync Setup
         ═══════════════════════════════════════════════════════════════
 
+        STEP 1: Settings (Managed by Nix)
+        ──────────────────────────────────────────────────────────────
         The NixOS configuration has created default VSCodium settings at:
           /etc/vscodium-settings.json
-          /etc/vscodium-keybindings.json 
+          /etc/vscodium-keybindings.json
 
         To use these settings, run:
-
           mkdir -p ~/.config/VSCodium/User
           ln -sf /etc/vscodium-settings.json ~/.config/VSCodium/User/settings.json
           ln -sf /etc/vscodium-keybindings.json ~/.config/VSCodium/User/keybindings.json
 
-        Or copy them if you want to customize:
+        STEP 2: Extensions (Synced via GitHub Gist)
+        ──────────────────────────────────────────────────────────────
+        Install the Syncing extension to manage extensions across machines:
 
-          mkdir -p ~/.config/VSCodium/User
-          cp /etc/vscodium-settings.json ~/.config/VSCodium/User/settings.json
-          cp /etc/vscodium-keybindings.json ~/.config/VSCodium/User/keybindings.json
+          codium --install-extension nonoroazoro.syncing
+
+        Then in VSCodium:
+          1. Press Ctrl+Shift+P
+          2. Type "Syncing: Upload Settings"
+          3. Create a GitHub token (Settings Sync will guide you)
+          4. Your extensions will be saved to a GitHub Gist
+
+        On other machines:
+          1. Install the Syncing extension
+          2. Press Ctrl+Shift+P
+          3. Type "Syncing: Download Settings"
+          4. Enter your Gist ID
+
+        Essential Extensions to Install:
+        ─────────────────────────────────────────────────────────────
+        - Claude Code: anthropic.claude-code
+        - Python: ms-python.python
+        - Python Debugger: ms-python.debugpy
+        - Nix IDE: jnoortheen.nix-ide
+        - Nix Environment Selector: arrterian.nix-env-selector
+        - direnv: mkhl.direnv
 
         ═══════════════════════════════════════════════════════════════
       '';
@@ -152,13 +157,7 @@
     };
 
     # Enable the nix-ld module for binary compatibility
-    # This is important for extensions with native components
+    # This is important for extensions with native components (like Claude Code)
     # Already enabled in laptop-xfce.nix, but ensuring it's available
-
-    # To list your current extensions, run on an existing system:
-    # codium --list-extensions
-    #
-    # To export extension settings:
-    # cat ~/.config/VSCodium/User/settings.json
   };
 }
