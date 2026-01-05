@@ -5,6 +5,7 @@ let
       ./latitude-hardware.nix
       inputs.self.nixosModules.common
       inputs.self.nixosModules.laptop-xfce
+      inputs.self.nixosModules.multi-monitor
       inputs.self.nixosModules.user-scott
     ];
     config = {
