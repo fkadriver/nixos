@@ -52,7 +52,6 @@
         syncthing = import ./modules/syncthing.nix flakeContext;
         tailscale = import ./modules/tailscale.nix flakeContext;
         user-scott = import ./modules/user-scott.nix flakeContext;
-        vscode = import ./modules/vscode.nix flakeContext;
         wireless = import ./modules/wireless.nix flakeContext;
       };
       overlays.default = overlay;

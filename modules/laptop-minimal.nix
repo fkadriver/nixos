@@ -1,7 +1,6 @@
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }: {
   imports = [
-    inputs.self.nixosModules.vscode  # VSCodium included in minimal
   ];
 
   config = {
@@ -24,7 +23,8 @@
 
     # Minimal laptop applications (no Hyprland, no Bitwarden, no 3D printing, no home design)
     environment.systemPackages = with pkgs; [
-      # Development (VSCodium now in vscode module)
+      # Development
+      vscodium          # Settings and extensions managed via GitHub Settings Sync
       python3Minimal
       claude-code
 

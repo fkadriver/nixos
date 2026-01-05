@@ -6,7 +6,6 @@
     inputs.self.nixosModules.home-design
     inputs.self.nixosModules.hyprland
     inputs.self.nixosModules.iphone
-    inputs.self.nixosModules.vscode
     inputs.self.nixosModules.wireless
   ];
 
@@ -16,7 +15,8 @@
 
     # Laptop-specific applications
     environment.systemPackages = with pkgs; [
-      # Development (VSCodium now in vscode module)
+      # Development
+      vscodium          # Settings and extensions managed via GitHub Settings Sync
       python3Minimal
       claude-code
 
