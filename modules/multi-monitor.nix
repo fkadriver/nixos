@@ -27,20 +27,41 @@
   # Custom lid switch handler script
   environment.etc."lid-switch-handler.sh" = {
     text = ''
-      #!/usr/bin/env bash
+      #!${pkgs.bash}/bin/bash
       # Custom lid switch handler for docked/external power scenarios
+
+      # Set PATH for NixOS
+      PATH=/run/current-system/sw/bin:$PATH
+
+      # Find the X display and user
+      for x in /tmp/.X11-unix/X*; do
+        DISPLAY=":''${x##/tmp/.X11-unix/X}"
+        USER=$(who | grep "(:''${x##/tmp/.X11-unix/X})" | awk '{print $1}' | head -1)
+        if [ -n "$USER" ]; then
+          break
+        fi
+      done
+
+      # If no X session found, log and exit
+      if [ -z "$DISPLAY" ] || [ -z "$USER" ]; then
+        logger "Lid event: No X session found, skipping"
+        exit 0
+      fi
+
+      export DISPLAY
+      export XAUTHORITY="/home/$USER/.Xauthority"
 
       LID_STATE=$(cat /proc/acpi/button/lid/LID*/state | awk '{print $2}')
 
       if [ "$LID_STATE" = "closed" ]; then
         # Check if we have external displays connected
-        EXTERNAL_DISPLAYS=$(xrandr | grep " connected" | grep -v "eDP" | wc -l)
+        EXTERNAL_DISPLAYS=$(su - "$USER" -c "DISPLAY=$DISPLAY xrandr | grep ' connected' | grep -v 'eDP' | wc -l")
 
         if [ "$EXTERNAL_DISPLAYS" -gt 0 ]; then
           # Disable the laptop's internal display
-          INTERNAL_DISPLAY=$(xrandr | grep "eDP" | awk '{print $1}')
+          INTERNAL_DISPLAY=$(su - "$USER" -c "DISPLAY=$DISPLAY xrandr | grep 'eDP' | awk '{print \$1}'")
           if [ -n "$INTERNAL_DISPLAY" ]; then
-            xrandr --output "$INTERNAL_DISPLAY" --off
+            su - "$USER" -c "DISPLAY=$DISPLAY xrandr --output $INTERNAL_DISPLAY --off"
             logger "Lid closed: Disabled internal display $INTERNAL_DISPLAY"
           fi
         else
@@ -50,20 +71,19 @@
             /run/current-system/sw/bin/systemctl suspend
 
           # Notify user about the countdown
-          DISPLAY=:0 notify-send -u critical "Lid Closed" \
-            "No external displays detected. System will suspend in 5 minutes." \
-            -t 10000
+          su - "$USER" -c "DISPLAY=$DISPLAY notify-send -u critical 'Lid Closed' \
+            'No external displays detected. System will suspend in 5 minutes.' \
+            -t 10000"
         fi
       else
         # Lid opened - cancel any pending suspend and re-enable internal display
-        systemctl --user list-timers --all | grep -q suspend && \
-          pkill -f "systemd-run.*suspend" && \
+        pkill -f "systemd-run.*suspend" && \
           logger "Lid opened: Cancelled suspend timer"
 
         # Re-enable internal display
-        INTERNAL_DISPLAY=$(xrandr | grep "eDP" | awk '{print $1}')
+        INTERNAL_DISPLAY=$(su - "$USER" -c "DISPLAY=$DISPLAY xrandr | grep 'eDP' | awk '{print \$1}'")
         if [ -n "$INTERNAL_DISPLAY" ]; then
-          xrandr --output "$INTERNAL_DISPLAY" --auto
+          su - "$USER" -c "DISPLAY=$DISPLAY xrandr --output $INTERNAL_DISPLAY --auto"
           logger "Lid opened: Enabled internal display $INTERNAL_DISPLAY"
         fi
       fi
