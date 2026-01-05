@@ -19,18 +19,11 @@
           # Development Tools
           mkhl.direnv                         # direnv integration
 
-        ] ++ pkgs.vscode-utils.extensionsFromVscodeMarketplace [
-          # Claude Code extension
-          {
-            name = "claude-code";
-            publisher = "anthropic";
-            version = "latest";
-            sha256 = "sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
-          }
-          # Note: You may need to update the version and sha256 hash above
-          # or install Claude Code manually via the VSCodium marketplace
-          # Check with: codium --list-extensions
         ];
+        # Note: Claude Code extension must be installed manually via VSCodium marketplace
+        # It's not available in nixpkgs and cannot be declaratively installed
+        # Install from: Extensions > Search "Claude Code" > Install
+        # Or from CLI: codium --install-extension anthropic.claude-code
       })
     ];
 
@@ -139,7 +132,7 @@
 
         The NixOS configuration has created default VSCodium settings at:
           /etc/vscodium-settings.json
-          /etc/vscodium-keybindings.json
+          /etc/vscodium-keybindings.json 
 
         To use these settings, run:
 
