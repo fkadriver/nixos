@@ -48,6 +48,7 @@
         multi-monitor = import ./modules/multi-monitor.nix flakeContext;
         shell-aliases = import ./modules/shell-aliases.nix flakeContext;
         syncthing = import ./modules/syncthing.nix flakeContext;
+        syncthing-declarative = import ./modules/syncthing-declarative.nix flakeContext;
         tailscale = import ./modules/tailscale.nix flakeContext;
         user-scott = import ./modules/user-scott.nix flakeContext;
         wireless = import ./modules/wireless.nix flakeContext;

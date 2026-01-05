@@ -1,0 +1,13 @@
+# Syncthing .stignore template
+# Place this file as ~/.ssh/.stignore to prevent syncing Syncthing's config
+
+# IMPORTANT: Don't sync Syncthing's own config directory
+# This prevents duplicate device IDs and configuration conflicts
+.config/syncthing
+
+# Don't sync known_hosts as it's machine-specific
+known_hosts
+known_hosts.old
+
+# Don't sync SSH agent socket
+agent.*

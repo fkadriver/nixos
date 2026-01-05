@@ -29,3 +29,4 @@ Thumbs.db
 
 # Temp photos
 *.JPEG
+.sops.yaml

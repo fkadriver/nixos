@@ -3,13 +3,21 @@ let
   nixosModule = { config, lib, pkgs, ... }: {
     imports = [
       ./airbook-hardware.nix
+      ./airbook-syncthing.nix
       inputs.self.nixosModules.common
       inputs.self.nixosModules.laptop-xfce
       inputs.self.nixosModules.multi-monitor
       inputs.self.nixosModules.wireless
       inputs.self.nixosModules.user-scott
+      inputs.self.nixosModules.bitwarden
     ];
     config = {
+      # Enable Bitwarden secrets management
+      services.bitwarden-secrets = {
+        enable = true;
+        # secretsFile will default to ../secrets/secrets.yaml
+      };
+
       # Filesystem configuration (matches disko partition layout)
       fileSystems."/" = {
         device = "/dev/nvme0n1p3";  # Root is now p3 (after boot and swap)
