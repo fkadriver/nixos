@@ -22,7 +22,13 @@
         enableXfwm = true;
         enableScreensaver = true;
       };
-
+      # Screen saver timeout (15 minutes = 900 seconds)
+      serverFlagsSection = ''
+        Option "BlankTime" "15"
+        Option "StandbyTime" "15"
+        Option "SuspendTime" "15"
+        Option "OffTime" "15"
+      '';
     };
 
     # Touchpad support for laptops
@@ -60,7 +66,7 @@
       xfce4-netload-plugin
       xfce4-pulseaudio-plugin
       xfce4-screenshooter
-      xfce4-systemload-plugin
+      xfce4-systemload-plugin      # CPU/memory usage for notification area
       xfce4-taskmanager
       xfce4-weather-plugin
       xfce4-whiskermenu-plugin
