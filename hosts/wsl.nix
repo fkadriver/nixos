@@ -6,40 +6,36 @@ let
       inputs.self.nixosModules.user-scott
     ];
     config = {
-      # WSL-specific configuration
-      wsl = {
-        enable = true;
-        defaultUser = "scott";
-        startMenuLaunchers = true;
-
-        # Enable native Docker support
-        docker-native.enable = false;  # Use Docker from common.nix instead
-
-        # WSL-specific settings
-        wslConf = {
-          automount.root = "/mnt";
-          network.generateHosts = true;
-          network.generateResolvConf = true;
-        };
-      };
+      # Basic WSL-compatible configuration
+      # Note: For full WSL integration, add nixos-wsl as a flake input
+      # For now, this is a minimal Linux config that works on WSL
 
       # Networking
       networking = {
         hostName = "wsl-nixos";
+        # Use host's DNS resolution (WSL provides this)
+        useHostResolvConf = true;
       };
 
-      # Minimal WSL-specific packages
-      environment.systemPackages = with pkgs; [
-        # WSL utilities
-        wslu  # WSL utilities
+      # Disable systemd-resolved (conflicts with WSL networking)
+      services.resolved.enable = lib.mkForce false;
 
+      # Disable systemd services that don't work well in WSL
+      boot.isContainer = true;
+
+      # Minimal WSL-friendly packages
+      environment.systemPackages = with pkgs; [
         # Development tools
         vscodium
         python3
 
-        # Windows interop
-        # (wslu provides wslview, wslpath, etc.)
+        # System utilities
+        which
+        procps
       ];
+
+      # Use systemd in WSL (supported in WSL2)
+      boot.loader.grub.enable = false;
 
       system.stateVersion = "25.04";
     };

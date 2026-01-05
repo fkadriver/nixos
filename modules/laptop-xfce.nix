@@ -48,10 +48,10 @@
     services.blueman.enable = true;  # Blueman GUI for XFCE
 
     # Lid switch behavior - don't suspend when external monitor connected
-    services.logind = {
-      lidSwitch = "suspend";  # Suspend when lid closed normally
-      lidSwitchDocked = "ignore";  # Don't suspend when docked (external monitor)
-      lidSwitchExternalPower = "ignore";  # Don't suspend on AC power with lid closed
+    services.logind.settings.Login = {
+      HandleLidSwitch = "suspend";
+      HandleLidSwitchDocked = "ignore";
+      HandleLidSwitchExternalPower = "ignore";
     };
 
     # Laptop-specific applications
