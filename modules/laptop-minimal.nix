@@ -20,6 +20,12 @@
     variant = "";
   };
 
+  # Bluetooth support
+  hardware.bluetooth = {
+    enable = true;
+    powerOnBoot = true;
+  };
+  services.blueman.enable = true;  # Blueman GUI for XFCE
 
     # Minimal laptop applications (no Hyprland, no Bitwarden, no 3D printing, no home design)
     environment.systemPackages = with pkgs; [

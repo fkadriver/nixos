@@ -49,6 +49,13 @@
     # Browser
     programs.firefox.enable = true;
 
+    # Bluetooth support
+    hardware.bluetooth = {
+      enable = true;
+      powerOnBoot = true;
+    };
+    services.blueman.enable = true;  # Blueman GUI (works with Wayland)
+
     # Dynamic linking support for non-NixOS binaries
     # Required for VSCode extensions with native binaries (like Claude Code)
     # The nix-ld module automatically sets NIX_LD and NIX_LD_LIBRARY_PATH

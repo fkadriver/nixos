@@ -40,6 +40,13 @@
       };
     };
 
+    # Bluetooth support
+    hardware.bluetooth = {
+      enable = true;
+      powerOnBoot = true;
+    };
+    services.blueman.enable = true;  # Blueman GUI for XFCE
+
     # Laptop-specific applications
     environment.systemPackages = with pkgs; [
       # Development
