@@ -103,7 +103,8 @@
     enable = true;
     lidEventCommands = ''
       # Only run custom handler when on external power or docked
-      POWER_STATE=$(cat /sys/class/power_supply/AC*/online 2>/dev/null || echo "0")
+      # Check both AC* (Dell) and ADP* (MacBook) power supply paths
+      POWER_STATE=$(cat /sys/class/power_supply/AC*/online 2>/dev/null || cat /sys/class/power_supply/ADP*/online 2>/dev/null || echo "0")
 
       if [ "$POWER_STATE" = "1" ]; then
         # On external power - use custom handler

@@ -8,6 +8,7 @@
         clr = "clear";
 
         # Tailscale SSH shortcuts
+        airbook = "tailscale ssh airbook-nixos-1";
         nas01 = "tailscale ssh nas01";
         slap = "tailscale ssh latitude-nixos";
         log01 = "tailscale ssh sands-log01";
