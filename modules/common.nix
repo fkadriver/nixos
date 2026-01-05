@@ -57,6 +57,11 @@
           enable = true;
         };
       };
+      starship = {
+        enable = true;
+        # Starship is a fast, customizable shell prompt
+        # Config file can be created at ~/.config/starship.toml
+      };
     };
 
     # Timezone
