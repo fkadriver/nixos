@@ -29,10 +29,10 @@
         latitude = import ./hosts/latitude.nix flakeContext;
         latitude-minimal = import ./hosts/latitude-minimal.nix flakeContext;
         latitude-xfce = import ./hosts/latitude-xfce.nix flakeContext;
-        latitude-hyprland = import ./hosts/latitude-hyprland.nix flakeContext;
         airbook = import ./hosts/airbook.nix flakeContext;
         nas01 = import ./hosts/nas01.nix flakeContext;
         installer = import ./hosts/installer.nix flakeContext;
+        wsl = import ./hosts/wsl.nix flakeContext;
       };
       nixosModules = {
         "3d-printing" = import ./modules/3d-printing.nix flakeContext;
@@ -41,10 +41,8 @@
         common = import ./modules/common.nix flakeContext;
         disko-config = import ./modules/disko-config.nix flakeContext;
         home-design = import ./modules/home-design.nix flakeContext;
-        hyprland = import ./modules/hyprland.nix flakeContext;
         idrive-e360 = import ./modules/idrive-e360.nix flakeContext;
         iphone = import ./modules/iphone.nix flakeContext;
-        laptop-hyprland = import ./modules/laptop-hyprland.nix flakeContext;
         laptop-xfce = import ./modules/laptop-xfce.nix flakeContext;
         laptop-minimal = import ./modules/laptop-minimal.nix flakeContext;
         multi-monitor = import ./modules/multi-monitor.nix flakeContext;
