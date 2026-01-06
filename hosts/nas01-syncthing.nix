@@ -5,7 +5,7 @@
 
     folders = {
       documents = {
-        path = "/home/scott/Documents";
+        path = "/btrfs/raid5/syncthing/Documents";
         devices = [ "latitude" "airbook" ];
         versioning = {
           type = "simple";
