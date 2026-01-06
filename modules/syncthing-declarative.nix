@@ -12,6 +12,13 @@ let
     airbook = "YXQRVDE-2LBYEEB-MRR33Y3-34C3AEM-Q3KV32O-X74BXNC-4BUWSJZ-SOQC3AX";
     server = "O5ICANC-MMANGNF-6S23FIO-UIUK4S2-6E6JKZK-VGNFOJO-BXZ3UBK-DO7JLQ6";  # nas01
   };
+
+  # Tailscale IP addresses for cross-network connectivity
+  tailscaleAddresses = {
+    latitude = "100.107.63.92";
+    airbook = "100.64.100.37";
+    server = "100.116.206.46";  # nas01
+  };
 in
 {
   options.services.syncthing-declarative = {
@@ -96,6 +103,7 @@ in
         in
         mapAttrs (name: id: {
           id = id;
+          addresses = [ "tcp://${tailscaleAddresses.${name}}:22000" ];
         }) otherDevices;
 
       # Declarative folder configuration
