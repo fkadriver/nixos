@@ -5,10 +5,13 @@ inputs.nixpkgs.lib.nixosSystem {
   specialArgs = { inherit inputs; };
   modules = [
     ./nas01-hardware.nix
+    ./nas01-disko.nix
+    ./nas01-syncthing.nix
     inputs.self.nixosModules.common
     inputs.self.nixosModules.user-scott
+    inputs.self.nixosModules.syncthing-declarative
+    inputs.self.nixosModules.idrive-e360
     inputs.disko.nixosModules.disko
-    inputs.self.nixosModules.disko-config
     {
       config = {
         networking = {
@@ -20,12 +23,14 @@ inputs.nixpkgs.lib.nixosSystem {
           enable = true;
           settings = {
             PermitRootLogin = "no";
-            PasswordAuthentication = true;  # Change to false after setting up keys
+            PasswordAuthentication = false;  # Use SSH keys only
           };
         };
 
-        # Open SSH port in firewall
-        networking.firewall.allowedTCPPorts = [ 22 ];
+        # Bitwarden secrets management
+        services.bitwarden-secrets = {
+          enable = true;
+        };
 
         system = {
           stateVersion = "25.04";
