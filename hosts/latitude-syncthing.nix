@@ -1,9 +1,4 @@
-{ inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }: {
-  imports = [
-    inputs.self.nixosModules.syncthing-declarative
-  ];
-
   services.syncthing-declarative = {
     enable = true;
     deviceName = "latitude";
