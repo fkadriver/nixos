@@ -10,7 +10,6 @@ let
       inputs.self.nixosModules.syncthing-declarative
       inputs.self.nixosModules.wireless
       inputs.self.nixosModules.user-scott
-      inputs.self.nixosModules.bitwarden
     ];
     config = {
       # Enable Bitwarden secrets management
