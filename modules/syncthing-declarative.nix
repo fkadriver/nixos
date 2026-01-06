@@ -97,7 +97,7 @@ in
 
       # Declarative device configuration
       overrideDevices = true;
-      devices =
+      settings.devices =
         let
           otherDevices = removeAttrs deviceIds [ cfg.deviceName ];
         in
@@ -108,7 +108,7 @@ in
 
       # Declarative folder configuration
       overrideFolders = true;
-      folders = mapAttrs (name: folderCfg: {
+      settings.folders = mapAttrs (name: folderCfg: {
         path = folderCfg.path;
         devices = folderCfg.devices;
         ignorePerms = folderCfg.ignorePerms;
