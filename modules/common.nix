@@ -19,6 +19,10 @@
         rsync
         tmux
         ncdu
+        # Network troubleshooting tools
+        bind          # dig, nslookup
+        netcat        # nc
+        tcpdump       # packet analyzer
       ];
     };
 
