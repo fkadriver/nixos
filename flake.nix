@@ -32,7 +32,6 @@
         airbook = import ./hosts/airbook.nix flakeContext;
         nas01 = import ./hosts/nas01.nix flakeContext;
         installer = import ./hosts/installer.nix flakeContext;
-        wsl = import ./hosts/wsl.nix flakeContext;
       };
       nixosModules = {
         "3d-printing" = import ./modules/3d-printing.nix flakeContext;
