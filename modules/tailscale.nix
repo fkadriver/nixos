@@ -22,6 +22,9 @@
       tailscale = {
         enable = true;
         useRoutingFeatures = "both";
+        # Auto-authenticate using auth key from secrets (if bitwarden-secrets is enabled)
+        authKeyFile = lib.mkIf config.services.bitwarden-secrets.enable
+          config.sops.secrets."tailscale/auth_key".path;
       };
     };
   };

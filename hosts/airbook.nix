@@ -16,6 +16,18 @@ let
       services.bitwarden-secrets = {
         enable = true;
         # secretsFile will default to ../secrets/secrets.yaml
+
+        # Deploy SSH keys from secrets
+        sshKeys = {
+          id_ed25519 = {
+            secretName = "ssh/github_key";
+            user = "scott";
+          };
+          id_ed25519_legacy = {
+            secretName = "ssh/legacy_ssh_key";
+            user = "scott";
+          };
+        };
       };
 
       # Filesystem configuration (matches disko partition layout)
