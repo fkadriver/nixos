@@ -16,6 +16,19 @@
       };
     };
 
+    # Passwordless sudo for tailscale commands
+    security.sudo.extraRules = [
+      {
+        users = [ "scott" ];
+        commands = [
+          {
+            command = "${pkgs.tailscale}/bin/tailscale";
+            options = [ "NOPASSWD" ];
+          }
+        ];
+      }
+    ];
+
     # Git configuration for user scott
     programs.git = {
       enable = true;

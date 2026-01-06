@@ -2,7 +2,6 @@
 { config, lib, pkgs, ... }: {
   imports = [
     inputs.self.nixosModules.tailscale
-    inputs.self.nixosModules.syncthing
     inputs.self.nixosModules.shell-aliases
   ];
   config = {
