@@ -12,12 +12,6 @@
           params.keep = "5";  # Keep 5 old versions
         };
       };
-
-      ssh = {
-        path = "/home/scott/.ssh";
-        devices = [ "airbook" "server" ];
-        ignorePerms = false;  # Preserve permissions for SSH keys
-      };
     };
   };
 }
