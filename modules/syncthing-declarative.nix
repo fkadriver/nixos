@@ -10,14 +10,14 @@ let
   deviceIds = {
     latitude = "AH7R53Y-PH464V2-R4P7MSY-T7BUWHP-CVPJLL5-ZDIEJZ7-SNDVKDC-3ROY7AZ";
     airbook = "YXQRVDE-2LBYEEB-MRR33Y3-34C3AEM-Q3KV32O-X74BXNC-4BUWSJZ-SOQC3AX";
-    server = "O5ICANC-MMANGNF-6S23FIO-UIUK4S2-6E6JKZK-VGNFOJO-BXZ3UBK-DO7JLQ6";  # nas01
+    nas01 = "O5ICANC-MMANGNF-6S23FIO-UIUK4S2-6E6JKZK-VGNFOJO-BXZ3UBK-DO7JLQ6";
   };
 
   # Tailscale IP addresses for cross-network connectivity
   tailscaleAddresses = {
     latitude = "100.107.63.92";
     airbook = "100.64.100.37";
-    server = "100.116.206.46";  # nas01
+    nas01 = "100.116.206.46";
   };
 in
 {

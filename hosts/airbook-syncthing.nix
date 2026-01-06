@@ -4,12 +4,28 @@
     deviceName = "airbook";
 
     folders = {
-      documents = {
+      Documents = {
         path = "/home/scott/Documents";
-        devices = [ "latitude" "server" ];
+        devices = [ "latitude" "nas01" ];
         versioning = {
           type = "simple";
           params.keep = "5";  # Keep 5 old versions
+        };
+      };
+      Photos = {
+        path = "/home/scott/Photos";
+        devices = [ "latitude" "nas01" ];
+        versioning = {
+          type = "simple";
+          params.keep = "5";
+        };
+      };
+      Downloads = {
+        path = "/home/scott/Downloads";
+        devices = [ "latitude" "nas01" ];
+        versioning = {
+          type = "simple";
+          params.keep = "5";
         };
       };
     };
