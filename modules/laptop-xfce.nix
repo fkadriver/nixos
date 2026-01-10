@@ -58,6 +58,7 @@
     environment.systemPackages = with pkgs; [
       # Development
       vscodium          # Install Syncing extension manually: codium --install-extension nonoroazoro.syncing
+      nodejs
       python3Minimal
       claude-code
 
