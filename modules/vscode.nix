@@ -17,10 +17,15 @@
           # Tailscale extension
           tailscale.vscode-tailscale
 
-          # Claude Code extension (add this line)
-          anthropic.claude-code
+          # Don't use anthropic.claude-code here - it has wrong hash
         ] ++ pkgs.vscode-utils.extensionsFromVscodeMarketplace [
-          # Add any additional extensions from marketplace here if needed
+          # Claude Code extension from marketplace with correct hash
+          {
+            name = "claude-code";
+            publisher = "anthropic";
+            version = "2.0.75";
+            sha256 = "sha256-LXUIp+Rqh0prvFLgmbiSVJYHNY2ECVAfK8GLmDRMcxU=";
+          }
         ];
       })
     ];
