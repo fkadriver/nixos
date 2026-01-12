@@ -3,11 +3,11 @@ let
   nixosModule = { config, lib, pkgs, ... }: {
     imports = [
       ./latitude-hardware.nix
-      ./latitude-syncthing.nix
+      # ./latitude-syncthing.nix
       inputs.self.nixosModules.common
       inputs.self.nixosModules.laptop-xfce
       inputs.self.nixosModules.multi-monitor
-      inputs.self.nixosModules.syncthing-declarative
+      # inputs.self.nixosModules.syncthing-declarative
       inputs.self.nixosModules.user-scott
     ];
     config = {

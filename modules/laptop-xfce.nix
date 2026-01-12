@@ -2,9 +2,10 @@
 { config, lib, pkgs, ... }: {
   imports = [
     inputs.self.nixosModules."3d-printing"
-    inputs.self.nixosModules.bitwarden
+    # inputs.self.nixosModules.bitwarden
     inputs.self.nixosModules.home-design
     inputs.self.nixosModules.iphone
+    inputs.self.nixosModules.vscode
     inputs.self.nixosModules.wireless
   ];
 
@@ -57,7 +58,6 @@
     # Laptop-specific applications
     environment.systemPackages = with pkgs; [
       # Development
-      vscodium          # Install Syncing extension manually: codium --install-extension nonoroazoro.syncing
       python3Minimal
       claude-code
 
