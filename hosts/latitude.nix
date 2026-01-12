@@ -12,22 +12,22 @@ let
     ];
     config = {
       # Enable Bitwarden secrets management
-      services.bitwarden-secrets = {
-        enable = true;
-        # secretsFile will default to ../secrets/secrets.yaml
+      # services.bitwarden-secrets = {
+      #   enable = true;
+      #   # secretsFile will default to ../secrets/secrets.yaml
 
-        # Deploy SSH keys from secrets
-        sshKeys = {
-          id_ed25519 = {
-            secretName = "ssh/github_key";
-            user = "scott";
-          };
-          id_ed25519_legacy = {
-            secretName = "ssh/legacy_ssh_key";
-            user = "scott";
-          };
-        };
-      };
+      #   # Deploy SSH keys from secrets
+      #   sshKeys = {
+      #     id_ed25519 = {
+      #       secretName = "ssh/github_key";
+      #       user = "scott";
+      #     };
+      #     id_ed25519_legacy = {
+      #       secretName = "ssh/legacy_ssh_key";
+      #       user = "scott";
+      #     };
+      #   };
+      # };
 
       hardware = {
         logitech = {
