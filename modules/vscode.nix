@@ -1,7 +1,13 @@
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }: {
   config = {
+    # Allow unfree packages (needed for Claude Code and VSCode)
+    nixpkgs.config.allowUnfree = true;
+    
     environment.systemPackages = with pkgs; [
+      # Add Claude Code
+      claude-code
+      
       (vscode-with-extensions.override {
         vscode = vscode;
         vscodeExtensions = with vscode-extensions; [
