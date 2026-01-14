@@ -13,13 +13,12 @@
           # Python support
           ms-python.python
           ms-python.vscode-pylance
-
+          
+          # ChatGPT / LLM
+          continue.continue
+          
           # Tailscale extension
           tailscale.vscode-tailscale
-
-          # ChatGPT extensions
-          mpociot.chatgpt-vscode
-          jnoortheen.genie
 
           # Don't use anthropic.claude-code here - it has wrong hash
         ] ++ pkgs.vscode-utils.extensionsFromVscodeMarketplace [
