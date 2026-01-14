@@ -149,8 +149,8 @@ EOF
   '';
 
   # Disable internal display on login if lid is closed
-  # This runs when the display manager starts
-  services.displayManager.sessionCommands = ''
+  # This runs when the X session starts
+  services.xserver.displayManager.sessionCommands = ''
     # Check if lid is closed
     LID_STATE=$(cat /proc/acpi/button/lid/LID*/state 2>/dev/null | awk '{print $2}')
     if [ "$LID_STATE" = "closed" ]; then
