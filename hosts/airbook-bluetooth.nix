@@ -1,4 +1,3 @@
-{ inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }:
 
 # Airbook-specific hardware configuration:

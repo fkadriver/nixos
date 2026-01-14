@@ -4,7 +4,7 @@ let
     imports = [
       ./airbook-hardware.nix
       ./airbook-syncthing.nix
-      # ./airbook-bluetooth.nix
+      ./airbook-bluetooth.nix
       inputs.self.nixosModules.common
       inputs.self.nixosModules.laptop-xfce
       inputs.self.nixosModules.multi-monitor
