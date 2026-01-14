@@ -1,5 +1,36 @@
 { inputs, ... }@flakeContext:
-{ config, lib, pkgs, ... }: {
+{ config, lib, pkgs, ... }: 
+
+let
+  # Create a patched version of the Claude Code extension
+  claude-code-patched = pkgs.vscode-utils.buildVscodeMarketplaceExtension {
+    mktplcRef = {
+      name = "claude-code";
+      publisher = "anthropic";
+      version = "2.0.75";
+      # Specify linux-x64 platform to get correct binary
+      arch = "linux-x64";
+      sha256 = "sha256-c6h6IlsmiE2bkVIq9DCANqo5a+wkSCZo1Ok5xI5xihI=";
+    };
+    
+    nativeBuildInputs = with pkgs; [ 
+      autoPatchelfHook
+    ];
+    
+    buildInputs = with pkgs; [
+      stdenv.cc.cc.lib
+    ];
+    
+    postInstall = ''
+      # Find and patch the claude binary
+      if [ -f "$out/share/vscode/extensions/anthropic.claude-code/resources/native-binary/claude" ]; then
+        chmod +x "$out/share/vscode/extensions/anthropic.claude-code/resources/native-binary/claude"
+        echo "Patching Claude binary..."
+      fi
+    '';
+  };
+in
+{
   config = {
     nixpkgs.config.allowUnfree = true;
     
@@ -19,16 +50,9 @@
           
           # Tailscale extension
           tailscale.vscode-tailscale
-
-          # Don't use anthropic.claude-code here - it has wrong hash
-        ] ++ pkgs.vscode-utils.extensionsFromVscodeMarketplace [
-          # Claude Code extension from marketplace with correct hash
-          {
-            name = "claude-code";
-            publisher = "anthropic";
-            version = "2.0.75";
-            sha256 = "sha256-LXUIp+Rqh0prvFLgmbiSVJYHNY2ECVAfK8GLmDRMcxU=";
-          }
+        ] ++ [
+          # Patched Claude Code extension
+          claude-code-patched
         ];
       })
     ];
