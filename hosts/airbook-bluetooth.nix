@@ -1,9 +1,9 @@
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }:
 
-# Bluetooth device pairing configuration for airbook
-# Adapter MAC: 30:35:AD:A2:51:67
-# Devices: SEENDA COE200 KB and MS
+# Airbook-specific hardware configuration:
+# - Bluetooth device pairing (SEENDA keyboard and mouse)
+# - Closed-lid boot handling (disable internal display on boot if lid closed)
 
 let
   btAdapterMAC = "30:35:AD:A2:51:67";
@@ -147,5 +147,19 @@ EOF
     chmod 700 /var/lib/bluetooth/${btAdapterMAC}/${mouseMAC}
     chmod 600 /var/lib/bluetooth/${btAdapterMAC}/${keyboardMAC}/info
     chmod 600 /var/lib/bluetooth/${btAdapterMAC}/${mouseMAC}/info
+  '';
+
+  # Disable internal display on login if lid is closed
+  # This runs when the display manager starts
+  services.displayManager.sessionCommands = ''
+    # Check if lid is closed
+    LID_STATE=$(cat /proc/acpi/button/lid/LID*/state 2>/dev/null | awk '{print $2}')
+    if [ "$LID_STATE" = "closed" ]; then
+      # Find and disable internal display (eDP)
+      INTERNAL=$(${pkgs.xorg.xrandr}/bin/xrandr | grep -E '^eDP' | awk '{print $1}')
+      if [ -n "$INTERNAL" ]; then
+        ${pkgs.xorg.xrandr}/bin/xrandr --output "$INTERNAL" --off
+      fi
+    fi
   '';
 }
