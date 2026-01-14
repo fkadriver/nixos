@@ -22,7 +22,11 @@
         users = [ "scott" ];
         commands = [
           {
-            command = "${pkgs.tailscale}/bin/tailscale";
+            command = "/nix/store/*/bin/tailscale *";
+            options = [ "NOPASSWD" ];
+          }
+          {
+            command = "/run/current-system/sw/bin/tailscale *";
             options = [ "NOPASSWD" ];
           }
         ];
