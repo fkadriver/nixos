@@ -8,6 +8,7 @@ let
       inputs.self.nixosModules.laptop-xfce
       inputs.self.nixosModules.multi-monitor
       inputs.self.nixosModules.syncthing-declarative
+      inputs.self.nixosModules.bitwarden
       inputs.self.nixosModules.wireless
       inputs.self.nixosModules.user-scott
     ];
