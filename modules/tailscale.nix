@@ -22,6 +22,10 @@
       tailscale = {
         enable = true;
         useRoutingFeatures = "both";
+        extraUpFlags = [
+          "--accept-routes"
+          "--ssh"
+        ];
         # Auto-authenticate using auth key from secrets (if bitwarden-secrets is enabled)
         authKeyFile = lib.mkIf
           (config.services ? bitwarden-secrets && config.services.bitwarden-secrets.enable)
