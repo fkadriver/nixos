@@ -66,7 +66,7 @@ let
       };
 
       networking = {
-        hostName = "airbook-nixos";
+        hostName = "airbook";
       };
       system = {
         stateVersion = "25.04";

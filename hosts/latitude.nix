@@ -39,7 +39,7 @@ let
         };
       };
       networking = {
-        hostName = "latitude-nixos";
+        hostName = "latitude";
       };
       system = {
         stateVersion = "25.04";
