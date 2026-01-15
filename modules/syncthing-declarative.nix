@@ -13,11 +13,12 @@ let
     nas01 = "O5ICANC-MMANGNF-6S23FIO-UIUK4S2-6E6JKZK-VGNFOJO-BXZ3UBK-DO7JLQ6";
   };
 
-  # Tailscale IP addresses for cross-network connectivity
-  tailscaleAddresses = {
-    latitude-nixos = "100.107.63.92";
-    airbook-nixos = "100.64.100.37";
-    nas01 = "100.116.206.46";
+  # nas01 is always behind Tailscale, latitude/airbook use dynamic discovery (same WiFi typically)
+  # "dynamic" means use Syncthing's automatic discovery
+  deviceAddresses = {
+    latitude = [ "dynamic" ];
+    airbook = [ "dynamic" ];
+    nas01 = [ "tcp://100.116.206.46:22000" ];  # Always use Tailscale for nas01
   };
 in
 {
@@ -103,7 +104,7 @@ in
         in
         mapAttrs (name: id: {
           id = id;
-          addresses = [ "tcp://${tailscaleAddresses.${name}}:22000" ];
+          addresses = deviceAddresses.${name};
         }) otherDevices;
 
       # Declarative folder configuration
