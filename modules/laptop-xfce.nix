@@ -70,6 +70,9 @@
       # Media
       shotwell
 
+      # Office
+      libreoffice
+
       # Utilities
       unzip
 

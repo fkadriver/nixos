@@ -14,7 +14,7 @@ let
 in
 {
   options.services.idrive-e360 = {
-    enable = mkEnableOption "iDrive e360 backup service";
+    enable = mkEnableOption "iDrive e360 backup client";
 
     debFile = mkOption {
       type = types.nullOr types.path;
@@ -52,12 +52,6 @@ in
       description = "Root directory to backup";
     };
 
-    autoStart = mkOption {
-      type = types.bool;
-      default = true;
-      description = "Whether to automatically start the iDrive e360 service";
-    };
-
     scheduledBackup = {
       enable = mkEnableOption "scheduled automatic backups";
 
@@ -76,32 +70,14 @@ in
 
   config = mkIf cfg.enable {
     # Add iDrive e360 package to system packages
+    # Available commands:
+    #   idrive360         - Interactive account setup (run manually in terminal)
+    #   idrive360-backup  - Run backup (requires prior setup)
+    #   idrive360-restore - Run restore (requires prior setup)
     environment.systemPackages = [ cfg.package ];
 
-    # Create iDrive e360 systemd service
-    systemd.services.idrive-e360 = {
-      description = "iDrive e360 Backup Service";
-      after = [ "network-online.target" ];
-      wants = [ "network-online.target" ];
-      wantedBy = mkIf cfg.autoStart [ "multi-user.target" ];
-
-      serviceConfig = {
-        Type = "simple";
-        User = cfg.user;
-        ExecStart = "${cfg.package}/bin/idrive360";
-        Restart = "on-failure";
-        RestartSec = "30s";
-
-        # Security hardening
-        PrivateTmp = true;
-        NoNewPrivileges = true;
-        ProtectSystem = "strict";
-        ProtectHome = "read-only";
-        ReadWritePaths = [ cfg.configDir cfg.dataDir ];
-      };
-    };
-
     # Scheduled backup timer (if enabled)
+    # Note: You must first run 'idrive360' interactively to configure your account
     systemd.timers.idrive-e360-backup = mkIf cfg.scheduledBackup.enable {
       description = "iDrive e360 Scheduled Backup Timer";
       wantedBy = [ "timers.target" ];
@@ -120,7 +96,7 @@ in
       serviceConfig = {
         Type = "oneshot";
         User = cfg.user;
-        ExecStart = "${cfg.package}/bin/idrive360 --backup";
+        ExecStart = "${cfg.package}/bin/idrive360-backup";
 
         # Security hardening
         PrivateTmp = true;
