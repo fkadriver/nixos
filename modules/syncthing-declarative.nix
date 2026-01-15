@@ -15,8 +15,8 @@ let
 
   # Tailscale IP addresses for cross-network connectivity
   tailscaleAddresses = {
-    latitude = "100.107.63.92";
-    airbook = "100.64.100.37";
+    latitude-nixos = "100.107.63.92";
+    airbook-nixos = "100.64.100.37";
     nas01 = "100.116.206.46";
   };
 in
