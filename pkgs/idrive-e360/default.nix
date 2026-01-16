@@ -107,6 +107,14 @@ stdenv.mkDerivation rec {
       --replace-fail 'our $perlBin              = "/opt/idrive360/Idrivelib/dependencies/perl/perl";' \
                      'our $perlBin              = "${perl}/bin/perl";'
 
+    # Fix hardcoded 'root' user - use whoami instead to detect actual user
+    # This allows the script to work correctly when run as non-root users
+    substituteInPlace $out/share/idrive360/Idrivelib/lib/AppConfig.pm \
+      --replace-fail '# our $mcUser = `whoami`;
+our $mcUser = "root";' \
+                     'our $mcUser = `whoami`;
+# our $mcUser = "root";'
+
     # Create a setup script that creates a mutable runtime directory
     # iDrive needs to write .serviceLocation and other files to its app directory
     # Since Nix store is read-only, we create a mutable copy in ~/.idrive360-app
