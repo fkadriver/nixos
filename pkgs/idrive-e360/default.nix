@@ -168,8 +168,8 @@ if [ ! -d "$IDRIVE_APP_DIR" ]; then
     echo "Setting up iDrive360 runtime directory at $IDRIVE_APP_DIR..."
     mkdir -p "$IDRIVE_APP_DIR"
     # Copy the entire share directory to make it writable
-    cp -r "$IDRIVE_STORE_DIR"/* "$IDRIVE_APP_DIR/"
-    chmod -R u+w "$IDRIVE_APP_DIR"
+    # Use --no-preserve=mode to ensure files are writable (Nix store files are read-only)
+    cp -rL --no-preserve=mode "$IDRIVE_STORE_DIR"/* "$IDRIVE_APP_DIR/"
     echo "Setup complete."
 fi
 
