@@ -19,6 +19,7 @@
 , ncurses    # for clear, tput
 , unzip
 , which
+, popt       # for EVS binary (idevsutil_dedup)
 }:
 
 # This package can be built in two ways:
@@ -57,6 +58,7 @@ stdenv.mkDerivation rec {
     zlib
     sqlite
     curl
+    popt  # Required by EVS binary (idevsutil_dedup)
   ];
 
   # Don't strip binaries (may break the iDrive client)
@@ -81,10 +83,29 @@ stdenv.mkDerivation rec {
     # Copy all iDrive360 files to share directory
     cp -r opt/idrive360/* $out/share/idrive360/
 
+    # Extract EVS binaries from tar.gz files so autoPatchelfHook can patch them
+    # The bundled tar files contain idevsutil_dedup which needs libpopt.so
+    pushd $out/share/idrive360/Idrivelib/dependencies/evsbin
+    for tarfile in *.tar.gz; do
+      if [ -f "$tarfile" ]; then
+        dirname="''${tarfile%.tar.gz}"
+        mkdir -p "$dirname"
+        tar -xzf "$tarfile" -C "$dirname"
+        rm "$tarfile"
+      fi
+    done
+    popd
+
     # Patch account_setting.pl to not set BACKGROUND mode
     # This allows interactive output to display properly
     substituteInPlace $out/share/idrive360/account_setting.pl \
       --replace-fail "\$AppConfig::callerEnv = 'BACKGROUND';" "\$AppConfig::callerEnv = 'INTERACTIVE';"
+
+    # Patch hardcoded perl path to use system perl
+    # The original points to /opt/idrive360/Idrivelib/dependencies/perl/perl which doesn't exist on NixOS
+    substituteInPlace $out/share/idrive360/Idrivelib/lib/AppConfig.pm \
+      --replace-fail 'our $perlBin              = "/opt/idrive360/Idrivelib/dependencies/perl/perl";' \
+                     'our $perlBin              = "${perl}/bin/perl";'
 
     # Create a setup script that creates a mutable runtime directory
     # iDrive needs to write .serviceLocation and other files to its app directory
@@ -94,6 +115,7 @@ stdenv.mkDerivation rec {
 set -e
 IDRIVE_APP_DIR="$HOME/.idrive360-app"
 IDRIVE_STORE_DIR="STORE_PATH_PLACEHOLDER"
+IDRIVE_SERVICE_DIR="$HOME/idriveIt"
 
 # Create mutable app directory if it doesn't exist
 if [ ! -d "$IDRIVE_APP_DIR" ]; then
@@ -103,6 +125,30 @@ if [ ! -d "$IDRIVE_APP_DIR" ]; then
     cp -r "$IDRIVE_STORE_DIR"/* "$IDRIVE_APP_DIR/"
     chmod -R u+w "$IDRIVE_APP_DIR"
     echo "Setup complete."
+fi
+
+# Ensure EVS binary is installed in the service directory
+# The iDrive Perl scripts expect idevsutil_dedup at ~/idriveIt/
+if [ ! -f "$IDRIVE_SERVICE_DIR/idevsutil_dedup" ]; then
+    echo "Installing EVS binary to $IDRIVE_SERVICE_DIR..."
+    mkdir -p "$IDRIVE_SERVICE_DIR"
+
+    # Detect architecture and copy appropriate binary
+    ARCH=$(uname -m)
+    EVS_BIN=""
+    if [[ "$ARCH" == "x86_64" || "$ARCH" == "amd64" ]]; then
+        EVS_BIN="$IDRIVE_APP_DIR/Idrivelib/dependencies/evsbin/x86_64/idevsutil_dedup"
+    elif [[ "$ARCH" == "i386" || "$ARCH" == "i686" ]]; then
+        EVS_BIN="$IDRIVE_APP_DIR/Idrivelib/dependencies/evsbin/x86/idevsutil_dedup"
+    fi
+
+    if [ -n "$EVS_BIN" ] && [ -f "$EVS_BIN" ]; then
+        cp "$EVS_BIN" "$IDRIVE_SERVICE_DIR/idevsutil_dedup"
+        chmod +x "$IDRIVE_SERVICE_DIR/idevsutil_dedup"
+        echo "EVS binary installed."
+    else
+        echo "Warning: Could not find EVS binary for architecture $ARCH"
+    fi
 fi
 
 # Run account_setting.pl from the mutable directory
@@ -117,9 +163,28 @@ SETUPSCRIPT
     cat > $out/bin/idrive360 <<'MAINSCRIPT'
 #!/usr/bin/env bash
 IDRIVE_APP_DIR="$HOME/.idrive360-app"
+IDRIVE_SERVICE_DIR="$HOME/idriveIt"
+
 if [ ! -d "$IDRIVE_APP_DIR" ]; then
     exec "$(dirname "$0")/idrive360-setup" "$@"
 fi
+
+# Ensure EVS binary is installed (may be needed after package upgrade)
+if [ ! -f "$IDRIVE_SERVICE_DIR/idevsutil_dedup" ]; then
+    mkdir -p "$IDRIVE_SERVICE_DIR"
+    ARCH=$(uname -m)
+    EVS_BIN=""
+    if [[ "$ARCH" == "x86_64" || "$ARCH" == "amd64" ]]; then
+        EVS_BIN="$IDRIVE_APP_DIR/Idrivelib/dependencies/evsbin/x86_64/idevsutil_dedup"
+    elif [[ "$ARCH" == "i386" || "$ARCH" == "i686" ]]; then
+        EVS_BIN="$IDRIVE_APP_DIR/Idrivelib/dependencies/evsbin/x86/idevsutil_dedup"
+    fi
+    if [ -n "$EVS_BIN" ] && [ -f "$EVS_BIN" ]; then
+        cp "$EVS_BIN" "$IDRIVE_SERVICE_DIR/idevsutil_dedup"
+        chmod +x "$IDRIVE_SERVICE_DIR/idevsutil_dedup"
+    fi
+fi
+
 cd "$IDRIVE_APP_DIR"
 exec perl account_setting.pl "$@"
 MAINSCRIPT
@@ -159,8 +224,8 @@ RESTORESCRIPT
     # Make all Perl scripts in share/idrive360 executable
     chmod +x $out/share/idrive360/*.pl
 
-    # Set proper permissions for subdirectories
-    chmod +x $out/share/idrive360/Idrivelib/dependencies/evsbin/*
+    # Set proper permissions for EVS binaries (now in subdirectories after extraction)
+    find $out/share/idrive360/Idrivelib/dependencies/evsbin -type f -name 'idevsutil*' -exec chmod +x {} \;
 
     runHook postInstall
   '';
