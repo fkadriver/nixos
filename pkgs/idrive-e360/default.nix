@@ -20,6 +20,9 @@
 , unzip
 , which
 , popt       # for EVS binary (idevsutil_dedup)
+, expat      # for bundled Python
+, xz         # for bundled Python (liblzma)
+, bzip2      # for bundled Python
 }:
 
 # This package can be built in two ways:
@@ -58,7 +61,10 @@ stdenv.mkDerivation rec {
     zlib
     sqlite
     curl
-    popt  # Required by EVS binary (idevsutil_dedup)
+    popt    # Required by EVS binary (idevsutil_dedup)
+    expat   # Required by bundled Python (libpython3.5m.so needs libexpat.so.1)
+    xz      # Required by bundled Python (liblzma.so.5)
+    bzip2   # Required by bundled Python (libbz2.so.1.0)
   ];
 
   # Don't strip binaries (may break the iDrive client)
@@ -66,18 +72,15 @@ stdenv.mkDerivation rec {
 
   # Ignore missing dependencies for bundled binaries
   # - libperl.so: iDrive bundles Perl binaries for various distros but we use system Perl
-  # - Python-related libs: The bundled Python binary includes its own libraries
-  #   that have old Ubuntu dependencies we can't satisfy on NixOS
+  # - libapt-pkg: Ubuntu-specific package manager library, not used on NixOS
+  # - libreadline.so.6/libmpdec.so.2: Old versions not available on NixOS, but these
+  #   are for optional Python modules (readline, decimal) not used by iDrive
   autoPatchelfIgnoreMissingDeps = [
     "libperl.so.5.20"
     "libperl.so*"
-    # Bundled Python dependencies (Python 3.5 from Ubuntu)
-    "libbz2.so.1.0"
-    "libreadline.so.6"
-    "libapt-pkg.so.5.0"
-    "libexpat.so.1"
-    "liblzma.so.5"
-    "libmpdec.so.2"
+    "libapt-pkg.so.5.0"  # Ubuntu-specific, not needed
+    "libreadline.so.6"   # NixOS has newer version, optional module
+    "libmpdec.so.2"      # NixOS has newer version (libmpdec.so.4), optional module
   ];
 
   unpackPhase = ''
