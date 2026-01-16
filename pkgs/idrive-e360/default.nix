@@ -101,6 +101,19 @@ stdenv.mkDerivation rec {
     substituteInPlace $out/share/idrive360/account_setting.pl \
       --replace-fail "\$AppConfig::callerEnv = 'BACKGROUND';" "\$AppConfig::callerEnv = 'INTERACTIVE';"
 
+    # Re-enable authentication flow in account_setting.pl
+    # The e360 enterprise version has authentication disabled (commented with #-)
+    # and replaced with code that just loads existing credentials.
+    # We need to restore the original authentication prompts for first-time setup.
+    # Step 1: Uncomment the original auth code (remove #- prefix)
+    sed -i 's/^#-\t/\t/g' $out/share/idrive360/account_setting.pl
+    # Step 2: Comment out the TODO: NEW section that bypasses auth
+    sed -i '/^# TODO: NEW$/,/^# TODO: NEW-end$/{
+      /^# TODO: NEW$/b
+      /^# TODO: NEW-end$/b
+      s/^\t/#-\t/
+    }' $out/share/idrive360/account_setting.pl
+
     # Patch hardcoded perl path to use system perl
     # The original points to /opt/idrive360/Idrivelib/dependencies/perl/perl which doesn't exist on NixOS
     substituteInPlace $out/share/idrive360/Idrivelib/lib/AppConfig.pm \
