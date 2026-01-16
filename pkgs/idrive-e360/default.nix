@@ -64,9 +64,21 @@ stdenv.mkDerivation rec {
   # Don't strip binaries (may break the iDrive client)
   dontStrip = true;
 
-  # Ignore missing libperl.so dependencies - iDrive bundles its own Perl
-  # binaries for various distros but we use the system Perl instead
-  autoPatchelfIgnoreMissingDeps = [ "libperl.so.5.20" "libperl.so*" ];
+  # Ignore missing dependencies for bundled binaries
+  # - libperl.so: iDrive bundles Perl binaries for various distros but we use system Perl
+  # - Python-related libs: The bundled Python binary includes its own libraries
+  #   that have old Ubuntu dependencies we can't satisfy on NixOS
+  autoPatchelfIgnoreMissingDeps = [
+    "libperl.so.5.20"
+    "libperl.so*"
+    # Bundled Python dependencies (Python 3.5 from Ubuntu)
+    "libbz2.so.1.0"
+    "libreadline.so.6"
+    "libapt-pkg.so.5.0"
+    "libexpat.so.1"
+    "liblzma.so.5"
+    "libmpdec.so.2"
+  ];
 
   unpackPhase = ''
     runHook preUnpack
