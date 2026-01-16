@@ -96,6 +96,16 @@ stdenv.mkDerivation rec {
     done
     popd
 
+    # Extract Python binary for x86_64
+    # iDrive uses a bundled Python-based binary for API requests
+    # It expects the binary at Idrivelib/dependencies/python/idrive360
+    mkdir -p $out/share/idrive360/Idrivelib/dependencies/python
+    if [ -f "$out/share/idrive360/Idrivelib/dependencies/pythonbin/k3/x86_64/python.tar.gz" ]; then
+      tar -xzf "$out/share/idrive360/Idrivelib/dependencies/pythonbin/k3/x86_64/python.tar.gz" \
+        -C $out/share/idrive360/Idrivelib/dependencies/python --strip-components=1
+      chmod +x $out/share/idrive360/Idrivelib/dependencies/python/idrive360
+    fi
+
     # Patch account_setting.pl to not set BACKGROUND mode
     # This allows interactive output to display properly
     substituteInPlace $out/share/idrive360/account_setting.pl \
