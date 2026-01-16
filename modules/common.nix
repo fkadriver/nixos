@@ -23,6 +23,9 @@
         bind          # dig, nslookup
         netcat        # nc
         tcpdump       # packet analyzer
+
+
+        jdupes	      # Delint systems
       ];
     };
 
