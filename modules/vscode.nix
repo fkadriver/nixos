@@ -36,7 +36,10 @@ in
 
     # Enable gnome-keyring for VSCode settings sync
     services.gnome.gnome-keyring.enable = true;
+
+    # Enable PAM integration for auto-unlock on login
     security.pam.services.login.enableGnomeKeyring = true;
+    security.pam.services.lightdm.enableGnomeKeyring = true;
     security.pam.services.gdm.enableGnomeKeyring = true;
 
     # Install libsecret and keyring management tools
