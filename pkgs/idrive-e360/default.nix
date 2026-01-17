@@ -23,6 +23,7 @@
 , expat      # for bundled Python
 , xz         # for bundled Python (liblzma)
 , bzip2      # for bundled Python
+, fakeroot   # for bypassing root check in Python binary
 }:
 
 # This package can be built in two ways:
@@ -33,7 +34,7 @@
 #   nix-build -E 'with import <nixpkgs> {}; callPackage ./pkgs/idrive-e360/default.nix { src = /path/to/idrive360.deb; }'
 
 let
-  runtimePath = lib.makeBinPath [ coreutils inetutils ncurses bash perl unzip which curl gnutar gzip ];
+  runtimePath = lib.makeBinPath [ coreutils inetutils ncurses bash perl unzip which curl gnutar gzip fakeroot ];
 in
 stdenv.mkDerivation rec {
   pname = "idrive-e360";
@@ -118,6 +119,18 @@ stdenv.mkDerivation rec {
     if [ -f "$out/share/idrive360/Idrivelib/dependencies/pythonbin/k3/x86_64/python.tar.gz" ]; then
       tar -xzf "$out/share/idrive360/Idrivelib/dependencies/pythonbin/k3/x86_64/python.tar.gz" \
         -C $out/share/idrive360/Idrivelib/dependencies/python --strip-components=1
+      # Rename the actual binary and create a fakeroot wrapper
+      # The binary checks if running as root and refuses to work otherwise
+      mv $out/share/idrive360/Idrivelib/dependencies/python/idrive360 \
+         $out/share/idrive360/Idrivelib/dependencies/python/idrive360.real
+      # Ensure the binary has execute permission (cp --no-preserve=mode in setup removes it)
+      chmod 755 $out/share/idrive360/Idrivelib/dependencies/python/idrive360.real
+      cat > $out/share/idrive360/Idrivelib/dependencies/python/idrive360 <<PYWRAP
+#!/usr/bin/env bash
+# Wrapper to bypass root check in iDrive Python binary
+# The binary uses whoami to check if running as root and exits if not
+exec ${fakeroot}/bin/fakeroot "\$(dirname "\$0")/idrive360.real" "\$@"
+PYWRAP
       chmod +x $out/share/idrive360/Idrivelib/dependencies/python/idrive360
     fi
 
@@ -177,8 +190,9 @@ if [ ! -d "$IDRIVE_APP_DIR" ]; then
     # Use --no-preserve=mode to ensure files are writable (Nix store files are read-only)
     # Use trailing /. to copy contents of directory (avoids glob issues with many files)
     cp -rL --no-preserve=mode "$IDRIVE_STORE_DIR/." "$IDRIVE_APP_DIR"
-    # Make the python binary executable (--no-preserve=mode removes execute bit)
+    # Make the python binaries executable (--no-preserve=mode removes execute bit)
     chmod +x "$IDRIVE_APP_DIR/Idrivelib/dependencies/python/idrive360" 2>/dev/null || true
+    chmod +x "$IDRIVE_APP_DIR/Idrivelib/dependencies/python/idrive360.real" 2>/dev/null || true
     echo "Setup complete."
 fi
 
