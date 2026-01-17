@@ -153,6 +153,13 @@ our $mcUser = "root";' \
                      'our $mcUser = `whoami`;
 # our $mcUser = "root";'
 
+    # Patch hasPythonBinary to skip version check
+    # The e360 python binary requires root/sudo even for version check,
+    # which causes it to delete the pre-extracted binary on non-root systems
+    substituteInPlace $out/share/idrive360/Idrivelib/lib/Common.pm \
+      --replace-fail 'unless ($idrivepyver eq $AppConfig::pythonVersion) {' \
+                     'if (0) { # Version check disabled for NixOS'
+
     # Create a setup script that creates a mutable runtime directory
     # iDrive needs to write .serviceLocation and other files to its app directory
     # Since Nix store is read-only, we create a mutable copy in ~/.idrive360-app
@@ -166,10 +173,10 @@ IDRIVE_SERVICE_DIR="$HOME/idriveIt"
 # Create mutable app directory if it doesn't exist
 if [ ! -d "$IDRIVE_APP_DIR" ]; then
     echo "Setting up iDrive360 runtime directory at $IDRIVE_APP_DIR..."
-    mkdir -p "$IDRIVE_APP_DIR"
     # Copy the entire share directory to make it writable
     # Use --no-preserve=mode to ensure files are writable (Nix store files are read-only)
-    cp -rL --no-preserve=mode "$IDRIVE_STORE_DIR"/* "$IDRIVE_APP_DIR/"
+    # Use trailing /. to copy contents of directory (avoids glob issues with many files)
+    cp -rL --no-preserve=mode "$IDRIVE_STORE_DIR/." "$IDRIVE_APP_DIR"
     # Make the python binary executable (--no-preserve=mode removes execute bit)
     chmod +x "$IDRIVE_APP_DIR/Idrivelib/dependencies/python/idrive360" 2>/dev/null || true
     echo "Setup complete."
