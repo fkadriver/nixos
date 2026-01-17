@@ -39,10 +39,11 @@ in
     security.pam.services.login.enableGnomeKeyring = true;
     security.pam.services.gdm.enableGnomeKeyring = true;
 
-    # Install libsecret for keyring access
+    # Install libsecret and keyring management tools
     environment.systemPackages = with pkgs; [
       libsecret
       gnome-keyring
+      seahorse  # GUI for managing keyrings
       (vscode-with-extensions.override {
         vscode = vscode;
         vscodeExtensions = with vscode-extensions; [

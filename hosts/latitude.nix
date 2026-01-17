@@ -9,7 +9,6 @@ let
       inputs.self.nixosModules.multi-monitor
       inputs.self.nixosModules.syncthing-declarative
       inputs.self.nixosModules.bitwarden
-      inputs.self.nixosModules.idrive-e360
       inputs.self.nixosModules.user-scott
     ];
     config = {
@@ -29,12 +28,6 @@ let
             user = "scott";
           };
         };
-      };
-
-      # Enable iDrive e360 backup service
-      services.idrive-e360 = {
-        enable = true;
-        user = "scott";
       };
 
       hardware = {
