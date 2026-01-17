@@ -33,8 +33,16 @@ in
 {
   config = {
     nixpkgs.config.allowUnfree = true;
-    
+
+    # Enable gnome-keyring for VSCode settings sync
+    services.gnome.gnome-keyring.enable = true;
+    security.pam.services.login.enableGnomeKeyring = true;
+    security.pam.services.gdm.enableGnomeKeyring = true;
+
+    # Install libsecret for keyring access
     environment.systemPackages = with pkgs; [
+      libsecret
+      gnome-keyring
       (vscode-with-extensions.override {
         vscode = vscode;
         vscodeExtensions = with vscode-extensions; [
@@ -44,12 +52,16 @@ in
           # Python support
           ms-python.python
           ms-python.vscode-pylance
-          
+
           # ChatGPT / LLM
           continue.continue
-          
+
           # Tailscale extension
           tailscale.vscode-tailscale
+
+          # Docker and container support
+          ms-azuretools.vscode-docker
+          ms-vscode-remote.remote-containers
         ] ++ [
           # Patched Claude Code extension
           claude-code-patched

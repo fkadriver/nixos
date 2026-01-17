@@ -1,0 +1,56 @@
+# iDrive e360 Docker Compose configuration
+#
+# Usage:
+#   1. Download IDrive360.deb from your iDrive console
+#   2. Place it in this directory as IDrive360.deb
+#   3. Run: docker-compose build --network=host
+#   4. Run: docker-compose run --rm idrive360  (for interactive setup)
+#   5. After setup, run backups with: docker-compose run --rm idrive360-backup
+#
+services:
+  idrive360:
+    build:
+      context: .
+      network: host
+    # Run as root since e360 Python binary requires it
+    user: root
+    network_mode: host
+    volumes:
+      # Persist iDrive configuration in /opt/idrive360 (where it expects it)
+      - idrive-data:/opt/idrive360/idriveIt
+      # Mount your home directory for backup (read-only for safety)
+      - ${HOME}:/data:ro
+    stdin_open: true
+    tty: true
+    working_dir: /opt/idrive360
+
+  idrive360-backup:
+    build:
+      context: .
+      network: host
+    user: root
+    network_mode: host
+    volumes:
+      - idrive-data:/opt/idrive360/idriveIt
+      - ${HOME}:/data:ro
+    working_dir: /opt/idrive360
+    # Run backup
+    command: ["perl", "Backup_Script.pl"]
+
+  idrive360-restore:
+    build:
+      context: .
+      network: host
+    user: root
+    network_mode: host
+    volumes:
+      - idrive-data:/opt/idrive360/idriveIt
+      # Mount with write access for restore
+      - ${HOME}:/data
+    stdin_open: true
+    tty: true
+    working_dir: /opt/idrive360
+    command: ["perl", "Restore_Script.pl"]
+
+volumes:
+  idrive-data:
