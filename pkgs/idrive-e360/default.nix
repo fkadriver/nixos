@@ -170,6 +170,8 @@ if [ ! -d "$IDRIVE_APP_DIR" ]; then
     # Copy the entire share directory to make it writable
     # Use --no-preserve=mode to ensure files are writable (Nix store files are read-only)
     cp -rL --no-preserve=mode "$IDRIVE_STORE_DIR"/* "$IDRIVE_APP_DIR/"
+    # Make the python binary executable (--no-preserve=mode removes execute bit)
+    chmod +x "$IDRIVE_APP_DIR/Idrivelib/dependencies/python/idrive360" 2>/dev/null || true
     echo "Setup complete."
 fi
 
