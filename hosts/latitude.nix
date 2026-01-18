@@ -9,6 +9,7 @@ let
       inputs.self.nixosModules.multi-monitor
       inputs.self.nixosModules.syncthing-declarative
       inputs.self.nixosModules.bitwarden
+      inputs.self.nixosModules.borg-backup
       inputs.self.nixosModules.user-scott
     ];
     config = {
@@ -27,6 +28,32 @@ let
             secretName = "ssh/legacy_ssh_key";
             user = "scott";
           };
+        };
+      };
+
+      # Borg backup to NAS
+      services.borg-backup = {
+        enable = true;
+        repository = "ssh://scott@nas01/mnt/storage/backups/borg/latitude";
+        paths = [ "/home/scott" ];
+        exclude = [
+          "/home/scott/.cache"
+          "/home/scott/.local/share/Trash"
+          "/home/scott/Downloads"
+          "/home/scott/.npm"
+          "/home/scott/.cargo"
+          "/home/scott/.rustup"
+          "/home/scott/node_modules"
+          "*.pyc"
+          "*/__pycache__"
+        ];
+        encryption.passphraseFile = "/etc/borg-passphrase";
+        sshKeyFile = "/home/scott/.ssh/id_ed25519";
+        schedule = "daily";
+        prune.keep = {
+          daily = 7;
+          weekly = 4;
+          monthly = 6;
         };
       };
 

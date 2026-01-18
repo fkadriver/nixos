@@ -52,7 +52,17 @@
       settings = {
         experimental-features = [ "nix-command" "flakes" ];
       };
+      # Garbage collection - keep 5-10 generations
+      gc = {
+        automatic = true;
+        dates = "weekly";
+        options = "--delete-older-than 30d";
+      };
     };
+
+    # Keep only the last 10 generations in the boot menu
+    boot.loader.systemd-boot.configurationLimit = 10;
+    boot.loader.grub.configurationLimit = 10;
 
     # Programs
     programs = {

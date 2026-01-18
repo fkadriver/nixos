@@ -37,6 +37,7 @@
         "3d-printing" = import ./modules/3d-printing.nix flakeContext;
         autorandr-profiles = import ./modules/autorandr-profiles.nix flakeContext;
         bitwarden = import ./modules/bitwarden.nix flakeContext;
+        borg-backup = import ./modules/borg-backup.nix flakeContext;
         common = import ./modules/common.nix flakeContext;
         disko-config = import ./modules/disko-config.nix flakeContext;
         home-design = import ./modules/home-design.nix flakeContext;
