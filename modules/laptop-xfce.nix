@@ -75,6 +75,7 @@
 
       # Utilities
       unzip
+      xarchiver  # Archive manager GUI for Thunar integration
 
       # XFCE plugins and utilities
       xfce4-battery-plugin
