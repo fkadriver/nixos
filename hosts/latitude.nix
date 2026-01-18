@@ -31,10 +31,10 @@ let
         };
       };
 
-      # Borg backup to NAS
+      # Borg backup to NAS via Tailscale
       services.borg-backup = {
         enable = true;
-        repository = "ssh://scott@nas01/mnt/storage/backups/borg/latitude";
+        repository = "ssh://scott@nas01.warthog-royal.ts.net/mnt/storage/backups/borg/latitude";
         paths = [ "/home/scott" ];
         exclude = [
           "/home/scott/.cache"
