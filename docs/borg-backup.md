@@ -10,8 +10,8 @@ Borg Backup is a deduplicating backup program that supports compression and encr
 
 | Host | Repository | Schedule |
 |------|------------|----------|
-| latitude | `ssh://scott@nas01.warthog-royal.ts.net/mnt/storage/backups/borg/latitude` | Daily |
-| airbook | `ssh://scott@nas01.warthog-royal.ts.net/mnt/storage/backups/borg/airbook` | Daily |
+| latitude | `ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/latitude` | Daily |
+| airbook | `ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/airbook` | Daily |
 
 ## Initial Setup
 
@@ -19,9 +19,9 @@ Borg Backup is a deduplicating backup program that supports compression and encr
 
 ```bash
 ssh nas01
-sudo mkdir -p /mnt/storage/backups/borg/latitude
-sudo mkdir -p /mnt/storage/backups/borg/airbook
-sudo chown -R scott:users /mnt/storage/backups/borg
+sudo mkdir -p /mnt/wd18T/Backups/latitude
+sudo mkdir -p /mnt/wd18T/Backups/airbook
+sudo chown -R scott:users /mnt/wd18T/Backups
 ```
 
 ### 2. Create passphrase file on each client
@@ -39,18 +39,18 @@ sudo chmod 600 /etc/borg-passphrase
 ```bash
 # On latitude
 sudo borg init --encryption=repokey-blake2 \
-  ssh://scott@nas01.warthog-royal.ts.net/mnt/storage/backups/borg/latitude
+  ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/latitude
 
 # On airbook
 sudo borg init --encryption=repokey-blake2 \
-  ssh://scott@nas01.warthog-royal.ts.net/mnt/storage/backups/borg/airbook
+  ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/airbook
 ```
 
 ### 4. Export the repository key (important for recovery!)
 
 ```bash
 sudo borg key export \
-  ssh://scott@nas01.warthog-royal.ts.net/mnt/storage/backups/borg/$(hostname) \
+  ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/$(hostname) \
   ~/borg-key-$(hostname).txt
 ```
 
@@ -80,31 +80,31 @@ sudo systemctl start borgbackup-job-system.service
 ### List backups
 
 ```bash
-sudo borg list ssh://scott@nas01.warthog-royal.ts.net/mnt/storage/backups/borg/$(hostname)
+sudo borg list ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/$(hostname)
 ```
 
 ### View backup info
 
 ```bash
-sudo borg info ssh://scott@nas01.warthog-royal.ts.net/mnt/storage/backups/borg/$(hostname)
+sudo borg info ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/$(hostname)
 ```
 
 ### Restore files
 
 ```bash
 # List contents of a specific backup
-sudo borg list ssh://scott@nas01.warthog-royal.ts.net/mnt/storage/backups/borg/$(hostname)::ARCHIVE_NAME
+sudo borg list ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/$(hostname)::ARCHIVE_NAME
 
 # Extract specific files to current directory
 sudo borg extract \
-  ssh://scott@nas01.warthog-royal.ts.net/mnt/storage/backups/borg/$(hostname)::ARCHIVE_NAME \
+  ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/$(hostname)::ARCHIVE_NAME \
   home/scott/Documents/important-file.txt
 
 # Extract entire backup to a restore directory
 sudo mkdir /tmp/restore
 cd /tmp/restore
 sudo borg extract \
-  ssh://scott@nas01.warthog-royal.ts.net/mnt/storage/backups/borg/$(hostname)::ARCHIVE_NAME
+  ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/$(hostname)::ARCHIVE_NAME
 ```
 
 ### Mount backup as filesystem (for browsing)
@@ -112,7 +112,7 @@ sudo borg extract \
 ```bash
 sudo mkdir /mnt/borg
 sudo borg mount \
-  ssh://scott@nas01.warthog-royal.ts.net/mnt/storage/backups/borg/$(hostname) \
+  ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/$(hostname) \
   /mnt/borg
 
 # Browse backups
@@ -165,14 +165,14 @@ sudo ls -la /home/scott/.ssh/id_ed25519
 If a backup was interrupted:
 ```bash
 sudo borg break-lock \
-  ssh://scott@nas01.warthog-royal.ts.net/mnt/storage/backups/borg/$(hostname)
+  ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/$(hostname)
 ```
 
 ### Check repository integrity
 
 ```bash
 sudo borg check \
-  ssh://scott@nas01.warthog-royal.ts.net/mnt/storage/backups/borg/$(hostname)
+  ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/$(hostname)
 ```
 
 ## Module Options

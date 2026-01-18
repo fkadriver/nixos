@@ -36,7 +36,7 @@ let
       # Borg backup to NAS via Tailscale
       services.borg-backup = {
         enable = true;
-        repository = "ssh://scott@nas01.warthog-royal.ts.net/mnt/storage/backups/borg/airbook";
+        repository = "ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/airbook";
         paths = [ "/home/scott" ];
         exclude = [
           "/home/scott/.cache"
