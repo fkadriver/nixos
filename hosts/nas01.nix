@@ -10,6 +10,7 @@ inputs.nixpkgs.lib.nixosSystem {
     inputs.self.nixosModules.common
     inputs.self.nixosModules.user-scott
     inputs.self.nixosModules.syncthing-declarative
+    inputs.self.nixosModules.bitwarden
     inputs.disko.nixosModules.disko
     {
       config = {

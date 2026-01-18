@@ -1,4 +1,3 @@
-{ inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }:
 {
   # Disko configuration for nas01 16GB OS drive
