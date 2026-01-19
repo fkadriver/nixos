@@ -77,6 +77,9 @@
       # Utilities
       unzip
       xarchiver  # Archive manager GUI for Thunar integration
+      xdotool    # For mouse button remapping
+      xbindkeys  # Bind mouse buttons to keyboard shortcuts
+      xorg.xev   # Test mouse button codes
 
       # XFCE plugins and utilities
       xfce4-battery-plugin
