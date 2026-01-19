@@ -72,6 +72,7 @@
 
       # Office
       libreoffice
+      thunderbird  # Email client (Gmail + iCloud)
 
       # Utilities
       unzip
