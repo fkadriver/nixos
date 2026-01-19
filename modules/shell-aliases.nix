@@ -7,6 +7,9 @@
         wtf = "alias";
         clr = "clear";
 
+        # Docker one-liners
+        docker run -d -p 8080:8080 humangod/cyberchef
+
         # Tailscale SSH shortcuts
         airbook = "tailscale ssh airbook";
         nas01 = "tailscale ssh nas01";
