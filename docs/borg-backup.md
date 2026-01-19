@@ -4,7 +4,7 @@ This document describes how to set up and use the Borg backup module in this Nix
 
 ## Overview
 
-Borg Backup is a deduplicating backup program that supports compression and encryption. Backups are sent to `nas01` via Tailscale, ensuring they work from any network.
+Borg Backup is a deduplicating backup program that supports compression and encryption. Backups are sent to `nas01` (Ubuntu server) via Tailscale, ensuring they work from any network.
 
 ## Configured Hosts
 
@@ -13,18 +13,22 @@ Borg Backup is a deduplicating backup program that supports compression and encr
 | latitude | `ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/latitude` | Daily |
 | airbook | `ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/airbook` | Daily |
 
-## Initial Setup
+## Server Setup (nas01 - Ubuntu)
 
-### 1. Create backup directories on nas01
+The backup server requires:
 
 ```bash
-ssh nas01
-sudo mkdir -p /mnt/wd18T/Backups/latitude
-sudo mkdir -p /mnt/wd18T/Backups/airbook
-sudo chown -R scott:users /mnt/wd18T/Backups
+# Install borgbackup
+sudo apt install borgbackup
+
+# Ensure SSH server is running
+sudo systemctl enable ssh
+sudo systemctl start ssh
 ```
 
-### 2. Create passphrase file on each client
+## Client Setup (NixOS)
+
+### 1. Create passphrase file on each client
 
 Use the same passphrase for all machines to simplify management:
 
@@ -34,7 +38,9 @@ echo "your-secure-passphrase" | sudo tee /etc/borg-passphrase
 sudo chmod 600 /etc/borg-passphrase
 ```
 
-### 3. Initialize the Borg repository (first time only)
+### 2. Initialize the Borg repository (from client, first time only)
+
+This creates the repository directory and initializes it with encryption:
 
 ```bash
 # On latitude
@@ -46,7 +52,7 @@ sudo borg init --encryption=repokey-blake2 \
   ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/airbook
 ```
 
-### 4. Export the repository key (important for recovery!)
+### 3. Export the repository key (important for recovery!)
 
 ```bash
 sudo borg key export \
