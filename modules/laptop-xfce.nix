@@ -2,7 +2,7 @@
 { config, lib, pkgs, ... }: {
   imports = [
     inputs.self.nixosModules."3d-printing"
-    # inputs.self.nixosModules.bitwarden
+    inputs.self.nixosModules.bitwarden
     inputs.self.nixosModules.home-design
     inputs.self.nixosModules.iphone
     inputs.self.nixosModules.syncthing-declarative
@@ -13,6 +13,21 @@
   config = {
     # Set boot label
     system.nixos.label = "XFCE";
+
+    # Enable Bitwarden secrets management
+    services.bitwarden-secrets = {
+      enable = true;
+      sshKeys = {
+        id_ed25519 = {
+          secretName = "ssh/github_key";
+          user = "scott";
+        };
+        id_ed25519_legacy = {
+          secretName = "ssh/legacy_ssh_key";
+          user = "scott";
+        };
+      };
+    };
 
     # Enable X11 and XFCE
     services.xserver = {
