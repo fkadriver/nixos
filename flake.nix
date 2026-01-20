@@ -34,7 +34,9 @@
         latitude = import ./hosts/latitude flakeContext;
         latitude-minimal = import ./hosts/latitude/minimal.nix flakeContext;
         latitude-xfce = import ./hosts/latitude/xfce.nix flakeContext;
+        latitude-kde = import ./hosts/latitude/kde.nix flakeContext;
         airbook = import ./hosts/airbook flakeContext;
+        airbook-kde = import ./hosts/airbook/kde.nix flakeContext;
         installer = import ./hosts/installer flakeContext;
       };
     };

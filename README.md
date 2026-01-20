@@ -7,8 +7,10 @@ A modular NixOS configuration for laptops and servers with automated installatio
 ### Laptops
 - **latitude**: Dell Latitude 7480 (XFCE) - Primary configuration with Borg backup, 3D printing
 - **latitude-xfce**: Dell Latitude 7480 with full applications (XFCE)
+- **latitude-kde**: Dell Latitude 7480 with KDE Plasma (Windows 11-like taskbar)
 - **latitude-minimal**: Dell Latitude 7480 minimal testing configuration (XFCE)
 - **airbook**: Apple MacBook Air 7,2 (13-inch, Early 2015/Mid 2017) (XFCE)
+- **airbook-kde**: Apple MacBook Air 7,2 with KDE Plasma
 
 ### Installer
 - **installer**: Bootable ISO with automated disk partitioning and installation
@@ -50,6 +52,27 @@ Full-featured XFCE desktop configuration.
 - Firefox browser
 - nix-ld for running non-NixOS binaries
 - Mouse button tools (xdotool, xbindkeys) for Logitech mice
+
+**Includes:**
+- `3d-printing.nix` - UltiMaker Cura, PrusaSlicer, FreeCAD, Blender
+- `vscode.nix` - VSCode with gnome-keyring integration
+- `wireless.nix` - WiFi configuration
+
+#### laptop-kde.nix
+KDE Plasma desktop configuration with Windows 11-like experience.
+
+**Desktop Environment:**
+- KDE Plasma 6
+- SDDM display manager (Wayland)
+- Boot label: "KDE"
+
+**Features:**
+- Windows 11-like taskbar (can be cloned to all monitors)
+- Development tools (VSCodium, Claude Code, Python)
+- Gaming support (Heroic, Lutris, Wine)
+- KDE applications (Dolphin, Konsole, Kate, Gwenview)
+- KDE Connect for phone integration
+- PipeWire audio
 
 **Includes:**
 - `3d-printing.nix` - UltiMaker Cura, PrusaSlicer, FreeCAD, Blender
@@ -188,11 +211,17 @@ sudo nixos-rebuild switch --flake .#latitude
 # For Dell Latitude 7480 with full XFCE
 sudo nixos-rebuild switch --flake .#latitude-xfce
 
+# For Dell Latitude 7480 with KDE Plasma
+sudo nixos-rebuild switch --flake .#latitude-kde
+
 # For Dell Latitude 7480 minimal testing
 sudo nixos-rebuild switch --flake .#latitude-minimal
 
-# For MacBook Air 7,2
+# For MacBook Air 7,2 with XFCE
 sudo nixos-rebuild switch --flake .#airbook
+
+# For MacBook Air 7,2 with KDE Plasma
+sudo nixos-rebuild switch --flake .#airbook-kde
 ```
 
 ### Build Automated Installer ISO (Recommended)
@@ -288,6 +317,7 @@ nix flake check
 
 The boot menu will display configurations with clear labels:
 - **XFCE** - Full XFCE desktop with all applications
+- **KDE** - KDE Plasma desktop (Windows 11-like)
 - **XFCE-minimal** - Minimal XFCE for testing
 
 ## Network Configuration
@@ -335,17 +365,20 @@ Then authenticate via the provided URL.
 │   │   ├── hardware.nix           # Hardware configuration
 │   │   ├── syncthing.nix          # Syncthing device config
 │   │   ├── minimal.nix            # Minimal testing configuration
-│   │   └── xfce.nix               # XFCE full configuration
+│   │   ├── xfce.nix               # XFCE full configuration
+│   │   └── kde.nix                # KDE Plasma configuration
 │   ├── airbook/
 │   │   ├── default.nix            # MacBook Air 7,2 configuration
 │   │   ├── hardware.nix           # Hardware configuration
 │   │   ├── syncthing.nix          # Syncthing device config
-│   │   └── bluetooth.nix          # Bluetooth configuration
+│   │   ├── bluetooth.nix          # Bluetooth configuration
+│   │   └── kde.nix                # KDE Plasma configuration
 │   └── installer/
 │       └── default.nix            # Automated installer ISO
 ├── modules/                       # Auto-discovered by flake.nix
 │   ├── common.nix                 # Base configuration (server-safe)
 │   ├── laptop-xfce.nix            # XFCE laptop configuration
+│   ├── laptop-kde.nix             # KDE Plasma laptop configuration
 │   ├── laptop-minimal.nix         # Minimal testing configuration
 │   ├── 3d-printing.nix            # Cura, PrusaSlicer, FreeCAD, Blender
 │   ├── borg-backup.nix            # Encrypted backup to remote servers
@@ -357,7 +390,7 @@ Then authenticate via the provided URL.
 │   ├── tailscale.nix              # VPN configuration
 │   ├── vscode.nix                 # VSCode with gnome-keyring
 │   └── user-scott.nix             # User account
-├── archive/                       # Archived/unused configurations
+├── archive/                       # Archived/unused configurations (see archive/README.md)
 │   ├── modules/                   # Hyprland, iDrive e360 modules
 │   ├── hosts/                     # Archived host configs
 │   └── pkgs/                      # Archived packages
