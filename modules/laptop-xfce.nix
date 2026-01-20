@@ -7,7 +7,7 @@
     inputs.self.nixosModules.iphone
     inputs.self.nixosModules.syncthing-declarative
     inputs.self.nixosModules.vscode
-    inputs.self.nixosModules.wireless
+    # Note: wireless module removed - add explicitly in host config if needed (e.g., airbook)
   ];
 
   config = {
