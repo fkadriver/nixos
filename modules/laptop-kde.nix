@@ -29,6 +29,9 @@
       };
     };
 
+    # Enable NetworkManager for network management
+    networking.networkmanager.enable = true;
+
     # Enable KDE Plasma
     services.xserver.enable = true;
     services.displayManager.sddm = {

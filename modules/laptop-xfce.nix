@@ -29,6 +29,9 @@
       };
     };
 
+    # Enable NetworkManager for network management
+    networking.networkmanager.enable = true;
+
     # Enable X11 and XFCE
     services.xserver = {
       enable = true;
