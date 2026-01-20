@@ -4,6 +4,7 @@ let
     imports = [
       ./hardware.nix
       ./bluetooth.nix
+      ./syncthing.nix
       inputs.self.nixosModules.common
       inputs.self.nixosModules.laptop-kde
       inputs.self.nixosModules.multi-monitor

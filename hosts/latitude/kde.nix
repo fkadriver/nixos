@@ -3,6 +3,7 @@ let
   nixosModule = { config, lib, pkgs, ... }: {
     imports = [
       ./hardware.nix
+      ./syncthing.nix
       inputs.self.nixosModules.common
       inputs.self.nixosModules.laptop-kde
       inputs.self.nixosModules.multi-monitor

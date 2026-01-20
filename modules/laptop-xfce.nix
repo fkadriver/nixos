@@ -5,6 +5,7 @@
     # inputs.self.nixosModules.bitwarden
     inputs.self.nixosModules.home-design
     inputs.self.nixosModules.iphone
+    inputs.self.nixosModules.syncthing-declarative
     inputs.self.nixosModules.vscode
     inputs.self.nixosModules.wireless
   ];

@@ -4,6 +4,7 @@
     inputs.self.nixosModules."3d-printing"
     inputs.self.nixosModules.home-design
     inputs.self.nixosModules.iphone
+    inputs.self.nixosModules.syncthing-declarative
     inputs.self.nixosModules.vscode
     inputs.self.nixosModules.wireless
   ];

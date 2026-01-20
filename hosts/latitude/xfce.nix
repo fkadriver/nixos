@@ -3,6 +3,7 @@ let
   nixosModule = { config, lib, pkgs, ... }: {
     imports = [
       ./hardware.nix
+      ./syncthing.nix
       inputs.self.nixosModules.common
       inputs.self.nixosModules.laptop-xfce
       inputs.self.nixosModules.multi-monitor
@@ -34,7 +35,7 @@ let
       };
 
       networking = {
-        hostName = "latitude-nixos";
+        hostName = "latitude";
       };
 
       system = {
