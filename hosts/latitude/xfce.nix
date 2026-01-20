@@ -4,6 +4,7 @@ let
     imports = [
       ./hardware.nix
       ./syncthing.nix
+      inputs.self.nixosModules.bitwarden
       inputs.self.nixosModules.common
       inputs.self.nixosModules.laptop-xfce
       inputs.self.nixosModules.multi-monitor
@@ -11,6 +12,20 @@ let
       inputs.self.nixosModules.user-scott
     ];
     config = {
+      # Enable Bitwarden secrets management
+      services.bitwarden-secrets = {
+        enable = true;
+        sshKeys = {
+          id_ed25519 = {
+            secretName = "ssh/github_key";
+            user = "scott";
+          };
+          id_ed25519_legacy = {
+            secretName = "ssh/legacy_ssh_key";
+            user = "scott";
+          };
+        };
+      };
       # Filesystem configuration (not using disko)
       fileSystems."/" = {
         device = "/dev/disk/by-uuid/43055209-fe59-4393-a198-02aded5e5a48";

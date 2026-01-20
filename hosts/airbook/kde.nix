@@ -5,6 +5,7 @@ let
       ./hardware.nix
       ./bluetooth.nix
       ./syncthing.nix
+      inputs.self.nixosModules.bitwarden
       inputs.self.nixosModules.common
       inputs.self.nixosModules.laptop-kde
       inputs.self.nixosModules.multi-monitor
@@ -12,6 +13,20 @@ let
       inputs.self.nixosModules.user-scott
     ];
     config = {
+      # Enable Bitwarden secrets management
+      services.bitwarden-secrets = {
+        enable = true;
+        sshKeys = {
+          id_ed25519 = {
+            secretName = "ssh/github_key";
+            user = "scott";
+          };
+          id_ed25519_legacy = {
+            secretName = "ssh/legacy_ssh_key";
+            user = "scott";
+          };
+        };
+      };
       # Filesystem configuration (matches disko partition layout)
       fileSystems."/" = {
         device = "/dev/nvme0n1p3";
