@@ -8,7 +8,7 @@
         clr = "clear";
 
         # Docker one-liners
-        cybercheck = "docker run -d -p 8080:8080 humangod/cyberchef"
+        cybercheck = "docker run -d -p 8080:8080 humangod/cyberchef";
 
         # Tailscale SSH shortcuts
         airbook = "tailscale ssh airbook";

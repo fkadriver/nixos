@@ -5,15 +5,10 @@ A modular NixOS configuration for laptops and servers with automated installatio
 ## Supported Configurations
 
 ### Laptops
-- **latitude**: Dell Latitude 7480 (XFCE)
+- **latitude**: Dell Latitude 7480 (XFCE) - Primary configuration with Borg backup, 3D printing
 - **latitude-xfce**: Dell Latitude 7480 with full applications (XFCE)
-- **latitude-gnome**: Dell Latitude 7480 with full applications (GNOME)
-- **latitude-hyprland**: Dell Latitude 7480 with full applications (Hyprland) *[Work in Progress]*
 - **latitude-minimal**: Dell Latitude 7480 minimal testing configuration (XFCE)
 - **airbook**: Apple MacBook Air 7,2 (13-inch, Early 2015/Mid 2017) (XFCE)
-
-### Servers (Headless)
-- **nas01**: Generic server configuration using common.nix
 
 ### Installer
 - **installer**: Bootable ISO with automated disk partitioning and installation
@@ -39,8 +34,6 @@ Server-compatible base configuration that can be used on any machine, including 
 
 ### Laptop Modules
 
-The configuration provides three laptop profiles with different desktop environments but identical applications:
-
 #### laptop-xfce.nix
 Full-featured XFCE desktop configuration.
 
@@ -53,50 +46,15 @@ Full-featured XFCE desktop configuration.
 - Development tools (VSCodium, Claude Code, Python)
 - Gaming support (Heroic, Lutris, Wine)
 - Media tools (Shotwell)
+- Office suite (LibreOffice, Thunderbird)
 - Firefox browser
 - nix-ld for running non-NixOS binaries
+- Mouse button tools (xdotool, xbindkeys) for Logitech mice
 
 **Includes:**
-- `bitwarden.nix` - Secrets management
+- `3d-printing.nix` - UltiMaker Cura, PrusaSlicer, FreeCAD, Blender
+- `vscode.nix` - VSCode with gnome-keyring integration
 - `wireless.nix` - WiFi configuration
-
-#### laptop-gnome.nix
-Full-featured GNOME desktop configuration.
-
-**Desktop Environment:**
-- GNOME Desktop Environment
-- GDM display manager
-- Boot label: "GNOME"
-
-**Features:**
-- Same applications as laptop-xfce
-- GNOME-specific utilities (gnome-tweaks, appindicator extension)
-- Excludes default apps (gnome-tour, epiphany, geary)
-- Adwaita cursor theme (fixes square cursor issue)
-
-**Includes:**
-- `bitwarden.nix` - Secrets management
-- `wireless.nix` - WiFi configuration
-
-#### laptop-hyprland.nix
-Hyprland Wayland desktop configuration. **[Work in Progress - Currently not working]**
-
-**Desktop Environment:**
-- Hyprland Wayland compositor
-- LightDM display manager
-- Boot label: "Hyprland"
-
-**Features:**
-- Same applications as laptop-xfce
-- Wayland-native environment
-- Full Hyprland desktop tools
-
-**Includes:**
-- `hyprland.nix` - Hyprland compositor and desktop environment
-- `bitwarden.nix` - Secrets management
-- `wireless.nix` - WiFi configuration
-
-**Status:** Hyprland launches successfully from TTY but encounters issues when launched through LightDM. Troubleshooting in progress.
 
 #### laptop-minimal.nix
 Minimal XFCE configuration for testing.
@@ -111,38 +69,6 @@ Minimal XFCE configuration for testing.
 - No gaming tools
 - No Bitwarden integration
 - No WiFi auto-configuration
-
-### Desktop Environment Modules
-
-#### hyprland.nix
-Complete Hyprland Wayland desktop environment.
-
-**Features:**
-- Hyprland compositor with XWayland support
-- LightDM display manager with Hyprland session
-- Full Wayland environment setup
-- Graphics drivers enabled
-- PipeWire audio (with ALSA, PulseAudio, JACK support)
-- XDG portals for screen sharing and file pickers
-- GNOME Keyring for credential storage
-- Qt and GTK theming (Adwaita Dark)
-
-**Included Applications:**
-- **Terminal**: Kitty
-- **Status Bar**: Waybar
-- **App Launcher**: Rofi
-- **Notifications**: Dunst
-- **Screenshots**: Grim + Slurp
-- **Screen Recording**: wf-recorder
-- **File Manager**: Thunar
-- **Image Viewer**: imv
-- **PDF Viewer**: Zathura
-- **Hyprland Tools**: hyprpaper, hyprlock, hypridle, hyprpicker
-
-**Fonts:**
-- Noto Fonts (including CJK and Color Emoji)
-- Font Awesome
-- Nerd Fonts (JetBrains Mono, Fira Code)
 
 ### Utility Modules
 
@@ -201,23 +127,31 @@ Automated disk partitioning configuration using disko.
 Automatically applied during installer ISO installation.
 Can be customized per-host by overriding the `disko.devices.disk.main.device` option.
 
-#### idrive-e360.nix
-Enterprise cloud backup service integration for offsite backups.
+#### borg-backup.nix
+Borg backup configuration for automated encrypted backups.
 
 **Features:**
-- iDrive e360 thin client for Linux
-- Systemd service for background backup daemon
-- Optional scheduled automatic backups via systemd timers
-- Security hardening (PrivateTmp, restricted filesystem access)
+- Encrypted backups (repokey-blake2)
+- SSH transport to remote servers
+- Automatic pruning with configurable retention
+- Systemd timer for scheduled backups
 
 **Configuration Options:**
-- Custom backup schedules (daily, weekly, custom times)
-- User-specific backup settings
-- Config and data directory customization
+- Repository path (local or SSH)
+- Backup paths and exclusions
+- Pruning schedule (daily, weekly, monthly retention)
+- Schedule (daily, weekly, or custom)
 
-**Usage:**
-Requires downloading the .deb package from your iDrive e360 console.
-See "iDrive e360 Cloud Backup" section below for setup instructions.
+#### 3d-printing.nix
+3D printing software for Creality Ender 3 V3 KE and other printers.
+
+**Included Software:**
+- UltiMaker Cura 5.7.1 (AppImage with desktop integration)
+- PrusaSlicer
+- FreeCAD
+- Blender
+- OpenSCAD
+- MeshLab
 
 #### syncthing.nix
 File synchronization service configuration.
@@ -254,20 +188,11 @@ sudo nixos-rebuild switch --flake .#latitude
 # For Dell Latitude 7480 with full XFCE
 sudo nixos-rebuild switch --flake .#latitude-xfce
 
-# For Dell Latitude 7480 with GNOME
-sudo nixos-rebuild switch --flake .#latitude-gnome
-
-# For Dell Latitude 7480 with Hyprland (work in progress)
-sudo nixos-rebuild switch --flake .#latitude-hyprland
-
 # For Dell Latitude 7480 minimal testing
 sudo nixos-rebuild switch --flake .#latitude-minimal
 
 # For MacBook Air 7,2
 sudo nixos-rebuild switch --flake .#airbook
-
-# For NAS server
-sudo nixos-rebuild switch --flake .#nas01
 ```
 
 ### Build Automated Installer ISO (Recommended)
@@ -341,17 +266,9 @@ Before installing on hardware, you can test configurations in a virtual machine:
 nix build .#nixosConfigurations.latitude-xfce.config.system.build.vm
 ./result/bin/run-latitude-nixos-vm
 
-# Build and run VM for Dell Latitude 7480 with GNOME
-nix build .#nixosConfigurations.latitude-gnome.config.system.build.vm
-./result/bin/run-latitude-nixos-vm
-
 # Build and run VM for MacBook Air 7,2
 nix build .#nixosConfigurations.airbook.config.system.build.vm
 ./result/bin/run-airbook-nixos-vm
-
-# Build and run VM for NAS server
-nix build .#nixosConfigurations.nas01.config.system.build.vm
-./result/bin/run-nas01-vm
 ```
 
 **VM Notes:**
@@ -360,7 +277,6 @@ nix build .#nixosConfigurations.nas01.config.system.build.vm
 - VM state is stored in the current directory (delete `*.qcow2` files to reset)
 - Press `Ctrl+Alt+G` to release mouse from VM window
 - Close window or run `poweroff` inside VM to shutdown
-- For nas01, SSH is available on forwarded port (check VM output for details)
 
 ### Check Configuration
 
@@ -372,8 +288,6 @@ nix flake check
 
 The boot menu will display configurations with clear labels:
 - **XFCE** - Full XFCE desktop with all applications
-- **GNOME** - Full GNOME desktop with all applications
-- **Hyprland** - Hyprland Wayland compositor (work in progress)
 - **XFCE-minimal** - Minimal XFCE for testing
 
 ## Network Configuration
@@ -395,30 +309,6 @@ sudo tailscale up
 
 Then authenticate via the provided URL.
 
-## Hyprland Usage (Work in Progress)
-
-**Current Status:** Hyprland successfully launches from TTY2 but encounters issues when launched through LightDM. The desktop environment is fully configured but needs display manager troubleshooting.
-
-### Testing Hyprland Manually
-
-You can test Hyprland by launching it manually:
-
-1. Boot into any configuration
-2. Switch to TTY2 with `Ctrl+Alt+F2`
-3. Login as your user
-4. Run: `Hyprland`
-
-This will launch Hyprland successfully, confirming the compositor and configuration are working correctly.
-
-### Key Applications (when working)
-
-- **Super + Enter** - Launch terminal (Kitty)
-- **Super + R** - Application launcher (Rofi)
-- **Super + Q** - Close window
-- **Super + E** - File manager (Thunar)
-- **Print** - Screenshot selection
-- **Shift + Print** - Full screenshot
-
 ## Hardware-Specific Notes
 
 ### MacBook Air 7,2
@@ -438,195 +328,65 @@ This will launch Hyprland successfully, confirming the compositor and configurat
 
 ```
 .
-├── flake.nix                      # Main flake configuration
+├── flake.nix                      # Main flake configuration (auto-discovers modules)
 ├── hosts/
-│   ├── latitude.nix               # Dell Latitude 7480 (XFCE default)
-│   ├── latitude-xfce.nix          # Dell Latitude 7480 (XFCE full)
-│   ├── latitude-gnome.nix         # Dell Latitude 7480 (GNOME full)
-│   ├── latitude-hyprland.nix      # Dell Latitude 7480 (Hyprland - WIP)
-│   ├── latitude-minimal.nix       # Dell Latitude 7480 (minimal testing)
-│   ├── latitude-hardware.nix      # Hardware configuration
-│   ├── airbook.nix                # MacBook Air 7,2 configuration
-│   ├── airbook-hardware.nix       # Hardware configuration
-│   ├── nas01.nix                  # NAS server configuration
-│   ├── nas01-hardware.nix         # Hardware configuration
-│   └── installer.nix              # Automated installer ISO
-├── modules/
+│   ├── latitude/
+│   │   ├── default.nix            # Dell Latitude 7480 (XFCE, Borg backup, 3D printing)
+│   │   ├── hardware.nix           # Hardware configuration
+│   │   ├── syncthing.nix          # Syncthing device config
+│   │   ├── minimal.nix            # Minimal testing configuration
+│   │   └── xfce.nix               # XFCE full configuration
+│   ├── airbook/
+│   │   ├── default.nix            # MacBook Air 7,2 configuration
+│   │   ├── hardware.nix           # Hardware configuration
+│   │   ├── syncthing.nix          # Syncthing device config
+│   │   └── bluetooth.nix          # Bluetooth configuration
+│   └── installer/
+│       └── default.nix            # Automated installer ISO
+├── modules/                       # Auto-discovered by flake.nix
 │   ├── common.nix                 # Base configuration (server-safe)
 │   ├── laptop-xfce.nix            # XFCE laptop configuration
-│   ├── laptop-gnome.nix           # GNOME laptop configuration
-│   ├── laptop-hyprland.nix        # Hyprland laptop configuration
 │   ├── laptop-minimal.nix         # Minimal testing configuration
-│   ├── hyprland.nix               # Hyprland desktop environment
-│   ├── hyprland-config.nix        # Default Hyprland keybindings
+│   ├── 3d-printing.nix            # Cura, PrusaSlicer, FreeCAD, Blender
+│   ├── borg-backup.nix            # Encrypted backup to remote servers
 │   ├── bitwarden.nix              # Secrets management
 │   ├── wireless.nix               # WiFi configuration
 │   ├── disko-config.nix           # Automated disk partitioning
-│   ├── idrive-e360.nix            # Cloud backup service
 │   ├── shell-aliases.nix          # System-wide aliases
 │   ├── syncthing.nix              # File synchronization
 │   ├── tailscale.nix              # VPN configuration
+│   ├── vscode.nix                 # VSCode with gnome-keyring
 │   └── user-scott.nix             # User account
-├── pkgs/
-│   └── idrive-e360/
-│       ├── default.nix            # iDrive e360 package definition
-│       └── README.md              # Package customization guide
+├── archive/                       # Archived/unused configurations
+│   ├── modules/                   # Hyprland, iDrive e360 modules
+│   ├── hosts/                     # Archived host configs
+│   └── pkgs/                      # Archived packages
 └── docs/
+    ├── borg-backup.md             # Borg backup setup and usage
     ├── bitwarden-secrets-setup.md # Comprehensive secrets guide
     └── bitwarden-examples.nix     # Example configurations
 ```
 
-## iDrive e360 Cloud Backup
+## Borg Backup
 
-iDrive e360 provides enterprise-grade offsite backup for your laptops and servers. The configuration includes a custom NixOS module for seamless integration.
+Borg backup is configured for encrypted backups to a remote server via SSH. See [docs/borg-backup.md](docs/borg-backup.md) for detailed setup and usage instructions.
 
-### Initial Setup
+### Quick Start
 
-1. **Get Your iDrive e360 Account ID**
-
-   Log into your iDrive e360 account at [https://www.idrive.com/endpoint-backup/](https://www.idrive.com/endpoint-backup/):
-   - Click "Add Devices"
-   - Select the "Linux" tab
-   - Note the download link URL which contains your account ID (e.g., `BBAVCS39384`)
-
-   You have two options:
-
-   **Option A: Use Direct URL (Recommended)**
-   - No manual download needed
-   - Update the account ID in `pkgs/idrive-e360/default.nix` (line 36)
-   - The package will fetch automatically during build
-
-   **Option B: Download Locally**
-   - Download the `.deb` package
-   - Save it to a known location (e.g., `/home/scott/Downloads/idrive360.deb`)
-   - Use `debFile` option in configuration (see step 3)
-
-2. **Enable iDrive e360 in Your Configuration**
-
-   Add the iDrive e360 module to your host configuration. For example, in `hosts/latitude-xfce.nix`:
-
-   ```nix
-   imports = [
-     ./latitude-hardware.nix
-     inputs.self.nixosModules.common
-     inputs.self.nixosModules.laptop-xfce
-     inputs.self.nixosModules.user-scott
-     inputs.self.nixosModules.idrive-e360  # Add this line
-   ];
-   ```
-
-3. **Configure iDrive e360**
-
-   Add configuration options to your host file:
-
-   **If using Option A (Direct URL):**
-   ```nix
-   config = {
-     networking = {
-       hostName = "latitude-nixos";
-     };
-
-     # iDrive e360 configuration (using direct URL from package)
-     services.idrive-e360 = {
-       enable = true;
-       user = "scott";
-
-       # Optional: Enable scheduled backups
-       scheduledBackup = {
-         enable = true;
-         schedule = "daily";  # Options: "daily", "weekly", "hourly", "Mon 09:00", etc.
-       };
-     };
-
-     system = {
-       stateVersion = "25.04";
-     };
-   };
-   ```
-
-   **If using Option B (Local .deb file):**
-   ```nix
-   config = {
-     # iDrive e360 configuration (using local .deb file)
-     services.idrive-e360 = {
-       enable = true;
-       debFile = /home/scott/Downloads/idrive360.deb;  # Path to your downloaded .deb
-       user = "scott";
-
-       scheduledBackup = {
-         enable = true;
-         schedule = "daily";
-       };
-     };
-   };
-   ```
-
-4. **Rebuild Your System**
-
-   ```bash
-   sudo nixos-rebuild switch --flake .#latitude-xfce
-   ```
-
-5. **Configure Backup Settings**
-
-   After the system rebuild, the iDrive e360 client will be available. Run the initial configuration:
-
-   ```bash
-   # The binary name may vary - check available commands:
-   which idrive360
-
-   # Run the client to configure your backup settings
-   idrive360
-   ```
-
-   Follow the prompts to:
-   - Authenticate with your iDrive e360 account
-   - Select folders to backup
-   - Configure backup schedule (if not using systemd timers)
-   - Set retention policies
-
-### Managing Backups
-
-**Check Service Status:**
 ```bash
-systemctl status idrive-e360
+# Initialize the repository (first time only)
+sudo borg init --encryption=repokey-blake2 ssh://user@server/path/to/repo
+
+# Create passphrase file
+echo "your-passphrase" | sudo tee /etc/borg-passphrase
+sudo chmod 600 /etc/borg-passphrase
+
+# Manual backup
+sudo systemctl start borgbackup-job-system
+
+# Check backup status
+sudo systemctl status borgbackup-job-system
 ```
-
-**View Backup Logs:**
-```bash
-journalctl -u idrive-e360 -f
-```
-
-**Manual Backup:**
-```bash
-# Trigger an immediate backup
-systemctl start idrive-e360-backup
-```
-
-**Check Timer Status (if scheduled backups enabled):**
-```bash
-systemctl list-timers idrive-e360-backup
-```
-
-### Configuration Options
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `enable` | boolean | false | Enable iDrive e360 service |
-| `debFile` | path | null | Path to downloaded .deb file |
-| `user` | string | "scott" | User account for backups |
-| `configDir` | string | "/home/user/.idrive360" | Config directory |
-| `dataDir` | string | "/home/user" | Root directory to backup |
-| `autoStart` | boolean | true | Auto-start service on boot |
-| `scheduledBackup.enable` | boolean | false | Enable scheduled backups |
-| `scheduledBackup.schedule` | string | "daily" | Backup schedule (systemd timer format) |
-
-### Security Notes
-
-- The iDrive e360 service runs with restricted permissions
-- Configuration directory has 700 permissions (user-only access)
-- Service uses `PrivateTmp` and `ProtectSystem=strict` for isolation
-- Only specified directories have read/write access
 
 ## Bitwarden Secrets Management
 
@@ -732,9 +492,7 @@ Manage SSH keys, Tailscale auth keys, WiFi passwords, and other secrets using Bi
 
 ## Future Enhancements
 
-- **Hyprland Display Manager**: Fix LightDM integration for Hyprland to enable automatic desktop launch
 - **Home Manager Integration**: For user-specific configuration management
-- **Hyprland Dotfiles**: Declarative Hyprland configuration via home-manager
 - **Additional Hardware**: Add support for more hardware configurations
 
 ## Contributing
