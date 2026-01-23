@@ -87,6 +87,9 @@
       # Networking tools
       wireshark
 
+      # Backup
+      borgbackup
+
       # Utilities
       unzip
       kdePackages.ark             # KDE archive manager

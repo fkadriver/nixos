@@ -93,6 +93,9 @@
       libreoffice
       thunderbird  # Email client (Gmail + iCloud)
 
+      # Backup
+      borgbackup
+
       # Utilities
       unzip
       xarchiver  # Archive manager GUI for Thunar integration
