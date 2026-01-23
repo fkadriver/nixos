@@ -117,12 +117,16 @@ in
           then "cat ${cfg.encryption.passphraseFile}"
           else null;
       };
-      environment = mkIf (cfg.sshKeyFile != null) {
-        BORG_RSH = "ssh -i ${cfg.sshKeyFile} -o StrictHostKeyChecking=accept-new";
-      };
+      environment = mkMerge [
+        (mkIf (cfg.sshKeyFile != null) {
+          BORG_RSH = "ssh -i ${cfg.sshKeyFile} -o StrictHostKeyChecking=accept-new";
+        })
+        (mkIf (cfg.remotePath != null) {
+          BORG_REMOTE_PATH = cfg.remotePath;
+        })
+      ];
       compression = "auto,zstd";
       startAt = cfg.schedule;
-      remotePath = cfg.remotePath;
       prune.keep = {
         daily = cfg.prune.keep.daily;
         weekly = cfg.prune.keep.weekly;

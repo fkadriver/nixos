@@ -14,6 +14,15 @@ let
       networking = {
         hostName = "latitude";
       };
+
+      # Borg backup to nas01
+      services.borg-backup = {
+        enable = true;
+        repository = "ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/latitude";
+        encryption.passphraseFile = "/etc/borg-passphrase";
+        sshKeyFile = "/home/scott/.ssh/id_ed25519";
+      };
+
       system = {
         stateVersion = "25.04";
       };
