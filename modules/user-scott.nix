@@ -33,6 +33,28 @@
       }
     ];
 
+    # SSH configuration (agent started by desktop environment)
+    programs.ssh = {
+      extraConfig = ''
+        # Automatically add keys to agent when first used
+        AddKeysToAgent yes
+
+        # Default identity files (loaded in order)
+        IdentityFile ~/.ssh/id_ed25519
+        IdentityFile ~/.ssh/id_ed25519_legacy
+
+        # GitHub
+        Host github.com
+          IdentityFile ~/.ssh/id_ed25519
+          IdentitiesOnly yes
+
+        # Legacy systems
+        Host *.local 192.168.*.*
+          IdentityFile ~/.ssh/id_ed25519_legacy
+          IdentitiesOnly yes
+      '';
+    };
+
     # Git configuration for user scott
     programs.git = {
       enable = true;
