@@ -44,18 +44,20 @@ This creates the repository directory and initializes it with encryption:
 
 ```bash
 # On latitude
-sudo borg init --encryption=repokey-blake2 \
+sudo borg init --encryption=repokey-blake2 --remote-path=/usr/bin/borg \
   ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/latitude
 
 # On airbook
-sudo borg init --encryption=repokey-blake2 \
+sudo borg init --encryption=repokey-blake2 --remote-path=/usr/bin/borg \
   ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/airbook
 ```
+
+**Note:** The `--remote-path=/usr/bin/borg` flag is required for manual commands because nas01 (Ubuntu) doesn't have borg in the default PATH for non-login SSH sessions. The systemd service handles this automatically.
 
 ### 3. Export the repository key (important for recovery!)
 
 ```bash
-sudo borg key export \
+sudo borg key export --remote-path=/usr/bin/borg \
   ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/$(hostname) \
   ~/borg-key-$(hostname).txt
 ```
@@ -86,30 +88,33 @@ sudo systemctl start borgbackup-job-system.service
 ### List backups
 
 ```bash
-sudo borg list ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/$(hostname)
+sudo borg list --remote-path=/usr/bin/borg \
+  ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/$(hostname)
 ```
 
 ### View backup info
 
 ```bash
-sudo borg info ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/$(hostname)
+sudo borg info --remote-path=/usr/bin/borg \
+  ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/$(hostname)
 ```
 
 ### Restore files
 
 ```bash
 # List contents of a specific backup
-sudo borg list ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/$(hostname)::ARCHIVE_NAME
+sudo borg list --remote-path=/usr/bin/borg \
+  ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/$(hostname)::ARCHIVE_NAME
 
 # Extract specific files to current directory
-sudo borg extract \
+sudo borg extract --remote-path=/usr/bin/borg \
   ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/$(hostname)::ARCHIVE_NAME \
   home/scott/Documents/important-file.txt
 
 # Extract entire backup to a restore directory
 sudo mkdir /tmp/restore
 cd /tmp/restore
-sudo borg extract \
+sudo borg extract --remote-path=/usr/bin/borg \
   ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/$(hostname)::ARCHIVE_NAME
 ```
 
@@ -117,7 +122,7 @@ sudo borg extract \
 
 ```bash
 sudo mkdir /mnt/borg
-sudo borg mount \
+sudo borg mount --remote-path=/usr/bin/borg \
   ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/$(hostname) \
   /mnt/borg
 
@@ -170,14 +175,14 @@ sudo ls -la /home/scott/.ssh/id_ed25519
 
 If a backup was interrupted:
 ```bash
-sudo borg break-lock \
+sudo borg break-lock --remote-path=/usr/bin/borg \
   ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/$(hostname)
 ```
 
 ### Check repository integrity
 
 ```bash
-sudo borg check \
+sudo borg check --remote-path=/usr/bin/borg \
   ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/$(hostname)
 ```
 
@@ -194,6 +199,7 @@ The `services.borg-backup` module supports these options:
 | `encryption.mode` | `repokey-blake2` | Encryption mode |
 | `encryption.passphraseFile` | `null` | Path to passphrase file |
 | `sshKeyFile` | `null` | SSH private key for remote repos |
+| `remotePath` | `/usr/bin/borg` | Path to borg on remote server |
 | `schedule` | `daily` | Systemd calendar expression |
 | `prune.keep.daily` | `7` | Daily backups to keep |
 | `prune.keep.weekly` | `4` | Weekly backups to keep |
