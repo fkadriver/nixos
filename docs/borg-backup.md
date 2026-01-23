@@ -70,13 +70,13 @@ Store this key file securely (e.g., in a password manager). You need both the ke
 
 ```bash
 # View service status
-systemctl status borgbackup-job-system.service
+sudo systemctl status borgbackup-job-system.service
 
 # View timer status
-systemctl list-timers | grep borg
+sudo systemctl list-timers | grep borg
 
 # View recent logs
-journalctl -u borgbackup-job-system.service -n 50
+sudo journalctl -u borgbackup-job-system.service -n 50
 ```
 
 ### Manual backup
