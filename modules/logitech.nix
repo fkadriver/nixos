@@ -1,18 +1,20 @@
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }: {
+  imports = [
+    inputs.solaar.nixosModules.default
+  ];
+
   config = {
-    # Logitech device support using Solaar
-    # Solaar is a Linux manager for Logitech Unifying receivers and devices
+    # Enable Solaar service for Logitech device management
+    services.solaar = {
+      enable = true;
+      window = "hide";  # Start hidden in system tray
+    };
 
     # Enable udev rules for Logitech devices
     hardware.logitech.wireless = {
       enable = true;
-      enableGraphical = true;  # Enables Solaar GUI
+      enableGraphical = true;
     };
-
-    # Install Solaar package
-    environment.systemPackages = with pkgs; [
-      solaar  # Logitech device manager
-    ];
   };
 }
