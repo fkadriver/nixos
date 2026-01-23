@@ -43,13 +43,8 @@ sudo chmod 600 /etc/borg-passphrase
 This creates the repository directory and initializes it with encryption:
 
 ```bash
-# On latitude
 sudo borg init --encryption=repokey-blake2 --remote-path=/usr/bin/borg \
-  ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/latitude
-
-# On airbook
-sudo borg init --encryption=repokey-blake2 --remote-path=/usr/bin/borg \
-  ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/airbook
+  ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/$(hostname)
 ```
 
 **Note:** The `--remote-path=/usr/bin/borg` flag is required for manual commands because nas01 (Ubuntu) doesn't have borg in the default PATH for non-login SSH sessions. The systemd service handles this automatically.
