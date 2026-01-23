@@ -6,18 +6,11 @@ let
       ./syncthing.nix
       inputs.self.nixosModules.common
       inputs.self.nixosModules.laptop-kde
+      inputs.self.nixosModules.logitech
       inputs.self.nixosModules.multi-monitor
       inputs.self.nixosModules.user-scott
     ];
     config = {
-      hardware = {
-        logitech = {
-          wireless = {
-            enable = true;
-            enableGraphical = true;
-          };
-        };
-      };
       networking = {
         hostName = "latitude";
       };

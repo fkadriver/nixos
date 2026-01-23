@@ -3,6 +3,7 @@
   imports = [
     inputs.self.nixosModules."3d-printing"
     inputs.self.nixosModules.bitwarden
+    inputs.self.nixosModules.borg-backup
     inputs.self.nixosModules.home-design
     inputs.self.nixosModules.iphone
     inputs.self.nixosModules.syncthing-declarative
@@ -82,6 +83,9 @@
       # Office
       libreoffice
       thunderbird
+
+      # Networking tools
+      wireshark
 
       # Utilities
       unzip

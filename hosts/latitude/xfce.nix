@@ -6,6 +6,7 @@ let
       ./syncthing.nix
       inputs.self.nixosModules.common
       inputs.self.nixosModules.laptop-xfce
+      inputs.self.nixosModules.logitech
       inputs.self.nixosModules.multi-monitor
       inputs.self.nixosModules.autorandr-profiles
       inputs.self.nixosModules.user-scott
@@ -24,15 +25,6 @@ let
       swapDevices = [
         { device = "/dev/disk/by-uuid/ba0803d5-36af-4d07-98c2-7fc73adab9e9"; }
       ];
-
-      hardware = {
-        logitech = {
-          wireless = {
-            enable = true;
-            enableGraphical = true;
-          };
-        };
-      };
 
       networking = {
         hostName = "latitude";

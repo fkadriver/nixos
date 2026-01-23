@@ -42,16 +42,20 @@ in
     security.pam.services.lightdm.enableGnomeKeyring = true;
     security.pam.services.gdm.enableGnomeKeyring = true;
 
-    # Install libsecret and keyring management tools
+    # Install libsecret, keyring management tools, and development tools
     environment.systemPackages = with pkgs; [
       libsecret
       gnome-keyring
       seahorse  # GUI for managing keyrings
+      clang-tools  # Includes clangd for C/C++ language server
       (vscode-with-extensions.override {
         vscode = vscode;
         vscodeExtensions = with vscode-extensions; [
           # Nix language support
           jnoortheen.nix-ide
+
+          # C/C++ support
+          llvm-vs-code-extensions.vscode-clangd
 
           # Python support
           ms-python.python

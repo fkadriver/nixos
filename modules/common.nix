@@ -22,6 +22,7 @@
         # Network troubleshooting tools
         bind          # dig, nslookup
         netcat        # nc
+        nmap
         tcpdump       # packet analyzer
 
 
