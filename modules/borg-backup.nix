@@ -96,6 +96,12 @@ in
       default = null;
       description = "SSH private key file for remote repository access";
     };
+
+    remotePath = mkOption {
+      type = types.nullOr types.str;
+      default = "/usr/bin/borg";
+      description = "Path to borg executable on remote server (for SSH repos)";
+    };
   };
 
   config = mkIf cfg.enable {
@@ -116,6 +122,7 @@ in
       };
       compression = "auto,zstd";
       startAt = cfg.schedule;
+      remotePath = cfg.remotePath;
       prune.keep = {
         daily = cfg.prune.keep.daily;
         weekly = cfg.prune.keep.weekly;
