@@ -6,6 +6,7 @@
     inputs.self.nixosModules.borg-backup
     inputs.self.nixosModules.home-design
     inputs.self.nixosModules.iphone
+    inputs.self.nixosModules.printing
     inputs.self.nixosModules.syncthing-declarative
     inputs.self.nixosModules.vscode
     # Note: wireless module removed - add explicitly in host config if needed (e.g., airbook)
@@ -67,19 +68,6 @@
       powerOnBoot = true;
     };
     services.blueman.enable = true;  # Blueman GUI for XFCE
-
-    # Printing support with Canon drivers and autodiscovery
-    services.printing = {
-      enable = true;
-      drivers = [ pkgs.gutenprint pkgs.gutenprintBin ];
-    };
-
-    # Enable Avahi for printer autodiscovery
-    services.avahi = {
-      enable = true;
-      nssmdns4 = true;
-      openFirewall = true;
-    };
 
     # Lid switch behavior - don't suspend when external monitor connected
     services.logind.settings.Login = {
