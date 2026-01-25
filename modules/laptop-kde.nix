@@ -29,6 +29,9 @@
         };
       };
     };
+    
+    # Printing support
+    services.printing.enable = true;
 
     # Enable NetworkManager for network management
     networking.networkmanager.enable = true;

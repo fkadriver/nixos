@@ -68,6 +68,9 @@
     };
     services.blueman.enable = true;  # Blueman GUI for XFCE
 
+    # Printing support
+    services.printing.enable = true;
+
     # Lid switch behavior - don't suspend when external monitor connected
     services.logind.settings.Login = {
       HandleLidSwitch = "suspend";
