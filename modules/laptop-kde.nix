@@ -170,5 +170,29 @@
 
     # Disable power-profiles-daemon to avoid conflict with TLP (from multi-monitor module)
     services.power-profiles-daemon.enable = false;
+
+    # KDE Global Shortcuts - Ctrl+F7 for Spectacle (screenshot)
+    # This creates/updates the kglobalshortcutsrc file for user scott
+    system.activationScripts.kdeShortcuts = lib.stringAfter [ "users" ] ''
+      SHORTCUTS_FILE="/home/scott/.config/kglobalshortcutsrc"
+
+      # Create directory if it doesn't exist
+      mkdir -p /home/scott/.config
+
+      # Check if file exists, if not create it with basic structure
+      if [ ! -f "$SHORTCUTS_FILE" ]; then
+        touch "$SHORTCUTS_FILE"
+        chown scott:users "$SHORTCUTS_FILE"
+      fi
+
+      # Use kwriteconfig6 if available, otherwise write directly
+      if command -v ${pkgs.kdePackages.kconfig}/bin/kwriteconfig6 &> /dev/null; then
+        ${pkgs.kdePackages.kconfig}/bin/kwriteconfig6 --file "$SHORTCUTS_FILE" \
+          --group "org.kde.spectacle.desktop" \
+          --key "RectangularRegionScreenShot" "Ctrl+F7,Meta+Shift+Print,Capture Rectangular Region"
+      fi
+
+      chown scott:users "$SHORTCUTS_FILE"
+    '';
   };
 }
