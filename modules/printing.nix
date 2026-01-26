@@ -4,7 +4,11 @@
     # Printing support with Canon drivers and autodiscovery
     services.printing = {
       enable = true;
-      drivers = [ pkgs.gutenprint pkgs.gutenprintBin ];
+      drivers = with pkgs; [
+        gutenprint
+        gutenprintBin
+        cups-filters
+      ];
     };
 
     # Enable Avahi for printer autodiscovery
@@ -12,6 +16,22 @@
       enable = true;
       nssmdns4 = true;
       openFirewall = true;
+    };
+
+    # Canon LBP162 printer
+    hardware.printers = {
+      ensurePrinters = [
+        {
+          name = "Canon-LBP162";
+          location = "Home Office";
+          deviceUri = "ipp://LBP162/ipp/print";
+          model = "drv:///sample.drv/generic.ppd";
+          ppdOptions = {
+            PageSize = "Letter";
+          };
+        }
+      ];
+      ensureDefaultPrinter = "Canon-LBP162";
     };
   };
 }

@@ -16,5 +16,18 @@
       enable = true;
       enableGraphical = true;
     };
+
+    # Install libinput-gestures for mouse button support
+    environment.systemPackages = with pkgs; [
+      libinput  # For debugging input devices
+      evtest    # For testing input events
+      xdotool   # For simulating key presses (X11)
+      xbindkeys # For binding mouse buttons to actions
+    ];
+
+    # Enable numlockx for Num Lock default on at boot
+    services.xserver.displayManager.sessionCommands = ''
+      ${pkgs.numlockx}/bin/numlockx on
+    '';
   };
 }
