@@ -76,9 +76,16 @@
       };
       starship = {
         enable = true;
-        # Starship is a fast, customizable shell prompt
-        # Config file can be created at ~/.config/starship.toml
-      };
+        settings = {
+          # Add the custom Tailscale module
+          custom.tailscale = {
+            command = "tailscale status >/dev/null 2>&1 && echo \"up\" || echo \"down\"";
+            when = "command -v tailscale >/dev/null";
+            format = "[🔗 TS:$output]($style) ";
+            style = "bold green";
+            };
+          };
+        };
     };
 
     # Timezone
