@@ -93,7 +93,7 @@ let
             custom.tailscale = {
               command = "tailscale status >/dev/null 2>&1 && echo '✓' || echo '✗'";
               when = "command -v tailscale >/dev/null 2>&1";
-              format = "[[TS:$output](bold green)] ";
+              format = "[TS:$output](bold green) ";
               description = "Tailscale VPN status";
             };
 
