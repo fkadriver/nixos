@@ -17,16 +17,18 @@
     system.nixos.label = "KDE";
 
     # Enable Bitwarden secrets management
-    services.bitwarden-secrets = {
+    services.bitwarden = {
       enable = true;
       sshKeys = {
-        id_ed25519 = {
-          secretName = "ssh/github_key";
+        github = {
           user = "scott";
+          keyName = "id_ed25519_github";
+          itemId = "4eb21873-7ca7-4114-9b0e-b3c90164bc7e";  # BW_Name:github ssh
         };
-        id_ed25519_legacy = {
-          secretName = "ssh/legacy_ssh_key";
+        legacy = {
           user = "scott";
+          keyName = "id_ed25519_legacy";
+          itemId = "40b6efe1-5699-46a1-875f-b39800fd3105";  # BW_Name:scott (ssh-ed25519)
         };
       };
     };

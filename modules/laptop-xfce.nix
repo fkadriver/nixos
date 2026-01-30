@@ -17,16 +17,18 @@
     system.nixos.label = "XFCE";
 
     # Enable Bitwarden secrets management
-    services.bitwarden-secrets = {
+    services.bitwarden = {
       enable = true;
       sshKeys = {
-        id_ed25519 = {
-          secretName = "ssh/github_key";
+        github = {
           user = "scott";
+          keyName = "id_ed25519";
+          itemId = "SSH Key - GitHub";  # Update this to match your Bitwarden item name
         };
-        id_ed25519_legacy = {
-          secretName = "ssh/legacy_ssh_key";
+        legacy = {
           user = "scott";
+          keyName = "id_ed25519_legacy";
+          itemId = "SSH Key - Legacy Servers";  # Update this to match your Bitwarden item name
         };
       };
     };
