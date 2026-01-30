@@ -30,9 +30,17 @@
         value = import ./modules/${f} flakeContext;
       }) nixModules);
 
+      # Import home-manager configuration for scott
+      scottHome = import ./homeConfigurations/scott.nix flakeContext;
+
     in
     {
       inherit nixosModules;
+
+      # Export home-manager configurations
+      homeConfigurations = {
+        scott = scottHome;
+      };
 
       nixosConfigurations = {
         latitude = import ./hosts/latitude flakeContext;
