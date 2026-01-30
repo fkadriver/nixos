@@ -3,6 +3,7 @@
   imports = [
     inputs.self.nixosModules."3d-printing"
     inputs.self.nixosModules.bitwarden
+    inputs.self.nixosModules.bitwarden-scott
     inputs.self.nixosModules.borg-backup
     inputs.self.nixosModules.home-design
     inputs.self.nixosModules.iphone
@@ -16,31 +17,7 @@
     # Set boot label
     system.nixos.label = "XFCE";
 
-    # Enable Bitwarden secrets management
-    services.bitwarden = {
-      enable = true;
-      sshKeys = {
-        github = {
-          user = "scott";
-          keyName = "id_ed25519_github";
-          itemId = "4eb21873-7ca7-4114-9b0e-b3c90164bc7e";  # BW_Name:github ssh
-        };
-        legacy = {
-          user = "scott";
-          keyName = "id_ed25519_legacy";
-          itemId = "40b6efe1-5699-46a1-875f-b39800fd3105";  # BW_Name:scott (ssh-ed25519)
-        };
-      };
-    secrets = {
-      # Tailscale authentication key
-      tailscale_auth_key = {
-        name = "tailscale_auth_key";        # Filename in /run/bitwarden-secrets/
-        itemId = "5cf273b2-68ee-443b-add1-b3c901698464"; # NixOS Machines Auth Key
-        field = "password";                 # Extract from password field
-        mode = "0400";                      # File permissions
-      };
-    };
-  };
+    # Bitwarden secrets are configured in bitwarden-scott module
 
     # Enable NetworkManager for network management
     networking.networkmanager.enable = true;
