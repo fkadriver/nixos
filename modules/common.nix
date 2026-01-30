@@ -76,28 +76,8 @@
       };
       starship = {
         enable = true;
-        settings = {
-          # Include custom modules in the prompt format
-          format = lib.concatStrings [
-            "$username"
-            "$hostname"
-            "$directory"
-            "$git_branch"
-            "$git_status"
-            "$custom"
-            "$line_break"
-            "$character"
-          ];
-
-          # Custom Tailscale status module
-          custom.tailscale = {
-            command = "tailscale status >/dev/null 2>&1 && echo '✓' || echo '✗'";
-            when = "command -v tailscale >/dev/null 2>&1";
-            format = "[[TS:$output](bold green)]($style) ";
-            style = "";
-            description = "Tailscale VPN status";
-          };
-        };
+        # Starship is a fast, customizable shell prompt
+        # Config is in user-scott.nix
       };
     };
 

@@ -104,6 +104,7 @@
           "$python"
           "$nix_shell"
           "$direnv"
+          "$custom"  # Custom modules (Tailscale, etc.)
           "$sudo"
           "$cmd_duration"
           "$line_break"
@@ -183,6 +184,14 @@
         character = {
           success_symbol = "[➜](bold green)";
           error_symbol = "[➜](bold red)";
+        };
+
+        # Custom modules
+        custom.tailscale = {
+          command = "tailscale status >/dev/null 2>&1 && echo '✓' || echo '✗'";
+          when = "command -v tailscale >/dev/null 2>&1";
+          format = "[[TS:$output](bold green)] ";
+          description = "Tailscale VPN status";
         };
 
         # Disable cloud provider modules (not used from CLI)
