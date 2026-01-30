@@ -106,7 +106,16 @@ Save and exit (`:wq`).
 
 #### SSH Keys
 
-Create a **Secure Note** for each SSH key:
+You can store SSH keys in two ways:
+
+**Option 1: SSH Key Item Type (Recommended)**
+- **Item Type**: SSH Key
+- **Name**: Descriptive like "GitHub SSH Key"
+- Paste your private key when prompted
+- Bitwarden will automatically parse and store it
+
+**Option 2: Secure Note**
+- **Item Type**: Secure Note
 - **Name**: Descriptive like "SSH Key - GitHub"
 - **Notes**: Paste entire private key:
   ```
@@ -115,6 +124,8 @@ Create a **Secure Note** for each SSH key:
   ...
   -----END OPENSSH PRIVATE KEY-----
   ```
+
+The module supports both formats automatically.
 
 #### Service Secrets (Tailscale, etc.)
 

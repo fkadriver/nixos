@@ -267,18 +267,19 @@ in
           ${concatMapStringsSep "\n" (name:
             let
               key = cfg.sshKeys.${name};
+              userHome = config.users.users.${key.user}.home;
             in ''
               echo "  Fetching SSH key: ${key.keyName} for ${key.user}..."
 
-              USER_HOME=$(${pkgs.coreutils}/bin/su - ${key.user} -c 'echo $HOME')
-              SSH_DIR="$USER_HOME/.ssh"
+              SSH_DIR="${userHome}/.ssh"
               KEY_FILE="$SSH_DIR/${key.keyName}"
 
               # Create .ssh directory if it doesn't exist
               mkdir -p "$SSH_DIR"
 
-              # Fetch the key from Bitwarden (stored in notes field)
-              KEY_CONTENT=$(${pkgs.bitwarden-cli}/bin/bw get item "${key.itemId}" | ${pkgs.jq}/bin/jq -r '.notes // empty' || echo "")
+              # Fetch the key from Bitwarden
+              # Try .sshKey.privateKey first (for SSH Key type items), then fall back to .notes (for Secure Note items)
+              KEY_CONTENT=$(${pkgs.bitwarden-cli}/bin/bw get item "${key.itemId}" | ${pkgs.jq}/bin/jq -r '.sshKey.privateKey // .notes // empty' || echo "")
 
               if [ -z "$KEY_CONTENT" ] || [ "$KEY_CONTENT" = "null" ]; then
                 echo "    Warning: Failed to fetch SSH key ${key.keyName} from Bitwarden" >&2
