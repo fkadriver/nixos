@@ -31,7 +31,16 @@
           itemId = "40b6efe1-5699-46a1-875f-b39800fd3105";  # BW_Name:scott (ssh-ed25519)
         };
       };
+      secrets = {
+      # Tailscale authentication key
+      tailscale_auth_key = {
+        name = "tailscale_auth_key";        # Filename in /run/bitwarden-secrets/
+        itemId = "5cf273b2-68ee-443b-add1-b3c901698464"; # NixOS Machines Auth Key
+        field = "tskey";                    # Extract from custom field "tskey"
+        mode = "0400";                      # File permissions
+      };
     };
+  };
 
     # Enable NetworkManager for network management
     networking.networkmanager.enable = true;

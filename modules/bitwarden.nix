@@ -12,22 +12,25 @@ let
     set -euo pipefail
 
     ITEM_ID="$1"
-    FIELD="$2"  # "password", "notes", or "username"
+    FIELD="$2"  # "password", "notes", "username", or custom field name
 
-    # Fetch the item and extract the field
+    # Fetch the full item
+    ITEM_JSON=$(${pkgs.bitwarden-cli}/bin/bw get item "$ITEM_ID")
+
+    # Extract the field
     case "$FIELD" in
       password)
-        ${pkgs.bitwarden-cli}/bin/bw get item "$ITEM_ID" | ${pkgs.jq}/bin/jq -r '.login.password // empty'
+        echo "$ITEM_JSON" | ${pkgs.jq}/bin/jq -r '.login.password // empty'
         ;;
       notes)
-        ${pkgs.bitwarden-cli}/bin/bw get item "$ITEM_ID" | ${pkgs.jq}/bin/jq -r '.notes // empty'
+        echo "$ITEM_JSON" | ${pkgs.jq}/bin/jq -r '.notes // empty'
         ;;
       username)
-        ${pkgs.bitwarden-cli}/bin/bw get item "$ITEM_ID" | ${pkgs.jq}/bin/jq -r '.login.username // empty'
+        echo "$ITEM_JSON" | ${pkgs.jq}/bin/jq -r '.login.username // empty'
         ;;
       *)
-        echo "Error: Unknown field type: $FIELD" >&2
-        exit 1
+        # Try to extract as a custom field
+        echo "$ITEM_JSON" | ${pkgs.jq}/bin/jq -r --arg fieldname "$FIELD" '.fields[]? | select(.name == $fieldname) | .value // empty'
         ;;
     esac
   '';
@@ -115,9 +118,13 @@ in
             example = "Tailscale Auth Key";
           };
           field = mkOption {
-            type = types.enum [ "password" "notes" "username" ];
+            type = types.str;
             default = "password";
-            description = "Which field to extract from the Bitwarden item";
+            description = ''
+              Which field to extract from the Bitwarden item.
+              Standard fields: "password", "notes", "username"
+              Custom fields: Use the exact custom field name (e.g., "tskey")
+            '';
           };
           mode = mkOption {
             type = types.str;
@@ -219,6 +226,16 @@ in
         NoNewPrivileges = true;
         ProtectSystem = "strict";
         ProtectHome = true;
+
+        # Bitwarden CLI needs a writable directory for its config
+        RuntimeDirectory = "bitwarden-secrets";
+        RuntimeDirectoryMode = "0700";
+        CacheDirectory = "bitwarden-cli";
+        CacheDirectoryMode = "0700";
+
+        # Set HOME to the cache directory so bw CLI can write its data
+        Environment = "HOME=/var/cache/bitwarden-cli";
+
         ReadWritePaths = [ "/run/bitwarden-secrets" ];
       };
 

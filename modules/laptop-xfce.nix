@@ -22,16 +22,25 @@
       sshKeys = {
         github = {
           user = "scott";
-          keyName = "id_ed25519";
-          itemId = "SSH Key - GitHub";  # Update this to match your Bitwarden item name
+          keyName = "id_ed25519_github";
+          itemId = "4eb21873-7ca7-4114-9b0e-b3c90164bc7e";  # BW_Name:github ssh
         };
         legacy = {
           user = "scott";
           keyName = "id_ed25519_legacy";
-          itemId = "SSH Key - Legacy Servers";  # Update this to match your Bitwarden item name
+          itemId = "40b6efe1-5699-46a1-875f-b39800fd3105";  # BW_Name:scott (ssh-ed25519)
         };
       };
+    secrets = {
+      # Tailscale authentication key
+      tailscale_auth_key = {
+        name = "tailscale_auth_key";        # Filename in /run/bitwarden-secrets/
+        itemId = "5cf273b2-68ee-443b-add1-b3c901698464"; # NixOS Machines Auth Key
+        field = "password";                 # Extract from password field
+        mode = "0400";                      # File permissions
+      };
     };
+  };
 
     # Enable NetworkManager for network management
     networking.networkmanager.enable = true;

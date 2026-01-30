@@ -29,6 +29,10 @@
             command = "/run/current-system/sw/bin/tailscale *";
             options = [ "NOPASSWD" ];
           }
+          {
+            command = "/run/current-system/sw/bin/nixos-rebuild";
+            options = [ "NOPASSWD" ];
+          }
         ];
       }
     ];

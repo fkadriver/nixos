@@ -69,13 +69,17 @@ This module enables dynamic secrets management using Bitwarden. Only your Bitwar
 export BW_CLIENTID="user.xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 export BW_CLIENTSECRET="xxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 
-# Login and unlock
+# Login with API key
 bw login --apikey
+
+# Unlock vault (will prompt for master password)
 export BW_SESSION=$(bw unlock --raw)
 
 # Verify
 bw status
 ```
+
+**Important:** The API key authenticates you to Bitwarden's servers, but you still need your **master password** to unlock and decrypt your vault locally. This is by design - Bitwarden uses zero-knowledge encryption, so the master password never leaves your device.
 
 ### 3. Store Credentials in sops
 
