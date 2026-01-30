@@ -20,6 +20,11 @@
         keyName = "id_ed25519_legacy";
         itemId = "40b6efe1-5699-46a1-875f-b39800fd3105";  # BW_Name: scott (ssh-ed25519)
       };
+      opnsense = {
+        user = "scott";
+        keyName = "opnsense_admin_ed25519";
+        itemId = "21397fb4-104e-4528-90ef-b3ce00fe7c43";  # BW_Name: github ssh
+      };
     };
 
     # Service secrets - same across all machines
