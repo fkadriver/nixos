@@ -22,22 +22,15 @@
       openFirewall = true;
     };
 
-    # Configure printers (Canon LBP162 and Print to PDF)
+    # Configure printers (Canon LBP162)
+    # Note: Print-to-PDF functionality available via print dialog in most applications
+    # cups-pdf-to-pdf is installed but not configured as a printer queue
     hardware.printers = {
       ensurePrinters = [
         {
           name = "Canon-LBP162";
           location = "Home Office";
           deviceUri = "ipp://LBP162/ipp/print";
-          model = "drv:///sample.drv/generic.ppd";
-          ppdOptions = {
-            PageSize = "Letter";
-          };
-        }
-        {
-          name = "PDF";
-          location = "Virtual Printer";
-          deviceUri = "pdf-to-pdf:/";
           model = "drv:///sample.drv/generic.ppd";
           ppdOptions = {
             PageSize = "Letter";
