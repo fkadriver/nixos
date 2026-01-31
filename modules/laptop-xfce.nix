@@ -10,10 +10,15 @@
     inputs.self.nixosModules.printing
     inputs.self.nixosModules.syncthing-declarative
     inputs.self.nixosModules.vscode
+    inputs.home-manager.nixosModules.home-manager
+    (inputs.self.homeConfigurations.scott).nixosModule
     # Note: wireless module removed - add explicitly in host config if needed (e.g., airbook)
   ];
 
   config = {
+    # Home-manager configuration for scott
+    home-manager.useGlobalPkgs = true;
+    home-manager.useUserPackages = true;
     # Set boot label
     system.nixos.label = "XFCE";
 

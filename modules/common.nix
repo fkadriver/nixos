@@ -8,25 +8,29 @@
     # Core system packages (server-safe, no GUI dependencies)
     environment = {
       systemPackages = with pkgs; [
+        # CLI Utilities
         direnv
-        git
-        htop
         jq
         tree
         vim
-        wget
-        curl
-        rsync
         tmux
         ncdu
-        # Network troubleshooting tools
+        jdupes        # Deduplicate files
+
+        # Development Tools
+        git
+
+        # Network & Diagnostic Tools
         bind          # dig, nslookup
+        curl
         netcat        # nc
         nmap
+        rsync
         tcpdump       # packet analyzer
+        wget
 
-
-        jdupes	      # Delint systems
+        # System Monitoring
+        htop
       ];
     };
 

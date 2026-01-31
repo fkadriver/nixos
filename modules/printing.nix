@@ -25,7 +25,7 @@
 
     # Install cups-pdf package
     environment.systemPackages = with pkgs; [
-      cups-pdf
+      cups-pdf-to-pdf
     ];
 
     # Configure printers (Canon LBP162 and Print to PDF)
