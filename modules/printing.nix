@@ -8,7 +8,11 @@
         gutenprint
         gutenprintBin
         cups-filters
+        cups-pdf-to-pdf
       ];
+      extraConf = ''
+        # Enable cups-pdf for printing to PDF
+      '';
     };
 
     # Enable Avahi for printer autodiscovery
@@ -17,16 +21,6 @@
       nssmdns4 = true;
       openFirewall = true;
     };
-
-    # Print to PDF support via cups-pdf
-    services.printing.extraConf = ''
-      # Enable cups-pdf for printing to PDF
-    '';
-
-    # Install cups-pdf package
-    environment.systemPackages = with pkgs; [
-      cups-pdf-to-pdf
-    ];
 
     # Configure printers (Canon LBP162 and Print to PDF)
     hardware.printers = {
@@ -43,7 +37,7 @@
         {
           name = "PDF";
           location = "Virtual Printer";
-          deviceUri = "cups-pdf:/";
+          deviceUri = "pdf-to-pdf:/";
           model = "drv:///sample.drv/generic.ppd";
           ppdOptions = {
             PageSize = "Letter";

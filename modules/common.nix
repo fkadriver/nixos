@@ -78,11 +78,7 @@
           enable = true;
         };
       };
-      starship = {
-        enable = true;
-        # Starship is a fast, customizable shell prompt
-        # Config is in user-scott.nix
-      };
+      # Note: starship is configured via home-manager in homeConfigurations/scott.nix
     };
 
     # Timezone
