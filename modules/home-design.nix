@@ -9,16 +9,20 @@ let
   installPluginsScript = pkgs.writeShellScriptBin "sweethome3d-install-plugins" ''
     set -e
 
-    PLUGINS_DIR="$HOME/.local/share/Sweet Home 3D/plugins"
+    # Sweet Home 3D uses ~/.eteks/sweethome3d/ for its configuration
+    PLUGINS_DIR="$HOME/.eteks/sweethome3d/plugins"
+    FURNITURE_DIR="$HOME/.eteks/sweethome3d/furniture"
     DOWNLOADS_DIR="$HOME/Downloads/sweethome3d-plugins"
 
     mkdir -p "$PLUGINS_DIR"
+    mkdir -p "$FURNITURE_DIR"
     mkdir -p "$DOWNLOADS_DIR"
 
     echo "Sweet Home 3D Plugin Installer"
     echo "==============================="
     echo ""
     echo "Plugin directory: $PLUGINS_DIR"
+    echo "Furniture directory: $FURNITURE_DIR"
     echo ""
 
     # List of plugins to download
@@ -44,19 +48,34 @@ Required plugins:
    - Download from: https://www.sweethome3d.com/importModels.jsp
    - Look for contribution libraries in .sh3f format
 
-Once downloaded, this script will install them to:
-$PLUGINS_DIR
+Once downloaded, this script will install them to the correct directories.
 
 EOF
 
     # Check if any plugin files exist in downloads directory
-    if ls "$DOWNLOADS_DIR"/*.sh3p >/dev/null 2>&1 || ls "$DOWNLOADS_DIR"/*.sh3f >/dev/null 2>&1; then
-      echo "Found plugin files in $DOWNLOADS_DIR"
-      echo "Installing plugins..."
-      cp -v "$DOWNLOADS_DIR"/*.sh3p "$PLUGINS_DIR/" 2>/dev/null || true
-      cp -v "$DOWNLOADS_DIR"/*.sh3f "$PLUGINS_DIR/" 2>/dev/null || true
+    FOUND_FILES=false
+
+    if ls "$DOWNLOADS_DIR"/*.sh3p >/dev/null 2>&1; then
+      echo "Found plugin files (.sh3p) in $DOWNLOADS_DIR"
+      echo "Installing plugins to $PLUGINS_DIR..."
+      cp -v "$DOWNLOADS_DIR"/*.sh3p "$PLUGINS_DIR/"
+      FOUND_FILES=true
+    fi
+
+    if ls "$DOWNLOADS_DIR"/*.sh3f >/dev/null 2>&1; then
+      echo "Found furniture libraries (.sh3f) in $DOWNLOADS_DIR"
+      echo "Installing furniture to $FURNITURE_DIR..."
+      cp -v "$DOWNLOADS_DIR"/*.sh3f "$FURNITURE_DIR/"
+      FOUND_FILES=true
+    fi
+
+    if [ "$FOUND_FILES" = true ]; then
       echo ""
-      echo "Plugins installed! Restart Sweet Home 3D to use them."
+      echo "Installation complete!"
+      echo "Plugins installed to: $PLUGINS_DIR"
+      echo "Furniture installed to: $FURNITURE_DIR"
+      echo ""
+      echo "IMPORTANT: Restart Sweet Home 3D to use the new plugins."
     else
       echo "No plugin files found in $DOWNLOADS_DIR yet."
       echo "Download the plugins above and run this script again."
@@ -103,7 +122,9 @@ in
     # To install plugins:
     # 1. Run: sweethome3d-install-plugins
     # 2. Follow the instructions to download plugins
-    # 3. Run the command again to install them
+    # 3. Place downloaded files in ~/Downloads/sweethome3d-plugins/
+    # 4. Run the command again to install them
+    # 5. Restart Sweet Home 3D
     #
     # Recommended plugins:
     # - StaircaseGenerator-1.0.1.sh3p - Create custom staircases
@@ -111,10 +132,10 @@ in
     # - AutoDimensioning.sh3p - Automatic dimension annotations
     # - 3D Models Contributions - Additional furniture libraries
     #
-    # Plugin locations:
-    # - Plugins (.sh3p): ~/.local/share/Sweet Home 3D/plugins/
-    # - Furniture (.sh3f): ~/.local/share/Sweet Home 3D/furniture/
-    # - Downloaded plugins: ~/Downloads/sweethome3d-plugins/
+    # Plugin locations (Sweet Home 3D uses ~/.eteks/ not ~/.local/share/):
+    # - Plugins (.sh3p): ~/.eteks/sweethome3d/plugins/
+    # - Furniture (.sh3f): ~/.eteks/sweethome3d/furniture/
+    # - Download staging: ~/Downloads/sweethome3d-plugins/
 
     # LibreCAD configuration
     # Patterns and templates stored in: ~/.local/share/LibreCAD/
