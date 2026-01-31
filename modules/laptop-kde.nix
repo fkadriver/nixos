@@ -72,6 +72,7 @@
       # Office
       libreoffice
       thunderbird
+      kdePackages.okular          # KDE PDF viewer
 
       # Networking tools
       wireshark

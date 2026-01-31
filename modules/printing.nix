@@ -18,13 +18,32 @@
       openFirewall = true;
     };
 
-    # Canon LBP162 printer
+    # Print to PDF support via cups-pdf
+    services.printing.extraConf = ''
+      # Enable cups-pdf for printing to PDF
+    '';
+
+    # Install cups-pdf package
+    environment.systemPackages = with pkgs; [
+      cups-pdf
+    ];
+
+    # Configure printers (Canon LBP162 and Print to PDF)
     hardware.printers = {
       ensurePrinters = [
         {
           name = "Canon-LBP162";
           location = "Home Office";
           deviceUri = "ipp://LBP162/ipp/print";
+          model = "drv:///sample.drv/generic.ppd";
+          ppdOptions = {
+            PageSize = "Letter";
+          };
+        }
+        {
+          name = "PDF";
+          location = "Virtual Printer";
+          deviceUri = "cups-pdf:/";
           model = "drv:///sample.drv/generic.ppd";
           ppdOptions = {
             PageSize = "Letter";

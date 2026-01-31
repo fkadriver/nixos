@@ -82,6 +82,7 @@
       # Office
       libreoffice
       thunderbird  # Email client (Gmail + iCloud)
+      evince       # PDF viewer
 
       # Backup
       borgbackup
