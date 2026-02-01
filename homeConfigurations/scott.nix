@@ -8,6 +8,9 @@ let
         stateVersion = "25.05";
       };
       programs = {
+        bash = {
+          enable = true;
+        };
         jq = {
           enable = true;
         };
