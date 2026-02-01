@@ -10,6 +10,28 @@ let
       programs = {
         bash = {
           enable = true;
+          historySize = 10000;
+          historyFileSize = 100000;
+          historyControl = [ "ignoredups" "ignorespace" ];
+          shellOptions = [
+            "histappend"
+            "checkwinsize"
+            "extglob"
+            "globstar"
+            "checkjobs"
+          ];
+          shellAliases = {
+            k = "kubectl";
+            urldecode = "python3 -c 'import sys, urllib.parse as ul; print(ul.unquote_plus(sys.stdin.read()))'";
+            urlencode = "python3 -c 'import sys, urllib.parse as ul; print(ul.quote_plus(sys.stdin.read()))'";
+          };
+          initExtra = ''
+            export PATH="$PATH:$HOME/bin:$HOME/.local/bin:$HOME/go/bin"
+          '';
+        };
+        direnv = {
+          enable = true;
+          enableBashIntegration = true;
         };
         jq = {
           enable = true;
