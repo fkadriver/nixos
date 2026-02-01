@@ -9,6 +9,7 @@ let
       inputs.self.nixosModules.logitech
       inputs.self.nixosModules.multi-monitor
       inputs.self.nixosModules.user-scott
+      inputs.self.nixosModules.virtualbox
     ];
     config = {
       networking = {
