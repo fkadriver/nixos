@@ -651,6 +651,25 @@ Manage SSH keys, Tailscale auth keys, WiFi passwords, and other secrets using Bi
 ✅ Automatic service restarts on secret changes
 ✅ Multi-machine support with different keys
 
+## Documentation
+
+### Adding New Hosts
+
+See [docs/adding-hosts.md](docs/adding-hosts.md) for a comprehensive guide on:
+- Adding new physical machines to the repository
+- Creating host configuration variants (e.g., KDE, XFCE, minimal)
+- Hardware configuration setup
+- Module selection and configuration
+- Testing and deployment
+- Best practices and troubleshooting
+
+### Additional Guides
+
+- [docs/borg-backup.md](docs/borg-backup.md) - Backup configuration and usage
+- [docs/bitwarden.md](docs/bitwarden.md) - Secrets management with Bitwarden
+- [docs/multi-monitor-setup.md](docs/multi-monitor-setup.md) - Multi-monitor profile configuration
+- [docs/nixos-binary-compatibility.md](docs/nixos-binary-compatibility.md) - Running non-NixOS binaries
+
 ## Future Enhancements
 
 - **Home Manager Integration**: For user-specific configuration management
