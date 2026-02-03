@@ -321,9 +321,9 @@ sudo nixos-install --flake github:fkadriver/nixos#latitude
 sudo reboot
 ```
 
-Replace `latitude` with your configuration: `latitude`, `airbook`, etc.
+Replace `latitude` with your configuration: `prodesk`, `latitude`, `airbook`, etc.
 
-**Note:** This method uses disko for automatic disk partitioning. For configurations that don't use disko (like `prodesk`), see the hardware-specific installation instructions below.
+All configurations now support disko for automated disk partitioning!
 
 ### Test Configuration in VM
 
@@ -390,45 +390,35 @@ Then authenticate via the provided URL.
 - System libraries for photoAlbumOrganizer (OpenCV, dlib, face_recognition)
 - VSCode with FHS environment for AI frameworks
 - CMake, GCC for compiling native Python extensions
-- Manual disk partitioning (no disko)
+- Automated disk partitioning with disko
 - No automatic backups (Borg not configured)
 
-**Installation Steps:**
+**Automated Installation with Disko (Recommended):**
 
-1. **Boot NixOS installer and partition disks manually:**
+1. **Boot NixOS installer USB**
+
+2. **Identify your target disk:**
    ```bash
-   # Example for a simple layout (adjust as needed):
-   # Create partitions with fdisk/gdisk/parted
-   # Format: mkfs.fat -F 32 /dev/sdX1 (for /boot)
-   #         mkfs.ext4 /dev/sdX2 (for /)
-   # Mount:  mount /dev/sdX2 /mnt
-   #         mkdir -p /mnt/boot
-   #         mount /dev/sdX1 /mnt/boot
+   lsblk  # Find your disk (e.g., /dev/sda, /dev/nvme0n1)
    ```
 
-2. **Generate hardware configuration:**
+3. **Run disko to partition and format automatically:**
    ```bash
-   nixos-generate-config --root /mnt
-   # This creates /mnt/etc/nixos/hardware-configuration.nix
+   sudo nix run github:nix-community/disko -- \
+     --mode disko \
+     --flake github:fkadriver/nixos#prodesk \
+     --arg device '"/dev/sda"'  # Replace with your disk
+   ```
+   This creates:
+   - 1 GB EFI boot partition
+   - LVM with 8 GB swap + remaining space for root
+
+4. **Install NixOS directly from GitHub:**
+   ```bash
+   sudo nixos-install --flake github:fkadriver/nixos#prodesk
    ```
 
-3. **Clone the repository via HTTPS** (no SSH keys needed):
-   ```bash
-   cd /mnt
-   nix-shell -p git
-   git clone https://github.com/fkadriver/nixos.git
-   cd nixos
-   ```
-
-4. **Copy the generated hardware config:**
-   ```bash
-   cp /mnt/etc/nixos/hardware-configuration.nix hosts/prodesk/hardware.nix
-   ```
-
-5. **Install NixOS:**
-   ```bash
-   sudo nixos-install --root /mnt --flake /mnt/nixos#prodesk
-   ```
+5. **Set root password when prompted**
 
 6. **Reboot and login**
 
@@ -438,13 +428,7 @@ Then authenticate via the provided URL.
    ```
    Add this key to `.sops.yaml` in your repository to enable secret management (including SSH keys)
 
-8. **Rebuild to apply any changes:**
-   ```bash
-   cd ~/nixos  # Clone the repo to your home directory
-   sudo nixos-rebuild switch --flake .#prodesk
-   ```
-
-**Note:** The ProDesk 600 G4 has Intel UHD Graphics 630 (integrated graphics) - hardware acceleration is already configured in the template.
+**Note:** The ProDesk 600 G4 has Intel UHD Graphics 630 (integrated graphics) - hardware acceleration is already configured.
 
 **Setting up photoAlbumOrganizer:**
 

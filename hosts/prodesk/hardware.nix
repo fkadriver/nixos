@@ -1,8 +1,7 @@
 # Hardware configuration for HP ProDesk 600 G4 DM PC
 # CPU: Intel Core i5-8500T (Coffee Lake, 6 cores, 9MB cache)
 # GPU: Intel UHD Graphics 630 (integrated)
-# This is a template - run `nixos-generate-config` on the actual hardware
-# and replace this file with the generated hardware-configuration.nix
+# Disk partitioning is handled by disko (see disko-config.nix)
 
 { config, lib, pkgs, modulesPath, ... }:
 
@@ -27,24 +26,8 @@
     };
   };
 
-  # Filesystem configuration
-  # IMPORTANT: Replace these with your actual disk UUIDs after installation
-  # Get UUIDs with: blkid
-  fileSystems."/" = {
-    device = "/dev/disk/by-label/root";
-    fsType = "ext4";
-  };
-
-  fileSystems."/boot" = {
-    device = "/dev/disk/by-uuid/C8EA-FEDB";
-    fsType = "vfat";
-    options = [ "fmask=0077" "dmask=0077" ];
-  };
-
-  # Swap configuration (optional)
-   swapDevices = [
-     { device = "/dev/disk/by-label/swap"; }
-   ];
+  # Filesystem configuration is managed by disko-config.nix
+  # No manual filesystem or swap configuration needed here
 
   # CPU microcode updates for Intel Coffee Lake
   hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
