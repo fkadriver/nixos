@@ -181,8 +181,10 @@ Automated disk partitioning configuration using disko.
 - `noatime` mount option for improved performance
 
 **Usage:**
-Automatically applied during installer ISO installation.
-Can be customized per-host by overriding the `disko.devices.disk.main.device` option.
+- Used by: `prodesk`, `installer`
+- Automatically applied during automated installation
+- Can be customized per-host by overriding the `disko.devices.disk.main.device` option
+- Other hosts (latitude, airbook) use manual filesystem configuration
 
 #### borg-backup.nix
 Borg backup configuration for automated encrypted backups.
