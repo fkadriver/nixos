@@ -94,7 +94,7 @@ inputs.nixpkgs.lib.nixosSystem {
           echo "  1) latitude-xfce - Dell Latitude 7480 (XFCE)"
           echo "  2) latitude-kde  - Dell Latitude 7480 (KDE Plasma)"
           echo "  3) airbook-kde   - MacBook Air 7,2 (KDE Plasma)"
-          echo "  4) nas01         - Server configuration"
+          echo "  4) prodesk       - HP ProDesk 600 G4 (Photo/AI workstation)"
           echo ""
           read -p "Select configuration (1-4): " choice
 
@@ -102,7 +102,7 @@ inputs.nixpkgs.lib.nixosSystem {
             1) CONFIG="latitude-xfce" ;;
             2) CONFIG="latitude-kde" ;;
             3) CONFIG="airbook-kde" ;;
-            4) CONFIG="nas01" ;;
+            4) CONFIG="prodesk" ;;
             *) echo "Invalid choice"; exit 1 ;;
           esac
 
@@ -169,7 +169,7 @@ inputs.nixpkgs.lib.nixosSystem {
           1. Partition: nix run github:nix-community/disko -- --mode disko --flake github:fkadriver/nixos#<config> --arg device '"/dev/sdX"'
           2. Install: nixos-install --flake github:fkadriver/nixos#<config>
 
-        Available configs: latitude-xfce, latitude-kde, airbook-kde, nas01
+        Available configs: latitude-xfce, latitude-kde, airbook-kde, prodesk
         WiFi: Pre-configured for JEN_ACRES network
 
       '';

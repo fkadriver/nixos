@@ -291,7 +291,7 @@ sudo dd if=result/iso/nixos-*.iso of=/dev/sdX bs=4M status=progress conv=fsync
 
 3. **Follow the prompts:**
    - Enter git repository URL (e.g., `github:fkadriver/nixos`)
-   - Select configuration (latitude, airbook, or nas01)
+   - Select configuration (latitude-xfce, latitude-kde, airbook-kde, or prodesk)
    - Choose target disk
    - Confirm installation
 
