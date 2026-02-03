@@ -285,6 +285,63 @@ Each secret configuration requires:
 5. Writes secrets to `/run/bitwarden-secrets/`
 6. Timer runs every 6 hours to refresh secrets
 
+## Adding New Machines
+
+When adding a new machine to your NixOS configuration, you need to give it access to the encrypted secrets.
+
+### 1. Get the New Machine's AGE Public Key
+
+On the new machine (after first build):
+
+```bash
+sudo age-keygen -y /var/lib/sops-nix/key.txt
+```
+
+This outputs something like: `age1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
+
+### 2. Add the Key to `.sops.yaml`
+
+Edit `.sops.yaml` in your repository root:
+
+```yaml
+keys:
+  - &admin age1xxxxxxxxxxxxxx        # Your existing key
+  - &newmachine age1yyyyyyyyyyyyyy   # New machine's key
+
+creation_rules:
+  - path_regex: secrets/secrets\.yaml$
+    key_groups:
+      - age:
+          - *admin
+          - *newmachine
+```
+
+### 3. Re-encrypt Secrets with All Keys
+
+This is the critical step - re-encrypt the secrets file so all keys can decrypt it:
+
+```bash
+sops updatekeys secrets/secrets.yaml
+```
+
+This command:
+- Decrypts the file using your current key
+- Re-encrypts it for all keys listed in `.sops.yaml`
+- The file remains encrypted, but now both machines can decrypt it
+
+### 4. Commit and Deploy
+
+```bash
+git add .sops.yaml secrets/secrets.yaml
+git commit -m "Add AGE key for newmachine"
+git push
+
+# On the new machine, rebuild to use the secrets
+sudo nixos-rebuild switch --flake .#newmachine
+```
+
+**Important**: Always run `sops updatekeys` after modifying `.sops.yaml` - the secrets file won't work on the new machine until it's re-encrypted with the new key!
+
 ## Updating Secrets
 
 ### SSH Keys
@@ -302,6 +359,19 @@ sudo systemctl restart bitwarden-secrets-sync.service
 
 # Option 2: Just rebuild
 sudo nixos-rebuild switch --flake .#hostname
+```
+
+### Re-encrypt After Adding/Removing Keys
+
+Whenever you modify `.sops.yaml` (add or remove AGE keys):
+
+```bash
+# Re-encrypt all secrets with the updated key list
+sops updatekeys secrets/secrets.yaml
+
+# If you have multiple secrets files
+sops updatekeys secrets/secrets.yaml
+sops updatekeys secrets/other-secrets.yaml
 ```
 
 ## Troubleshooting

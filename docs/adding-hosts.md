@@ -305,12 +305,44 @@ See the `prodesk` configuration for an example.
 If your host uses the bitwarden module (included in `desktop-minimal` and laptop modules):
 
 1. After first boot, the AGE key is automatically generated at `/var/lib/sops-nix/key.txt`
+
 2. View the public key to add to `.sops.yaml`:
    ```bash
    sudo age-keygen -y /var/lib/sops-nix/key.txt
    ```
-3. Add the public key to `.sops.yaml` in the repository
-4. Re-encrypt secrets and rebuild
+   This outputs: `age1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
+
+3. Add the public key to `.sops.yaml` in the repository:
+   ```yaml
+   keys:
+     - &admin age1xxxxxxxxxxxxxx        # Your existing key
+     - &newhost age1yyyyyyyyyyyyyy      # New host's key
+
+   creation_rules:
+     - path_regex: secrets/secrets\.yaml$
+       key_groups:
+         - age:
+             - *admin
+             - *newhost
+   ```
+
+4. **Re-encrypt secrets with all keys** (critical step!):
+   ```bash
+   sops updatekeys secrets/secrets.yaml
+   ```
+   This decrypts the file with your current key and re-encrypts it for all keys listed in `.sops.yaml`.
+
+5. Commit and rebuild:
+   ```bash
+   git add .sops.yaml secrets/secrets.yaml
+   git commit -m "Add AGE key for newhost"
+   git push
+
+   # On the new host
+   sudo nixos-rebuild switch --flake .#newhost
+   ```
+
+**Important**: The `sops updatekeys` command is required - the secrets won't work on the new host until the file is re-encrypted with its key!
 
 See [docs/bitwarden.md](bitwarden.md) for detailed setup instructions.
 
