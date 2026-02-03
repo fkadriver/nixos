@@ -90,21 +90,40 @@ inputs.nixpkgs.lib.nixosSystem {
           read -p "> " GIT_REPO
 
           echo ""
-          echo "Available configurations:"
-          echo "  1) latitude-xfce - Dell Latitude 7480 (XFCE)"
-          echo "  2) latitude-kde  - Dell Latitude 7480 (KDE Plasma)"
-          echo "  3) airbook-kde   - MacBook Air 7,2 (KDE Plasma)"
-          echo "  4) prodesk       - HP ProDesk 600 G4 (Photo/AI workstation)"
-          echo ""
-          read -p "Select configuration (1-4): " choice
+          echo "Fetching available configurations from $GIT_REPO..."
 
-          case $choice in
-            1) CONFIG="latitude-xfce" ;;
-            2) CONFIG="latitude-kde" ;;
-            3) CONFIG="airbook-kde" ;;
-            4) CONFIG="prodesk" ;;
-            *) echo "Invalid choice"; exit 1 ;;
-          esac
+          # Get list of nixosConfigurations from the flake
+          CONFIGS=$(nix --experimental-features "nix-command flakes" flake show --json "$GIT_REPO" 2>/dev/null | \
+            jq -r '.nixosConfigurations | keys[]' 2>/dev/null | \
+            grep -v "^installer$" | \
+            sort)
+
+          if [ -z "$CONFIGS" ]; then
+            echo "ERROR: Could not fetch configurations from $GIT_REPO"
+            echo "Make sure the repository is accessible and contains nixosConfigurations"
+            exit 1
+          fi
+
+          echo ""
+          echo "Available configurations:"
+          i=1
+          declare -a config_array
+          while IFS= read -r config; do
+            config_array[$i]="$config"
+            echo "  $i) $config"
+            ((i++))
+          done <<< "$CONFIGS"
+
+          max_choice=$((i-1))
+          echo ""
+          read -p "Select configuration (1-$max_choice): " choice
+
+          if [[ ! "$choice" =~ ^[0-9]+$ ]] || [ "$choice" -lt 1 ] || [ "$choice" -gt "$max_choice" ]; then
+            echo "Invalid choice"
+            exit 1
+          fi
+
+          CONFIG="''${config_array[$choice]}"
 
           echo ""
           echo "Available disks:"
@@ -126,17 +145,10 @@ inputs.nixpkgs.lib.nixosSystem {
           fi
 
           echo ""
-          echo "Downloading disko configuration..."
-          DISKO_URL="https://raw.githubusercontent.com/fkadriver/nixos/main/disko/$CONFIG.nix"
-          curl -sL "$DISKO_URL" > /tmp/disko-$CONFIG.nix || {
-            echo "ERROR: Failed to download disko configuration from $DISKO_URL"
-            exit 1
-          }
-
           echo "Partitioning disk with disko..."
-          sudo nix --experimental-features "nix-command flakes" run github:nix-community/disko/latest -- \
-            --mode destroy,format,mount \
-            /tmp/disko-$CONFIG.nix \
+          sudo nix --experimental-features "nix-command flakes" run github:nix-community/disko -- \
+            --mode disko \
+            --flake "$GIT_REPO#$CONFIG" \
             --arg device "\"$DEVICE\""
 
           echo ""
@@ -166,10 +178,10 @@ inputs.nixpkgs.lib.nixosSystem {
           /etc/nixos-install-helper.sh
 
         Manual installation (using git flake directly):
-          1. Partition: nix run github:nix-community/disko -- --mode disko --flake github:fkadriver/nixos#<config> --arg device '"/dev/sdX"'
-          2. Install: nixos-install --flake github:fkadriver/nixos#<config>
+          1. Partition: nix run github:nix-community/disko -- --mode disko --flake <repo>#<config> --arg device '"/dev/sdX"'
+          2. Install: nixos-install --flake <repo>#<config>
 
-        Available configs: latitude-xfce, latitude-kde, airbook-kde, prodesk
+        The installer will dynamically discover available configurations from your flake.
         WiFi: Pre-configured for JEN_ACRES network
 
       '';
