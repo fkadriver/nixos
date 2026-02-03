@@ -9,6 +9,7 @@
     environment = {
       systemPackages = with pkgs; [
         # CLI Utilities
+        age           # Encryption tool for SOPS
         direnv
         jq
         tree

@@ -12,8 +12,8 @@
     home-manager.useGlobalPkgs = true;
     home-manager.useUserPackages = true;
 
-    # Set boot label
-    system.nixos.label = "Desktop";
+    # Set boot label (can be overridden by host-specific configs)
+    system.nixos.label = lib.mkDefault "Desktop";
 
     # Enable NetworkManager for network management
     networking.networkmanager.enable = true;

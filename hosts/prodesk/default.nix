@@ -16,9 +16,9 @@ let
       };
 
       # NOTE: Bitwarden secrets are configured in desktop-minimal module
-      # After first boot, get the AGE key for SOPS:
+      # The AGE key for SOPS is automatically generated on first boot
+      # To view the public key (to add to .sops.yaml), run:
       #   sudo age-keygen -y /var/lib/sops-nix/key.txt
-      # Then add this key to .sops.yaml to enable secret management
 
       # Optional: Enable Borg backup to nas01
       # Uncomment and configure if you want backups
@@ -47,6 +47,7 @@ let
 
       system = {
         stateVersion = "25.11";
+        nixos.label = "prodesk-minimal";
       };
     };
   };

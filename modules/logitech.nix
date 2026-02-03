@@ -25,7 +25,8 @@
       xbindkeys # For binding mouse buttons to actions
     ];
 
-    # Enable numlockx for Num Lock default on at boot
+    # Enable Num Lock at login screen and session start
+    services.displayManager.sddm.autoNumlock = true;
     services.xserver.displayManager.sessionCommands = ''
       ${pkgs.numlockx}/bin/numlockx on
     '';
