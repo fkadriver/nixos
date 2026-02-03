@@ -318,12 +318,9 @@ sudo nixos-install --flake github:fkadriver/nixos#latitude
 sudo reboot
 ```
 
-Replace `latitude` with your configuration: `prodesk`, `latitude`, `airbook`, etc.
+Replace `latitude` with your configuration: `latitude`, `airbook`, etc.
 
-**Note:** For `prodesk`, you'll need to clone the repo and update the hardware configuration first (see HP ProDesk section below), then use a local flake path:
-```bash
-sudo nixos-install --flake /mnt/nixos#prodesk
-```
+**Note:** This method uses disko for automatic disk partitioning. For configurations that don't use disko (like `prodesk`), see the hardware-specific installation instructions below.
 
 ### Test Configuration in VM
 
@@ -389,15 +386,26 @@ Then authenticate via the provided URL.
 - Python development environment ready for AI/ML workloads
 - Photo processing tools (GIMP, Darktable for RAW processing)
 - VSCode with FHS environment for AI frameworks
-- Optional NVIDIA CUDA support (uncomment in configuration)
+- Manual disk partitioning (no disko)
+- No automatic backups (Borg not configured)
 
-**Initial Setup:**
+**Installation Steps:**
 
-1. **Boot NixOS installer on the ProDesk**
+1. **Boot NixOS installer and partition disks manually:**
+   ```bash
+   # Example for a simple layout (adjust as needed):
+   # Create partitions with fdisk/gdisk/parted
+   # Format: mkfs.fat -F 32 /dev/sdX1 (for /boot)
+   #         mkfs.ext4 /dev/sdX2 (for /)
+   # Mount:  mount /dev/sdX2 /mnt
+   #         mkdir -p /mnt/boot
+   #         mount /dev/sdX1 /mnt/boot
+   ```
 
 2. **Generate hardware configuration:**
    ```bash
-   nixos-generate-config --show-hardware-config > /tmp/hardware.nix
+   nixos-generate-config --root /mnt
+   # This creates /mnt/etc/nixos/hardware-configuration.nix
    ```
 
 3. **Clone the repository via HTTPS** (no SSH keys needed):
@@ -408,42 +416,31 @@ Then authenticate via the provided URL.
    cd nixos
    ```
 
-4. **Replace the hardware template:**
+4. **Copy the generated hardware config:**
    ```bash
-   cp /tmp/hardware.nix hosts/prodesk/hardware.nix
+   cp /mnt/etc/nixos/hardware-configuration.nix hosts/prodesk/hardware.nix
    ```
 
-5. **Review and update disk UUIDs** in `hosts/prodesk/hardware.nix`:
+5. **Install NixOS:**
    ```bash
-   # Find your disk UUIDs
-   blkid
-
-   # Edit the hardware config with actual UUIDs
-   nano hosts/prodesk/hardware.nix
+   sudo nixos-install --root /mnt --flake /mnt/nixos#prodesk
    ```
 
-6. **Install NixOS:**
-   ```bash
-   sudo nixos-install --flake /mnt/nixos#prodesk
-   ```
+6. **Reboot and login**
 
-7. **Reboot and login**
-
-8. **After first boot, get AGE key for Bitwarden secrets:**
+7. **After first boot, get AGE key for Bitwarden secrets:**
    ```bash
    sudo age-keygen -y /var/lib/sops-nix/key.txt
    ```
    Add this key to `.sops.yaml` in your repository to enable secret management (including SSH keys)
 
-9. **If you have NVIDIA GPU**, uncomment NVIDIA sections in:
-   - `hosts/prodesk/default.nix` (NVIDIA driver configuration)
-   - Note: The ProDesk 600 G4 has Intel UHD Graphics 630 (integrated), so NVIDIA config is not needed
+8. **Rebuild to apply any changes:**
+   ```bash
+   cd ~/nixos  # Clone the repo to your home directory
+   sudo nixos-rebuild switch --flake .#prodesk
+   ```
 
-10. **Rebuild to apply any changes:**
-    ```bash
-    cd ~/nixos  # or wherever you cloned it
-    sudo nixos-rebuild switch --flake .#prodesk
-    ```
+**Note:** The ProDesk 600 G4 has Intel UHD Graphics 630 (integrated graphics) - hardware acceleration is already configured in the template.
 
 **AI/ML Setup:**
 
