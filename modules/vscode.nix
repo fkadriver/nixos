@@ -7,10 +7,10 @@ let
     mktplcRef = {
       name = "claude-code";
       publisher = "anthropic";
-      version = "2.0.75";
+      version = "2.1.29";
       # Specify linux-x64 platform to get correct binary
       arch = "linux-x64";
-      sha256 = "sha256-c6h6IlsmiE2bkVIq9DCANqo5a+wkSCZo1Ok5xI5xihI=";
+      sha256 = "sha256-qb6w3fazdpF7p7Iesgy9zLn7LqqTibYZ9LXynLrggpQ=";
     };
     
     nativeBuildInputs = with pkgs; [ 

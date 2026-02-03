@@ -2,6 +2,8 @@
 
 A modular NixOS configuration for laptops and servers with automated installation support via disko.
 
+**Current Release:** NixOS 25.11 "Xantusia" (tracking nixpkgs-unstable)
+
 ## Supported Configurations
 
 ### Laptops
@@ -54,7 +56,7 @@ Full-featured XFCE desktop configuration.
 - Mouse button tools (xdotool, xbindkeys) for Logitech mice
 
 **Includes:**
-- `3d-printing.nix` - UltiMaker Cura, PrusaSlicer, FreeCAD, Blender
+- `3d-printing.nix` - Orca Slicer, PrusaSlicer, FreeCAD, Blender
 - `vscode.nix` - VSCode with gnome-keyring integration
 - `wireless.nix` - WiFi configuration
 
@@ -169,7 +171,7 @@ Borg backup configuration for automated encrypted backups.
 3D printing software for Creality Ender 3 V3 KE and other printers.
 
 **Included Software:**
-- UltiMaker Cura 5.7.1 (AppImage with desktop integration)
+- Orca Slicer (Modern slicer with Creality support - recommended)
 - PrusaSlicer
 - FreeCAD
 - Blender
@@ -380,7 +382,7 @@ Then authenticate via the provided URL.
 │   ├── laptop-xfce.nix            # XFCE laptop configuration
 │   ├── laptop-kde.nix             # KDE Plasma laptop configuration
 │   ├── laptop-minimal.nix         # Minimal testing configuration
-│   ├── 3d-printing.nix            # Cura, PrusaSlicer, FreeCAD, Blender
+│   ├── 3d-printing.nix            # Orca Slicer, PrusaSlicer, FreeCAD, Blender
 │   ├── borg-backup.nix            # Encrypted backup to remote servers
 │   ├── bitwarden.nix              # Secrets management
 │   ├── wireless.nix               # WiFi configuration

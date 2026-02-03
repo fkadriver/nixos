@@ -15,7 +15,7 @@ let
         hostName = "latitude";
       };
       system = {
-        stateVersion = "25.04";
+        stateVersion = "25.11";
       };
     };
   };

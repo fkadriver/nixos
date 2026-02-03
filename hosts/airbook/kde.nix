@@ -49,7 +49,7 @@ let
         hostName = "airbook";
       };
       system = {
-        stateVersion = "25.04";
+        stateVersion = "25.11";
       };
     };
   };

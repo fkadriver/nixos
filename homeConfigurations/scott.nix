@@ -5,7 +5,7 @@ let
       home = {
         username = "scott";
         homeDirectory = "/home/scott";
-        stateVersion = "25.05";
+        stateVersion = "25.11";
       };
       programs = {
         bash = {
