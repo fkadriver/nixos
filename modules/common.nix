@@ -10,6 +10,7 @@
       systemPackages = with pkgs; [
         # CLI Utilities
         age           # Encryption tool for SOPS
+        sops          # Secret operations (encryption, decryption, updatekeys)
         direnv
         jq
         tree
