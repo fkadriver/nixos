@@ -302,23 +302,28 @@ Note: The installer fetches the configuration directly from git, no cloning need
 
 ### Manual Installation with Disko
 
-If you prefer manual installation:
+If you prefer manual installation using disko for automatic disk partitioning:
 
 ```bash
-# 1. Partition the disk (using git flake directly)
+# 1. Partition the disk (using git flake directly from GitHub via HTTPS)
 sudo nix run github:nix-community/disko -- \
   --mode disko \
   --flake github:fkadriver/nixos#latitude \
   --arg device '"/dev/sdX"'
 
-# 2. Install NixOS (directly from git, no cloning needed)
+# 2. Install NixOS (directly from GitHub, no cloning needed)
 sudo nixos-install --flake github:fkadriver/nixos#latitude
 
-# 4. Reboot
+# 3. Reboot
 sudo reboot
 ```
 
-Replace `<configuration>` with: `latitude`, `airbook`, or `nas01`.
+Replace `latitude` with your configuration: `prodesk`, `latitude`, `airbook`, etc.
+
+**Note:** For `prodesk`, you'll need to clone the repo and update the hardware configuration first (see HP ProDesk section below), then use a local flake path:
+```bash
+sudo nixos-install --flake /mnt/nixos#prodesk
+```
 
 ### Test Configuration in VM
 
@@ -388,23 +393,57 @@ Then authenticate via the provided URL.
 
 **Initial Setup:**
 
-1. **Generate hardware configuration on the actual ProDesk:**
+1. **Boot NixOS installer on the ProDesk**
+
+2. **Generate hardware configuration:**
    ```bash
-   nixos-generate-config --show-hardware-config > hardware.nix
+   nixos-generate-config --show-hardware-config > /tmp/hardware.nix
    ```
 
-2. **Replace the template** in `hosts/prodesk/hardware.nix` with the generated configuration
+3. **Clone the repository via HTTPS** (no SSH keys needed):
+   ```bash
+   cd /mnt
+   nix-shell -p git
+   git clone https://github.com/fkadriver/nixos.git
+   cd nixos
+   ```
 
-3. **Update disk UUIDs** in hardware.nix (find with `blkid`)
+4. **Replace the hardware template:**
+   ```bash
+   cp /tmp/hardware.nix hosts/prodesk/hardware.nix
+   ```
 
-4. **If you have NVIDIA GPU**, uncomment NVIDIA sections in:
+5. **Review and update disk UUIDs** in `hosts/prodesk/hardware.nix`:
+   ```bash
+   # Find your disk UUIDs
+   blkid
+
+   # Edit the hardware config with actual UUIDs
+   nano hosts/prodesk/hardware.nix
+   ```
+
+6. **Install NixOS:**
+   ```bash
+   sudo nixos-install --flake /mnt/nixos#prodesk
+   ```
+
+7. **Reboot and login**
+
+8. **After first boot, get AGE key for Bitwarden secrets:**
+   ```bash
+   sudo age-keygen -y /var/lib/sops-nix/key.txt
+   ```
+   Add this key to `.sops.yaml` in your repository to enable secret management (including SSH keys)
+
+9. **If you have NVIDIA GPU**, uncomment NVIDIA sections in:
    - `hosts/prodesk/default.nix` (NVIDIA driver configuration)
-   - `modules/desktop-minimal.nix` (CUDA support)
+   - Note: The ProDesk 600 G4 has Intel UHD Graphics 630 (integrated), so NVIDIA config is not needed
 
-5. **Build and switch:**
-   ```bash
-   sudo nixos-rebuild switch --flake .#prodesk
-   ```
+10. **Rebuild to apply any changes:**
+    ```bash
+    cd ~/nixos  # or wherever you cloned it
+    sudo nixos-rebuild switch --flake .#prodesk
+    ```
 
 **AI/ML Setup:**
 
