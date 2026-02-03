@@ -6,8 +6,11 @@ A modular NixOS configuration for laptops and servers with automated installatio
 
 ## Supported Configurations
 
+### Desktops
+- **prodesk**: HP ProDesk - Minimal desktop for photo and AI processing (KDE Plasma)
+
 ### Laptops
-- **latitude**: Dell Latitude 7480 (XFCE) - Primary configuration with Borg backup, 3D printing
+- **latitude**: Dell Latitude 7480 (KDE) - Primary configuration with Borg backup, 3D printing
 - **latitude-xfce**: Dell Latitude 7480 with full applications (XFCE)
 - **latitude-kde**: Dell Latitude 7480 with KDE Plasma (Windows 11-like taskbar)
 - **latitude-minimal**: Dell Latitude 7480 minimal testing configuration (XFCE)
@@ -35,6 +38,32 @@ Server-compatible base configuration that can be used on any machine, including 
 - `tailscale.nix` - Tailscale VPN with firewall configuration
 - `syncthing.nix` - File synchronization service
 - `shell-aliases.nix` - Common command aliases
+
+### Desktop Modules
+
+#### desktop-minimal.nix
+Minimal desktop configuration optimized for photo and AI processing workstations.
+
+**Desktop Environment:**
+- KDE Plasma 6
+- SDDM display manager (Wayland)
+- PipeWire audio
+
+**Features:**
+- Minimal application set focused on productivity
+- Python development environment for AI/ML
+- Photo processing tools (GIMP, Darktable)
+- Essential KDE applications only
+- CUDA support ready (for NVIDIA GPUs)
+
+**Includes:**
+- `bitwarden.nix` - Secrets management
+- `home-manager` - For starship and bash configuration
+
+**Applications:**
+- Development: Python, VSCode, Git
+- Photo: GIMP, Darktable, Gwenview
+- Essentials: Firefox, VLC, KDE utilities
 
 ### Laptop Modules
 
@@ -207,7 +236,10 @@ User account configuration for scott.
 ### Build NixOS Configuration
 
 ```bash
-# For Dell Latitude 7480 with XFCE (default)
+# For HP ProDesk desktop (minimal photo/AI workstation)
+sudo nixos-rebuild switch --flake .#prodesk
+
+# For Dell Latitude 7480 with KDE (default)
 sudo nixos-rebuild switch --flake .#latitude
 
 # For Dell Latitude 7480 with full XFCE
@@ -343,6 +375,48 @@ Then authenticate via the provided URL.
 
 ## Hardware-Specific Notes
 
+### HP ProDesk
+
+**Configuration:** Minimal desktop optimized for photo and AI processing.
+
+**Key Features:**
+- Lightweight KDE Plasma 6 desktop
+- Python development environment ready for AI/ML workloads
+- Photo processing tools (GIMP, Darktable for RAW processing)
+- VSCode with FHS environment for AI frameworks
+- Optional NVIDIA CUDA support (uncomment in configuration)
+
+**Initial Setup:**
+
+1. **Generate hardware configuration on the actual ProDesk:**
+   ```bash
+   nixos-generate-config --show-hardware-config > hardware.nix
+   ```
+
+2. **Replace the template** in `hosts/prodesk/hardware.nix` with the generated configuration
+
+3. **Update disk UUIDs** in hardware.nix (find with `blkid`)
+
+4. **If you have NVIDIA GPU**, uncomment NVIDIA sections in:
+   - `hosts/prodesk/default.nix` (NVIDIA driver configuration)
+   - `modules/desktop-minimal.nix` (CUDA support)
+
+5. **Build and switch:**
+   ```bash
+   sudo nixos-rebuild switch --flake .#prodesk
+   ```
+
+**AI/ML Setup:**
+
+After installation, create Python virtual environments for your AI workloads:
+```bash
+python -m venv ~/ai-env
+source ~/ai-env/bin/activate
+pip install torch torchvision torchaudio  # or tensorflow, etc.
+```
+
+**Inspired by:** [mkellyxp/nixbook](https://github.com/mkellyxp/nixbook) - A project for converting old computers into lightweight NixOS workstations.
+
 ### MacBook Air 7,2
 
 **WiFi:** Uses Broadcom BCM43xx chipset with broadcom-sta driver (wl module).
@@ -362,6 +436,9 @@ Then authenticate via the provided URL.
 .
 ├── flake.nix                      # Main flake configuration (auto-discovers modules)
 ├── hosts/
+│   ├── prodesk/
+│   │   ├── default.nix            # HP ProDesk desktop (minimal photo/AI workstation)
+│   │   └── hardware.nix           # Hardware configuration (template)
 │   ├── latitude/
 │   │   ├── default.nix            # Dell Latitude 7480 (XFCE, Borg backup, 3D printing)
 │   │   ├── hardware.nix           # Hardware configuration
@@ -379,6 +456,7 @@ Then authenticate via the provided URL.
 │       └── default.nix            # Automated installer ISO
 ├── modules/                       # Auto-discovered by flake.nix
 │   ├── common.nix                 # Base configuration (server-safe)
+│   ├── desktop-minimal.nix        # Minimal desktop for photo/AI workstations
 │   ├── laptop-xfce.nix            # XFCE laptop configuration
 │   ├── laptop-kde.nix             # KDE Plasma laptop configuration
 │   ├── laptop-minimal.nix         # Minimal testing configuration
