@@ -120,6 +120,9 @@
       # Additional XFCE apps
       ristretto   # Image viewer
       mousepad    # Text editor
+
+      # Fonts
+      dejavu_fonts
     ];
 
     # Browser

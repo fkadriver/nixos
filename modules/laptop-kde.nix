@@ -107,6 +107,9 @@
 
       # Windows 11 theming (optional - can install via System Settings)
       # kdePackages.breeze          # Default theme (already included)
+
+      # Fonts
+      dejavu_fonts
     ];
 
     # Browser
