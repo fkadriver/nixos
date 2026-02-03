@@ -42,7 +42,7 @@ Server-compatible base configuration that can be used on any machine, including 
 ### Desktop Modules
 
 #### desktop-minimal.nix
-Minimal desktop configuration optimized for photo and AI processing workstations.
+Minimal desktop configuration optimized for programmatic photo processing and AI workstations.
 
 **Desktop Environment:**
 - KDE Plasma 6
@@ -50,20 +50,23 @@ Minimal desktop configuration optimized for photo and AI processing workstations
 - PipeWire audio
 
 **Features:**
-- Minimal application set focused on productivity
-- Python development environment for AI/ML
-- Photo processing tools (GIMP, Darktable)
+- Minimal application set focused on development workflows
+- Python development environment for AI/ML and computer vision
+- System libraries for photoAlbumOrganizer (face recognition, image processing)
 - Essential KDE applications only
-- CUDA support ready (for NVIDIA GPUs)
+- OpenCV, dlib, OpenBLAS for computer vision tasks
 
 **Includes:**
 - `bitwarden.nix` - Secrets management
 - `home-manager` - For starship and bash configuration
 
-**Applications:**
-- Development: Python, VSCode, Git
-- Photo: GIMP, Darktable, Gwenview
+**Applications & Libraries:**
+- Development: Python 3, VSCode FHS, Git, CMake, GCC
+- Computer Vision: OpenCV, dlib, OpenBLAS, LAPACK
+- Image Viewing: Gwenview (for verifying processing results)
 - Essentials: Firefox, VLC, KDE utilities
+
+**Optimized for:** [photoAlbumOrganizer](https://github.com/fkadriver/photoAlbumOrganizer) - programmatic photo organization with face recognition
 
 ### Laptop Modules
 
@@ -379,13 +382,14 @@ Then authenticate via the provided URL.
 
 ### HP ProDesk
 
-**Configuration:** Minimal desktop optimized for photo and AI processing.
+**Configuration:** Minimal desktop optimized for programmatic photo processing and AI.
 
 **Key Features:**
 - Lightweight KDE Plasma 6 desktop
-- Python development environment ready for AI/ML workloads
-- Photo processing tools (GIMP, Darktable for RAW processing)
+- Python development environment with computer vision libraries
+- System libraries for photoAlbumOrganizer (OpenCV, dlib, face_recognition)
 - VSCode with FHS environment for AI frameworks
+- CMake, GCC for compiling native Python extensions
 - Manual disk partitioning (no disko)
 - No automatic backups (Borg not configured)
 
@@ -441,6 +445,28 @@ Then authenticate via the provided URL.
    ```
 
 **Note:** The ProDesk 600 G4 has Intel UHD Graphics 630 (integrated graphics) - hardware acceleration is already configured in the template.
+
+**Setting up photoAlbumOrganizer:**
+
+After installation, you can set up your photo processing environment:
+```bash
+# Clone your photoAlbumOrganizer project
+git clone https://github.com/fkadriver/photoAlbumOrganizer.git
+cd photoAlbumOrganizer
+
+# All system dependencies (CMake, OpenCV, dlib, etc.) are already installed!
+# Just create a Python virtual environment and install Python packages
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# The environment includes:
+# - CMake for compiling dlib
+# - OpenCV for computer vision
+# - OpenBLAS and LAPACK for linear algebra
+# - dlib for face recognition
+# - All necessary build tools
+```
 
 **AI/ML Setup:**
 

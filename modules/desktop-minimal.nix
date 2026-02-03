@@ -35,28 +35,32 @@
       pulse.enable = true;
     };
 
-    # Minimal desktop applications - focused on photo and AI processing
+    # Minimal desktop applications - focused on programmatic photo processing and AI
     environment.systemPackages = with pkgs; [
-      # Development & AI tools
+      # Development & AI/ML tools
       python3
       python3Packages.pip
       python3Packages.virtualenv
       git
       vscode-fhs  # VSCode with FHS environment for AI tools
 
+      # System libraries for photoAlbumOrganizer and computer vision
+      cmake                        # Required for dlib compilation
+      gcc                          # Compiler for native extensions
+      pkg-config                   # Build configuration tool
+      openblas                     # Linear algebra library
+      lapack                       # Linear algebra package
+      opencv                       # Computer vision library
+      dlib                         # Machine learning library for face recognition
+
       # KDE essentials
       kdePackages.dolphin          # File manager
       kdePackages.konsole          # Terminal
       kdePackages.kate             # Text editor
-      kdePackages.gwenview         # Image viewer
+      kdePackages.gwenview         # Image viewer for verifying results
       kdePackages.okular           # PDF viewer
       kdePackages.spectacle        # Screenshot tool
       kdePackages.ark              # Archive manager
-
-      # Photo processing
-      gimp
-      darktable                    # RAW photo processor
-      # AI/ML will be added via Python environments
 
       # Essential utilities
       firefox
