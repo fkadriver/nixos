@@ -328,9 +328,11 @@ If your host uses the bitwarden module (included in `desktop-minimal` and laptop
 
 4. **Re-encrypt secrets with all keys** (critical step!):
    ```bash
-   sops updatekeys secrets/secrets.yaml
+   sudo SOPS_AGE_KEY_FILE=/var/lib/sops-nix/key.txt sops updatekeys secrets/secrets.yaml
    ```
    This decrypts the file with your current key and re-encrypts it for all keys listed in `.sops.yaml`.
+
+   **Note**: You must specify `SOPS_AGE_KEY_FILE` because NixOS stores the key at `/var/lib/sops-nix/key.txt`, not in sops' default locations.
 
 5. Commit and rebuild:
    ```bash

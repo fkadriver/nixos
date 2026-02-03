@@ -321,13 +321,17 @@ creation_rules:
 This is the critical step - re-encrypt the secrets file so all keys can decrypt it:
 
 ```bash
-sops updatekeys secrets/secrets.yaml
+# On NixOS, specify the key file location
+sudo SOPS_AGE_KEY_FILE=/var/lib/sops-nix/key.txt sops updatekeys secrets/secrets.yaml
 ```
 
 This command:
+- Uses `SOPS_AGE_KEY_FILE` to tell sops where to find the private key
 - Decrypts the file using your current key
 - Re-encrypts it for all keys listed in `.sops.yaml`
-- The file remains encrypted, but now both machines can decrypt it
+- The file remains encrypted, but now all listed machines can decrypt it
+
+**Note**: The NixOS private key is at `/var/lib/sops-nix/key.txt`, not in the default locations sops checks, so you must specify `SOPS_AGE_KEY_FILE`.
 
 ### 4. Commit and Deploy
 
@@ -367,11 +371,11 @@ Whenever you modify `.sops.yaml` (add or remove AGE keys):
 
 ```bash
 # Re-encrypt all secrets with the updated key list
-sops updatekeys secrets/secrets.yaml
+sudo SOPS_AGE_KEY_FILE=/var/lib/sops-nix/key.txt sops updatekeys secrets/secrets.yaml
 
 # If you have multiple secrets files
-sops updatekeys secrets/secrets.yaml
-sops updatekeys secrets/other-secrets.yaml
+sudo SOPS_AGE_KEY_FILE=/var/lib/sops-nix/key.txt sops updatekeys secrets/secrets.yaml
+sudo SOPS_AGE_KEY_FILE=/var/lib/sops-nix/key.txt sops updatekeys secrets/other-secrets.yaml
 ```
 
 ## Troubleshooting
