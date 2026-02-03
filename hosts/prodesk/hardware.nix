@@ -31,20 +31,20 @@
   # IMPORTANT: Replace these with your actual disk UUIDs after installation
   # Get UUIDs with: blkid
   fileSystems."/" = {
-    device = "/dev/disk/by-uuid/REPLACE-WITH-ROOT-UUID";
+    device = "/dev/disk/by-label/root";
     fsType = "ext4";
   };
 
   fileSystems."/boot" = {
-    device = "/dev/disk/by-uuid/REPLACE-WITH-BOOT-UUID";
+    device = "/dev/disk/by-uuid/C8EA-FEDB";
     fsType = "vfat";
     options = [ "fmask=0077" "dmask=0077" ];
   };
 
   # Swap configuration (optional)
-  # swapDevices = [
-  #   { device = "/dev/disk/by-uuid/REPLACE-WITH-SWAP-UUID"; }
-  # ];
+   swapDevices = [
+     { device = "/dev/disk/by-label/swap"; }
+   ];
 
   # CPU microcode updates for Intel Coffee Lake
   hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
