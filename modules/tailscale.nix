@@ -15,9 +15,11 @@
     };
     services = {
       resolved = {
-        dnsovertls = "opportunistic";
-        dnssec = "allow-downgrade";
         enable = true;
+        settings.Resolve = {
+          DNSOverTLS = "opportunistic";
+          DNSSEC = "allow-downgrade";
+        };
       };
       tailscale = {
         enable = true;
