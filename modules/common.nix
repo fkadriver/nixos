@@ -20,6 +20,7 @@
         jdupes        # Deduplicate files
 
         # Development Tools
+        gh            # GitHub CLI
         git
 
         # Network & Diagnostic Tools
