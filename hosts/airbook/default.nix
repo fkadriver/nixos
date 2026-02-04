@@ -42,6 +42,7 @@ let
         permittedInsecurePackages = [
           "broadcom-sta-6.30.223.271-59-6.12.60"
           "broadcom-sta-6.30.223.271-59-6.12.63"
+          "broadcom-sta-6.30.223.271-59-6.12.68"
         ];
       };
 
