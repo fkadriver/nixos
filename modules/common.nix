@@ -81,6 +81,13 @@
           enable = true;
         };
       };
+      git = {
+        enable = true;
+        config = {
+          user.name = "Scott Jensen";
+          user.email = "fkadriver@gmail.com";
+        };
+      };
       # Note: starship is configured via home-manager in homeConfigurations/scott.nix
     };
 
