@@ -8,6 +8,7 @@ let
       inputs.self.nixosModules.common
       inputs.self.nixosModules.desktop-minimal
       inputs.self.nixosModules.user-scott
+      inputs.self.nixosModules.vscode-server
     ];
 
     config = {
