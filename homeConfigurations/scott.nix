@@ -6,6 +6,8 @@ let
         username = "scott";
         homeDirectory = "/home/scott";
         stateVersion = "25.11";
+        # Add ~/.local/bin to PATH for non-interactive shells (VS Code Server)
+        sessionPath = [ "$HOME/.local/bin" ];
       };
       programs = {
         bash = {

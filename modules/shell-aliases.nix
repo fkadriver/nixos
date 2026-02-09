@@ -47,13 +47,7 @@
         nix-shell-python = "nix-shell -p python3 python3Packages.pip";
 
         # NixOS system shortcuts with automatic hostname detection
-        rebuild = ''
-          case "$(hostname)" in
-            latitude) sudo nixos-rebuild switch --flake .#latitude ;;
-            airbook) sudo nixos-rebuild switch --flake .#airbook ;;
-            *) echo "Unknown hostname: $(hostname)"; sudo nixos-rebuild switch --flake . ;;
-          esac
-        '';
+        rebuild = "sudo nixos-rebuild switch --flake .#$(hostname)";
         nos-rebuild = "sudo nixos-rebuild switch --flake .";
         nos-test = "sudo nixos-rebuild test --flake .";
         nos-boot = "sudo nixos-rebuild boot --flake .";

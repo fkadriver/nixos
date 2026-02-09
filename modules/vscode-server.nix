@@ -38,5 +38,6 @@
       gnome-keyring
       nodejs_22  # Node.js runtime for Claude Code extension
     ];
+
   };
 }
