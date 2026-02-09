@@ -70,6 +70,12 @@ in
           # Docker and container support
           ms-azuretools.vscode-docker
           ms-vscode-remote.remote-containers
+
+          # GitHub integration
+          github.vscode-pull-request-github
+
+          # Remote SSH
+          ms-vscode-remote.remote-ssh
         ] ++ [
           # Patched Claude Code extension
           claude-code-patched
