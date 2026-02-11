@@ -6,7 +6,7 @@
     environment.systemPackages = [
       pkgs.openscad           # 3D CAD modeler for creating models
       pkgs.prusa-slicer       # Alternative slicer (PrusaSlicer fork)
-      pkgs.orca-slicer        # Modern slicer with Creality support (recommended)
+#      pkgs.orca-slicer        # Modern slicer with Creality support (recommended)
       pkgs.freecad            # Parametric 3D CAD modeler
       pkgs.blender            # 3D creation suite (modeling, animation, rendering)
       pkgs.meshlab            # System for processing 3D meshes
