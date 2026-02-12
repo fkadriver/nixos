@@ -110,6 +110,8 @@
 
       # Fonts
       dejavu_fonts
+      font-manager
+      fontforge
     ];
 
     # Browser
