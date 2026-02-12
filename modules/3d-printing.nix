@@ -1,17 +1,26 @@
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }:
-{
+  {
   config = {
     # 3D Printing software for Creality Ender 3 V3 KE
-    environment.systemPackages = [
-      pkgs.openscad           # 3D CAD modeler for creating models
-      pkgs.prusa-slicer       # Alternative slicer (PrusaSlicer fork)
+    environment.systemPackages = with pkgs; [
+      openscad           # 3D CAD modeler for creating models
+      prusa-slicer       # Alternative slicer (PrusaSlicer fork)
 #      pkgs.orca-slicer        # Modern slicer with Creality support (recommended)
-      pkgs.freecad            # Parametric 3D CAD modeler
-      pkgs.blender            # 3D creation suite (modeling, animation, rendering)
-      pkgs.meshlab            # System for processing 3D meshes
-    ];
-
+      freecad            # Parametric 3D CAD modeler
+      blender            # 3D creation suite (modeling, animation, rendering)
+      meshlab            # System for processing 3D meshes
+      # Fonts chosen for reliable extrusion / watertight contours in OpenSCAD + PrusaSlicer
+    eb-garamond
+    libre-baskerville
+    oldstandard
+    junicode
+    inter
+    source-sans
+    # great-vibes
+    # allura
+    # parisienne
+  ];
     # Enable AppImage support
     programs.appimage = {
       enable = true;
