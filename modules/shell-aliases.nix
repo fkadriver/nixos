@@ -13,9 +13,10 @@
         # Tailscale SSH shortcuts
         airbook = "tailscale ssh airbook";
         nas01 = "tailscale ssh nas01";
-        pi-hole = "tailscale ssh pi-hole";
-        slap = "tailscale ssh latitude";
         log01 = "tailscale ssh sands-log01";
+        pi-hole = "tailscale ssh pi-hole";
+        prodesk = "tailscale ssh prodesk";
+        slap = "tailscale ssh latitude";
 
         # Grep with color
         gpc = "grep --color=always";
