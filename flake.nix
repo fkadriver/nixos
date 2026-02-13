@@ -27,8 +27,8 @@
 
       # Auto-discover all modules in ./modules/
       moduleFiles = builtins.attrNames (builtins.readDir ./modules);
-      nixModules = builtins.filter (f: builtins.match ".*\\.nix" f != null) moduleFiles;
-      mkModuleName = f: builtins.replaceStrings [ ".nix" ] [ "" ] f;
+      nixModules = builtins.filter (f: builtins.match ".*\\.nix$" f != null) moduleFiles;
+      mkModuleName = f: builtins.substring 0 (builtins.stringLength f - 4) f;  # drop ".nix"
       nixosModules = builtins.listToAttrs (map (f: {
         name = mkModuleName f;
         value = import ./modules/${f} flakeContext;

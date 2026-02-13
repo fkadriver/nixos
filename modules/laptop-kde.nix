@@ -5,6 +5,7 @@
     inputs.self.nixosModules.bitwarden
     inputs.self.nixosModules.bitwarden-scott
     inputs.self.nixosModules.borg-backup
+    inputs.self.nixosModules.font
     inputs.self.nixosModules.home-design
     inputs.self.nixosModules.iphone
     inputs.self.nixosModules.printing
