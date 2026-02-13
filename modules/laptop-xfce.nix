@@ -1,31 +1,13 @@
 { inputs, ... }@flakeContext:
-{ config, lib, pkgs, ... }: {
+{ config, lib, pkgs, ... }:
+{
   imports = [
-    inputs.self.nixosModules."3d-printing"
-    inputs.self.nixosModules.bitwarden
-    inputs.self.nixosModules.bitwarden-scott
-    inputs.self.nixosModules.borg-backup
-    inputs.self.nixosModules.home-design
-    inputs.self.nixosModules.iphone
-    inputs.self.nixosModules.printing
-    inputs.self.nixosModules.syncthing-declarative
-    inputs.self.nixosModules.vscode
-    inputs.home-manager.nixosModules.home-manager
-    (inputs.self.homeConfigurations.scott).nixosModule
-    # Note: wireless module removed - add explicitly in host config if needed (e.g., airbook)
+    inputs.self.nixosModules.daily-driver
   ];
 
   config = {
-    # Home-manager configuration for scott
-    home-manager.useGlobalPkgs = true;
-    home-manager.useUserPackages = true;
     # Set boot label
     system.nixos.label = "XFCE";
-
-    # Bitwarden secrets are configured in bitwarden-scott module
-
-    # Enable NetworkManager for network management
-    networking.networkmanager.enable = true;
 
     # Enable X11 and XFCE
     services.xserver = {
@@ -45,59 +27,19 @@
       '';
     };
 
-    # Touchpad support for laptops
-    services.libinput = {
-      enable = true;
-      touchpad = {
-        tapping = true;
-        naturalScrolling = true;
-        disableWhileTyping = true;
-      };
-    };
+    # Blueman GUI for XFCE
+    services.blueman.enable = true;
 
-    # Bluetooth support
-    hardware.bluetooth = {
-      enable = true;
-      powerOnBoot = true;
-    };
-    services.blueman.enable = true;  # Blueman GUI for XFCE
-
-    # Lid switch behavior - don't suspend when external monitor connected
-    services.logind.settings.Login = {
-      HandleLidSwitch = "suspend";
-      HandleLidSwitchDocked = "ignore";
-      HandleLidSwitchExternalPower = "ignore";
-    };
-
-    # Laptop-specific applications
-    environment.systemPackages = with pkgs; [
-      # Development
-      python3Minimal
-      claude-code
-
-      # Gaming
-      heroic
-      lutris
-      wineWowPackages.stable
-      winetricks
-
-      # Media
-      shotwell
-
-      # Office
-      libreoffice
-      thunderbird  # Email client (Gmail + iCloud)
-      evince       # PDF viewer
-
-      # Backup
-      borgbackup
+    # XFCE-specific apps/plugins (appended to daily-driver list)
+    environment.systemPackages = lib.mkAfter (with pkgs; [
+      # Office / viewers (XFCE side)
+      evince
 
       # Utilities
-      unzip
-      xarchiver  # Archive manager GUI for Thunar integration
-      xdotool    # For mouse button remapping
-      xbindkeys  # Bind mouse buttons to keyboard shortcuts
-      xorg.xev   # Test mouse button codes
+      xarchiver
+      xdotool
+      xbindkeys
+      xorg.xev
 
       # XFCE plugins and utilities
       xfce4-battery-plugin
@@ -106,7 +48,7 @@
       xfce4-netload-plugin
       xfce4-pulseaudio-plugin
       xfce4-screenshooter
-      xfce4-systemload-plugin      # CPU/memory usage for notification area
+      xfce4-systemload-plugin
       xfce4-taskmanager
       xfce4-weather-plugin
       xfce4-whiskermenu-plugin
@@ -118,56 +60,8 @@
       thunar-media-tags-plugin
 
       # Additional XFCE apps
-      ristretto   # Image viewer
-      mousepad    # Text editor
-
-      # Fonts
-      dejavu_fonts
-      font-manager
-      fontforge
-    ];
-
-    # Browser
-    programs.firefox.enable = true;
-
-    # Dynamic linking support for non-NixOS binaries
-    # Required for VSCode extensions with native binaries (like Claude Code)
-    # The nix-ld module automatically sets NIX_LD and NIX_LD_LIBRARY_PATH
-    programs.nix-ld = {
-      enable = true;
-      libraries = with pkgs; [
-        # Core C/C++ libraries
-        stdenv.cc.cc.lib  # libstdc++, libgcc_s
-
-        # Compression libraries
-        zlib
-        zstd
-        bzip2
-        xz
-
-        # Crypto and security
-        openssl
-        libxcrypt
-        libxcrypt-legacy
-
-        # Network libraries
-        curl
-        libssh
-
-        # System libraries
-        util-linux
-        systemd
-        attr
-        acl
-        libsodium
-
-        # XML/parsing
-        libxml2
-
-        # Other common dependencies
-        glib
-        dbus
-      ];
-    };
+      ristretto
+      mousepad
+    ]);
   };
 }

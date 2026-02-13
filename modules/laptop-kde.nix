@@ -1,32 +1,13 @@
 { inputs, ... }@flakeContext:
-{ config, lib, pkgs, ... }: {
+{ config, lib, pkgs, ... }:
+{
   imports = [
-    inputs.self.nixosModules."3d-printing"
-    inputs.self.nixosModules.bitwarden
-    inputs.self.nixosModules.bitwarden-scott
-    inputs.self.nixosModules.borg-backup
-    inputs.self.nixosModules.font
-    inputs.self.nixosModules.home-design
-    inputs.self.nixosModules.iphone
-    inputs.self.nixosModules.printing
-    inputs.self.nixosModules.syncthing-declarative
-    inputs.self.nixosModules.vscode
-    inputs.home-manager.nixosModules.home-manager
-    (inputs.self.homeConfigurations.scott).nixosModule
-    # Note: wireless module removed - add explicitly in host config if needed (e.g., airbook)
+    inputs.self.nixosModules.daily-driver
   ];
 
   config = {
-    # Home-manager configuration for scott
-    home-manager.useGlobalPkgs = true;
-    home-manager.useUserPackages = true;
     # Set boot label
     system.nixos.label = "KDE";
-
-    # Bitwarden secrets are configured in bitwarden-scott module
-
-    # Enable NetworkManager for network management
-    networking.networkmanager.enable = true;
 
     # Enable KDE Plasma
     services.xserver.enable = true;
@@ -36,128 +17,8 @@
     };
     services.desktopManager.plasma6.enable = true;
 
-    # Touchpad support for laptops
-    services.libinput = {
-      enable = true;
-      touchpad = {
-        tapping = true;
-        naturalScrolling = true;
-        disableWhileTyping = true;
-      };
-    };
-
-    # Bluetooth support
-    hardware.bluetooth = {
-      enable = true;
-      powerOnBoot = true;
-    };
-
-    # Lid switch behavior - don't suspend when external monitor connected
-    services.logind.settings.Login = {
-      HandleLidSwitch = "suspend";
-      HandleLidSwitchDocked = "ignore";
-      HandleLidSwitchExternalPower = "ignore";
-    };
-
-    # Laptop-specific applications
-    environment.systemPackages = with pkgs; [
-      # Development
-      python3Minimal
-      claude-code
-
-      # Gaming
-      heroic
-      lutris
-      wineWowPackages.stable
-      winetricks
-
-      # Media
-      shotwell
-      kdePackages.gwenview        # KDE image viewer
-
-      # Office
-      libreoffice
-      thunderbird
-      kdePackages.okular          # KDE PDF viewer
-
-      # Networking tools
-      wireshark
-
-      # Backup
-      borgbackup
-
-      # Utilities
-      unzip
-      kdePackages.ark             # KDE archive manager
-      kdePackages.kcalc           # KDE calculator
-      kdePackages.spectacle       # KDE screenshot tool
-
-      # KDE utilities
-      kdePackages.dolphin          # File manager
-      kdePackages.konsole          # Terminal
-      kdePackages.kate             # Text editor
-      kdePackages.kcmutils         # KDE system settings modules
-      kdePackages.kscreen          # Multi-monitor management
-      kdePackages.plasma-systemmonitor  # System monitor
-      kdePackages.kinfocenter      # System information
-      kdePackages.plasma-nm        # Network manager applet
-      kdePackages.plasma-pa        # PulseAudio/PipeWire applet
-      kdePackages.bluedevil        # Bluetooth manager
-      kdePackages.powerdevil       # Power management
-      kdePackages.kgamma           # Monitor gamma control
-
-      # Windows 11 theming (optional - can install via System Settings)
-      # kdePackages.breeze          # Default theme (already included)
-
-      # Fonts
-      dejavu_fonts
-      font-manager
-      fontforge
-    ];
-
-    # Browser
-    programs.firefox.enable = true;
-
     # KDE Connect for phone integration
     programs.kdeconnect.enable = true;
-
-    # Dynamic linking support for non-NixOS binaries
-    programs.nix-ld = {
-      enable = true;
-      libraries = with pkgs; [
-        # Core C/C++ libraries
-        stdenv.cc.cc.lib
-
-        # Compression libraries
-        zlib
-        zstd
-        bzip2
-        xz
-
-        # Crypto and security
-        openssl
-        libxcrypt
-        libxcrypt-legacy
-
-        # Network libraries
-        curl
-        libssh
-
-        # System libraries
-        util-linux
-        systemd
-        attr
-        acl
-        libsodium
-
-        # XML/parsing
-        libxml2
-
-        # Other common dependencies
-        glib
-        dbus
-      ];
-    };
 
     # PipeWire for audio (KDE integrates well with PipeWire)
     security.rtkit.enable = true;
@@ -168,24 +29,50 @@
       pulse.enable = true;
     };
 
-    # Disable power-profiles-daemon to avoid conflict with TLP (from multi-monitor module)
+    # Disable power-profiles-daemon to avoid conflict with TLP (if you use it elsewhere)
     services.power-profiles-daemon.enable = false;
+
+    # KDE / Plasma apps and utilities (appended to daily-driver list)
+    environment.systemPackages = lib.mkAfter (with pkgs; [
+      # Media / viewing
+      kdePackages.gwenview
+      kdePackages.okular
+
+      # Utilities
+      kdePackages.ark
+      kdePackages.kcalc
+      kdePackages.spectacle
+
+      # KDE core
+      kdePackages.dolphin
+      kdePackages.konsole
+      kdePackages.kate
+      kdePackages.kcmutils
+      kdePackages.kscreen
+      kdePackages.plasma-systemmonitor
+      kdePackages.kinfocenter
+      kdePackages.plasma-nm
+      kdePackages.plasma-pa
+      kdePackages.bluedevil
+      kdePackages.powerdevil
+      kdePackages.kgamma
+
+      # Networking tools
+      wireshark
+    ]);
 
     # KDE Global Shortcuts - Ctrl+F7 for Spectacle (screenshot)
     # This creates/updates the kglobalshortcutsrc file for user scott
     system.activationScripts.kdeShortcuts = lib.stringAfter [ "users" ] ''
       SHORTCUTS_FILE="/home/scott/.config/kglobalshortcutsrc"
 
-      # Create directory if it doesn't exist
       mkdir -p /home/scott/.config
 
-      # Check if file exists, if not create it with basic structure
       if [ ! -f "$SHORTCUTS_FILE" ]; then
         touch "$SHORTCUTS_FILE"
         chown scott:users "$SHORTCUTS_FILE"
       fi
 
-      # Use kwriteconfig6 if available, otherwise write directly
       if command -v ${pkgs.kdePackages.kconfig}/bin/kwriteconfig6 &> /dev/null; then
         ${pkgs.kdePackages.kconfig}/bin/kwriteconfig6 --file "$SHORTCUTS_FILE" \
           --group "org.kde.spectacle.desktop" \
