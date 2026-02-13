@@ -18,6 +18,7 @@
         tmux
         ncdu
         jdupes        # Deduplicate files
+        ripgrep       # fast ripgrep
 
         # Development Tools
         gh            # GitHub CLI

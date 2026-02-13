@@ -76,5 +76,9 @@
         libxml2 glib dbus
       ];
     };
+    my.printing = {
+      enable = true;
+      generateTestArtifacts = true;
+    };
   };
 }
