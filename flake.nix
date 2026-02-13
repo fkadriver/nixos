@@ -25,10 +25,17 @@
     let
       flakeContext = { inherit inputs; };
 
-      # Auto-discover all modules in ./modules/
-      moduleFiles = builtins.attrNames (builtins.readDir ./modules);
-      nixModules = builtins.filter (f: builtins.match ".*\\.nix$" f != null) moduleFiles;
-      mkModuleName = f: builtins.substring 0 (builtins.stringLength f - 4) f;  # drop ".nix"
+      # Auto-discover all modules in ./modules/ (ONLY regular files ending in .nix)
+      moduleDir = builtins.readDir ./modules;
+
+      nixModules =
+        builtins.filter
+          (f: moduleDir.${f} == "regular" && builtins.match ".*\\.nix$" f != null)
+          (builtins.attrNames moduleDir);
+
+      mkModuleName = f:
+        builtins.substring 0 (builtins.stringLength f - 4) f; # drop ".nix"
+
       nixosModules = builtins.listToAttrs (map (f: {
         name = mkModuleName f;
         value = import ./modules/${f} flakeContext;
