@@ -19,6 +19,16 @@
 
   config = {
 
+    # Fonts: managed by modules/font.nix
+    my.fonts = {
+      enable = true;
+      documents = true;
+      craft = true;
+      nerd = true;
+      viewer = true;
+    };
+
+
     networking.networkmanager.enable = true;
 
     services.libinput = {
@@ -59,10 +69,6 @@
 
       borgbackup
       unzip
-
-      dejavu_fonts
-      font-manager
-      fontforge
     ];
 
     programs.nix-ld = {
@@ -78,6 +84,8 @@
     };
     my.printing = {
       enable = true;
+      fonts.enable = true;
+      repairTools = true;
       generateTestArtifacts = true;
     };
   };

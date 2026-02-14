@@ -3,47 +3,13 @@
 
 let
   cfg = config.my.fonts;
-
-  # Paper / document fonts (laser printing, office, general UI)
-  documentFonts = with pkgs; [
-    noto-fonts
-    noto-fonts-extra
-    noto-fonts-cjk-sans
-    noto-fonts-emoji
-
-    liberation_ttf
-    corefonts
-    vistafonts
-
-    source-sans
-    source-serif
-    source-code-pro
-    inter
-  ];
-
-  # Decorative / craft fonts (Cricut-friendly bundles)
-  craftFonts = with pkgs; [
-    google-fonts
-    league-of-moveable-type
-  ];
-
-  # Nerd fonts (terminal)
-  nerdFonts = with pkgs; [
-    (nerdfonts.override { fonts = [ "JetBrainsMono" "FiraCode" ]; })
-  ];
-
-  selectedFonts = lib.flatten [
-    (lib.optionals cfg.documents documentFonts)
-    (lib.optionals cfg.craft craftFonts)
-    (lib.optionals cfg.nerd nerdFonts)
-  ];
 in
 {
   options.my.fonts = {
     enable = lib.mkEnableOption "shared font management";
 
     documents = lib.mkEnableOption "printing & office fonts";
-    craft     = lib.mkEnableOption "Cricut / decorative fonts";
+    craft     = lib.mkEnableOption "decorative / Cricut-friendly fonts";
     nerd      = lib.mkEnableOption "terminal nerd fonts";
 
     viewer = lib.mkOption {
@@ -53,31 +19,75 @@ in
     };
   };
 
-  config = lib.mkIf cfg.enable {
+  config = lib.mkIf cfg.enable (
+    let
+      documentFonts =
+        (with pkgs; [
+          dejavu_fonts
+          noto-fonts
+          noto-fonts-cjk-sans
+          liberation_ttf
+          source-sans
+          source-serif
+          source-code-pro
+          inter
+        ])
+        ++ (if pkgs ? "noto-fonts-color-emoji" then [ pkgs."noto-fonts-color-emoji" ]
+            else if pkgs ? "noto-fonts-emoji" then [ pkgs."noto-fonts-emoji" ]
+            else []);
 
-    fonts = {
-      packages = selectedFonts;
+      craftFonts =
+        (if pkgs ? "great-vibes" then [ pkgs."great-vibes" ] else [])
+        ++ (if pkgs ? "allura" then [ pkgs."allura" ] else [])
+        ++ (if pkgs ? "parisienne" then [ pkgs."parisienne" ] else [])
+        ++ (if pkgs ? "eb-garamond" then [ pkgs."eb-garamond" ] else [])
+        ++ (if pkgs ? "libre-baskerville" then [ pkgs."libre-baskerville" ] else [])
+        ++ (if pkgs ? "oldstandard" then [ pkgs."oldstandard" ] else [])
+        ++ (if pkgs ? "junicode" then [ pkgs."junicode" ] else []);
 
-      fontconfig = {
-        enable = true;
-        antialias = true;
-        hinting.enable = true;
+      # Nerd fonts: nixpkgs naming/packaging has changed over time.
+      # We only attempt the classic nerdfonts override when pkgs.nerdfonts exists.
+      # Otherwise we fall back to regular JetBrains Mono + Fira Code (non-nerd).
+      nerdFonts =
+        if pkgs ? nerdfonts then
+          [ (pkgs.nerdfonts.override { fonts = [ "JetBrainsMono" "FiraCode" ]; }) ]
+        else
+          (with pkgs; [
+            jetbrains-mono
+            fira-code
+          ]);
 
-        defaultFonts = {
-          serif = [ "Noto Serif" ];
-          sansSerif = [ "Noto Sans" ];
-          monospace = [ "JetBrainsMono Nerd Font" ];
+      selectedFonts = lib.flatten [
+        (lib.optionals cfg.documents documentFonts)
+        (lib.optionals cfg.craft craftFonts)
+        (lib.optionals cfg.nerd nerdFonts)
+      ];
+    in
+    {
+      fonts = {
+        packages = selectedFonts;
+
+        fontconfig = {
+          enable = true;
+          antialias = true;
+          hinting.enable = true;
+
+          defaultFonts = {
+            serif = [ "Noto Serif" ];
+            sansSerif = [ "Noto Sans" ];
+            monospace = [ "JetBrains Mono" "Fira Code" ];
+          };
         };
       };
-    };
 
-    environment.systemPackages = lib.optionals cfg.viewer (with pkgs; [
-      font-manager
-      gnome-font-viewer
-      fontpreview
-      fontforge
-      imagemagick
-      pango
-    ]);
-  };
+      environment.systemPackages = lib.optionals cfg.viewer (with pkgs; [
+        font-manager
+        gnome-font-viewer
+        fontpreview
+        fontforge
+        imagemagick
+        pango
+      ]);
+    }
+  );
 }

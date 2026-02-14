@@ -688,3 +688,31 @@ This configuration is provided as-is for personal use.
 - Inspired by [Fortydeux-NixOS-System-Flake](https://github.com/WhatstheUse/Fortydeux-NixOS-System-Flake)
 - Inspired by [hyprvibe](https://github.com/ChrisLAS/hyprvibe)
 - Based on https://mynixos.com/fkadriver/Driver
+
+## Daily driver profiles (Latitude + Airbook)
+
+This repo uses a shared `modules/daily-driver.nix` module for Scott's two daily-driver machines:
+
+- **Latitude (KDE)**: multi-monitor, typically docked
+- **Airbook (XFCE)**: lighter desktop for battery life
+
+`daily-driver.nix` contains shared applications, fonts, and 3D-printing tooling; the desktop environment modules (`modules/laptop-kde.nix`, `modules/laptop-xfce.nix`) contain DE-specific settings only.
+
+### Fonts
+
+Fonts are managed by `modules/font.nix` and enabled in `modules/daily-driver.nix`.
+
+### 3D printing font test artifacts
+
+When `my.printing.generateTestArtifacts = true;` is enabled (via `daily-driver.nix`), these commands are available:
+
+- `generate-font-plate "Your text"` → outputs `~/.cache/font-test-plate/font_plate.stl`
+- `generate-font-keychains "Your text"` → outputs multiple STLs under `~/.cache/font-keychains/`
+
+### Helpful Nix aliases
+
+System rebuild aliases are defined in `modules/shell-aliases.nix`, for example:
+
+- `nos-rebuild` → `sudo nixos-rebuild switch --flake .`
+- `nos-test` → `sudo nixos-rebuild test --flake .`
+- `nos-boot` → `sudo nixos-rebuild boot --flake .`
