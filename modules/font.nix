@@ -56,7 +56,6 @@ in
         work-sans
         # Bold/display (excellent for signage)
         oswald
-        archivo
         raleway
         # Geometric/industrial
         orbitron
