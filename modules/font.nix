@@ -8,9 +8,10 @@ in
   options.my.fonts = {
     enable = lib.mkEnableOption "shared font management";
 
-    documents = lib.mkEnableOption "printing & office fonts";
-    craft     = lib.mkEnableOption "decorative / Cricut-friendly fonts";
-    nerd      = lib.mkEnableOption "terminal nerd fonts";
+    documents  = lib.mkEnableOption "printing & office fonts";
+    craft      = lib.mkEnableOption "decorative / Cricut-friendly fonts";
+    printing3d = lib.mkEnableOption "3D printing fonts (bold strokes, clean contours)";
+    nerd       = lib.mkEnableOption "terminal nerd fonts";
 
     viewer = lib.mkOption {
       type = lib.types.bool;
@@ -45,6 +46,22 @@ in
         ++ (if pkgs ? "oldstandard" then [ pkgs."oldstandard" ] else [])
         ++ (if pkgs ? "junicode" then [ pkgs."junicode" ] else []);
 
+      # Fonts optimized for 3D printing: bold strokes, simple contours, reliable extrusion
+      printing3dFonts = with pkgs; [
+        # Sans-serif (clean, reliable)
+        roboto
+        lato
+        open-sans
+        montserrat
+        work-sans
+        # Bold/display (excellent for signage)
+        oswald
+        archivo
+        raleway
+        # Geometric/industrial
+        orbitron
+      ];
+
       # Nerd fonts: nixpkgs naming/packaging has changed over time.
       # We only attempt the classic nerdfonts override when pkgs.nerdfonts exists.
       # Otherwise we fall back to regular JetBrains Mono + Fira Code (non-nerd).
@@ -60,6 +77,7 @@ in
       selectedFonts = lib.flatten [
         (lib.optionals cfg.documents documentFonts)
         (lib.optionals cfg.craft craftFonts)
+        (lib.optionals cfg.printing3d printing3dFonts)
         (lib.optionals cfg.nerd nerdFonts)
       ];
     in

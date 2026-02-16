@@ -24,6 +24,7 @@
       enable = true;
       documents = true;
       craft = true;
+      printing3d = true;
       nerd = true;
       viewer = true;
     };

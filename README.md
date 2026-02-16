@@ -205,12 +205,13 @@ Borg backup configuration for automated encrypted backups.
 3D printing software for Creality Ender 3 V3 KE and other printers.
 
 **Included Software:**
-- Orca Slicer (Modern slicer with Creality support - recommended)
-- PrusaSlicer
-- FreeCAD
-- Blender
-- OpenSCAD
-- MeshLab
+- OpenSCAD, PrusaSlicer, FreeCAD, Blender, MeshLab
+
+**Options:**
+- `my.printing.enable` - Core 3D printing tools
+- `my.printing.fonts.enable` - 3D-safe emboss fonts (enables `my.fonts.printing3d`)
+- `my.printing.repairTools` - SVG/STL repair tools (Inkscape, Potrace, FontForge)
+- `my.printing.generateTestArtifacts` - Font test plate/keychain generators
 
 #### syncthing.nix
 File synchronization service configuration.
@@ -513,6 +514,7 @@ pip install torch torchvision torchaudio  # or tensorflow, etc.
 │   ├── bitwarden.nix              # Secrets management
 │   ├── wireless.nix               # WiFi configuration
 │   ├── disko-config.nix           # Automated disk partitioning
+│   ├── font.nix                   # Font management (documents, craft, printing3d, nerd)
 │   ├── shell-aliases.nix          # System-wide aliases
 │   ├── syncthing.nix              # File synchronization
 │   ├── tailscale.nix              # VPN configuration
@@ -700,7 +702,17 @@ This repo uses a shared `modules/daily-driver.nix` module for Scott's two daily-
 
 ### Fonts
 
-Fonts are managed by `modules/font.nix` and enabled in `modules/daily-driver.nix`.
+Fonts are managed by `modules/font.nix` with modular categories:
+
+| Option | Description | Fonts |
+|--------|-------------|-------|
+| `documents` | Office/printing | DejaVu, Noto, Liberation, Source family, Inter |
+| `craft` | Decorative/Cricut | Great Vibes, Allura, Parisienne, EB Garamond, Libre Baskerville |
+| `printing3d` | 3D printing optimized | Roboto, Lato, Open Sans, Montserrat, Oswald, Archivo, Raleway, Orbitron |
+| `nerd` | Terminal fonts | JetBrains Mono, Fira Code (with Nerd Font glyphs) |
+| `viewer` | Font tools | font-manager, gnome-font-viewer, fontforge |
+
+All categories are enabled in `modules/daily-driver.nix` for laptop-xfce and laptop-kde.
 
 ### 3D printing font test artifacts
 

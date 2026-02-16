@@ -9,7 +9,7 @@ in
   options.my.printing = {
     enable = lib.mkEnableOption "3D printing tools";
 
-    fonts.enable = lib.mkEnableOption "Install slicer-safe emboss fonts";
+    fonts.enable = lib.mkEnableOption "Install slicer-safe emboss fonts (enables my.fonts.printing3d)";
 
     repairTools = lib.mkEnableOption "SVG/STL repair & text preparation tools";
 
@@ -21,20 +21,7 @@ in
   };
 
   config = lib.mkIf cfg.enable (let
-    # Fonts chosen for reliable extrusion / watertight contours in OpenSCAD + PrusaSlicer.
-    # Some decorative fonts are not present in every nixpkgs revision; include them only if available.
-    slicerFonts =
-      (with pkgs; [
-        eb-garamond
-        libre-baskerville
-        oldstandard
-        junicode
-        inter
-        source-sans
-      ])
-      ++ (if pkgs ? "great-vibes" then [ pkgs."great-vibes" ] else [])
-      ++ (if pkgs ? "allura" then [ pkgs."allura" ] else [])
-      ++ (if pkgs ? "parisienne" then [ pkgs."parisienne" ] else []);
+    # Font installation now delegated to font.nix module via my.fonts.printing3d
 
     generatePlateScript = pkgs.writeShellScriptBin "generate-font-plate" ''
       set -euo pipefail
@@ -52,7 +39,7 @@ in
       ${pkgs.fontconfig}/bin/fc-list : family | cut -d, -f1 | sort -u > all_fonts.txt
 
       # Filter to a "known-good for 3D" subset by default. You can tweak this regex.
-      REGEX="Garamond|Baskerville|Old Standard|OldStandard|Junicode|Inter|Source Sans|Sans|Great Vibes|Vibes|Allura|Parisienne"
+      REGEX="Roboto|Lato|Open Sans|Montserrat|Work Sans|Oswald|Archivo|Raleway|Orbitron|Garamond|Baskerville|Old Standard|OldStandard|Junicode|Inter|Source Sans"
 
       echo "fonts = [" > fonts.scad
       grep -E "$REGEX" all_fonts.txt | sed 's/"/\\"/g; s/.*/"&",/' >> fonts.scad
@@ -126,7 +113,7 @@ EOF
       cd "$WORKDIR"
 
       ${pkgs.fontconfig}/bin/fc-list : family | cut -d, -f1 | sort -u > all_fonts.txt
-      REGEX="Garamond|Baskerville|Old Standard|OldStandard|Junicode|Inter|Source Sans|Sans|Great Vibes|Vibes|Allura|Parisienne"
+      REGEX="Roboto|Lato|Open Sans|Montserrat|Work Sans|Oswald|Archivo|Raleway|Orbitron|Garamond|Baskerville|Old Standard|OldStandard|Junicode|Inter|Source Sans"
       grep -E "$REGEX" all_fonts.txt > fonts.txt || true
 
       if [ ! -s fonts.txt ]; then
@@ -201,8 +188,11 @@ EOF
         generateKeychainsScript
       ];
 
-    # Install slicer-safe emboss fonts (optional)
-    fonts.packages = lib.mkIf cfg.fonts.enable slicerFonts;
+    # Enable 3D printing fonts from font.nix module
+    my.fonts = lib.mkIf cfg.fonts.enable {
+      enable = true;
+      printing3d = true;
+    };
 
     programs.appimage = {
       enable = true;
