@@ -35,6 +35,7 @@
 
         # System Monitoring
         htop
+        btop
       ];
     };
 
