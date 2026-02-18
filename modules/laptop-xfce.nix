@@ -62,6 +62,9 @@
       # Additional XFCE apps
       ristretto
       mousepad
+
+      # Prevent screen blanking/sleep
+      caffeine-ng
     ]);
   };
 }

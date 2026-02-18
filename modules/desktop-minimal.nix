@@ -65,6 +65,9 @@
       # Essential utilities
       firefox
       vlc
+
+      # Prevent screen blanking/sleep
+      libsForQt5.plasma-applet-caffeine-plus
     ];
 
     # Enable CUDA support for NVIDIA GPUs (if present)

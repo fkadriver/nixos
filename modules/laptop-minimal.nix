@@ -39,6 +39,9 @@
 
       # Utilities
       unzip
+
+      # Prevent screen blanking/sleep
+      caffeine-ng
     ];
 
     # Dynamic linking support for non-NixOS binaries

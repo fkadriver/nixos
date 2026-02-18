@@ -59,6 +59,9 @@
 
       # Networking tools
       wireshark
+
+      # Prevent screen blanking/sleep
+      libsForQt5.plasma-applet-caffeine-plus
     ]);
 
     # KDE Global Shortcuts - Ctrl+F7 for Spectacle (screenshot)
