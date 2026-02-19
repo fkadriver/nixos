@@ -90,6 +90,58 @@
           user.email = "fkadriver@gmail.com";
         };
       };
+      tmux = {
+        enable = true;
+        clock24 = true;
+        keyMode = "vi";
+        terminal = "screen-256color";
+        historyLimit = 10000;
+        extraConfig = ''
+          # Enable mouse support
+          set -g mouse on
+
+          # Start windows and panes at 1, not 0
+          set -g base-index 1
+          setw -g pane-base-index 1
+
+          # Renumber windows when one is closed
+          set -g renumber-windows on
+
+          # Better colors
+          set -g default-terminal "screen-256color"
+          set -ga terminal-overrides ",*256col*:Tc"
+
+          # Status bar styling
+          set -g status-style 'bg=#333333 fg=#ffffff'
+          set -g status-left-length 40
+          set -g status-right '%H:%M %d-%b-%y'
+
+          # Easy splits with | and -
+          bind | split-window -h -c "#{pane_current_path}"
+          bind - split-window -v -c "#{pane_current_path}"
+
+          # Vim-style pane navigation
+          bind h select-pane -L
+          bind j select-pane -D
+          bind k select-pane -U
+          bind l select-pane -R
+        '';
+      };
+      bash = {
+        interactiveShellInit = ''
+          # Auto-start tmux for interactive sessions
+          # Skip if: already in tmux, in VS Code terminal, running scp/sftp, or non-interactive
+          if command -v tmux &> /dev/null && \
+             [ -z "$TMUX" ] && \
+             [ -z "$VSCODE_INJECTION" ] && \
+             [ -z "$SSH_CONNECTION" ] || [ -n "$SSH_TTY" ] && \
+             [[ $- == *i* ]] && \
+             [ "$TERM" != "dumb" ]; then
+            # Attach to existing session or create new one
+            tmux attach-session -t default 2>/dev/null || tmux new-session -s default
+          fi
+        '';
+      };
       # Note: starship is configured via home-manager in homeConfigurations/scott.nix
     };
 
