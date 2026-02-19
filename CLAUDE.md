@@ -98,7 +98,9 @@ The flake automatically discovers all `.nix` files in `./modules/` and exposes t
 
 **Base Module:**
 - `common.nix` - Server-safe base configuration (no GUI dependencies)
-  - Essential CLI tools, nix settings, docker, direnv
+  - Essential CLI tools, nix settings, docker, direnv, tmux
+  - Tmux auto-starts for interactive bash sessions (skips VS Code terminals)
+  - Git configured with user.name/email for all systems
   - Imports: `tailscale.nix`, `shell-aliases.nix`
 
 **Desktop Modules:**

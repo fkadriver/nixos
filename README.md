@@ -28,11 +28,21 @@ A modular NixOS configuration for laptops and servers with automated installatio
 Server-compatible base configuration that can be used on any machine, including servers without a GUI.
 
 **Features:**
-- Essential CLI tools (git, vim, htop, jq, tmux, etc.)
+- Essential CLI tools (git, vim, htop, btop, jq, ripgrep, etc.)
+- Tmux terminal multiplexer with auto-start for bash sessions
+- Git configured globally (user.name, user.email)
 - Nix flakes enabled
 - Docker virtualization
 - Direnv integration
 - Locale and timezone settings (US Central Time)
+
+**Tmux Configuration:**
+- Auto-starts for interactive bash sessions (creates/attaches to "default" session)
+- Skips auto-start in VS Code terminals, existing tmux sessions, and non-interactive shells
+- Vi keybindings with mouse support enabled
+- Custom keybindings: `|` for horizontal split, `-` for vertical split
+- Vim-style pane navigation: `h/j/k/l`
+- 24-hour clock, 10,000 line history
 
 **Includes:**
 - `tailscale.nix` - Tailscale VPN with firewall configuration
