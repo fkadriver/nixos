@@ -44,6 +44,19 @@
       caffeine-ng
     ];
 
+    # Auto-start caffeine to prevent screen blanking
+    environment.etc."xdg/autostart/caffeine.desktop".text = ''
+      [Desktop Entry]
+      Name=Caffeine
+      Comment=Prevent screen blanking
+      Exec=caffeine
+      Icon=caffeine
+      Terminal=false
+      Type=Application
+      Categories=Utility;
+      X-GNOME-Autostart-enabled=true
+    '';
+
     # Dynamic linking support for non-NixOS binaries
     # Required for VSCode extensions with native binaries (like Claude Code)
     # The nix-ld module automatically sets NIX_LD and NIX_LD_LIBRARY_PATH

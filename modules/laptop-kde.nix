@@ -64,6 +64,19 @@
       caffeine-ng
     ]);
 
+    # Auto-start caffeine to prevent screen blanking
+    environment.etc."xdg/autostart/caffeine.desktop".text = ''
+      [Desktop Entry]
+      Name=Caffeine
+      Comment=Prevent screen blanking
+      Exec=caffeine
+      Icon=caffeine
+      Terminal=false
+      Type=Application
+      Categories=Utility;
+      X-GNOME-Autostart-enabled=true
+    '';
+
     # KDE Global Shortcuts - Ctrl+F7 for Spectacle (screenshot)
     # This creates/updates the kglobalshortcutsrc file for user scott
     system.activationScripts.kdeShortcuts = lib.stringAfter [ "users" ] ''
