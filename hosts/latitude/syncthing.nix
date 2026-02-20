@@ -4,9 +4,8 @@
     deviceName = "latitude";
 
     # Latitude is the introducer for nas01 (not managed by NixOS)
-    # nas01 will auto-accept folders shared by latitude
+    # This allows nas01 to discover other devices through latitude
     introducerFor = [ "nas01" ];
-    autoAcceptFrom = [ "nas01" ];
 
     folders = {
       # Documents: Full sync with all devices including iPhone

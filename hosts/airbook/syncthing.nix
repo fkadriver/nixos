@@ -3,8 +3,8 @@
     enable = true;
     deviceName = "airbook";
 
-    # Airbook accepts folders from nas01 (introduced by latitude)
-    autoAcceptFrom = [ "nas01" ];
+    # Note: autoAcceptFrom not used here because we use declarative folder config
+    # (overrideFolders = true conflicts with autoAcceptFolders)
 
     folders = {
       # Documents: Full sync with all devices including iPhone
