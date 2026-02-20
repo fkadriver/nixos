@@ -6,7 +6,7 @@
     folders = {
       Documents = {
         path = "/home/scott/Documents";
-        devices = [ "airbook" "nas01" ];
+        devices = [ "airbook" "nas01" "iphone" ];
         versioning = {
           type = "simple";
           params.keep = "5";  # Keep 5 old versions
@@ -14,7 +14,7 @@
       };
       Photos = {
         path = "/home/scott/Photos";
-        devices = [ "airbook" "nas01" ];
+        devices = [ "airbook" "nas01" "iphone" ];
         versioning = {
           type = "simple";
           params.keep = "5";

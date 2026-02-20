@@ -11,14 +11,16 @@ let
     latitude = "AH7R53Y-PH464V2-R4P7MSY-T7BUWHP-CVPJLL5-ZDIEJZ7-SNDVKDC-3ROY7AZ";
     airbook = "YWSK64M-74SMQZM-AX7M4DN-4CV3IZB-K5NZSXV-KUUPX7X-UONQQLM-Y3BEMQW";
     nas01 = "O5ICANC-MMANGNF-6S23FIO-UIUK4S2-6E6JKZK-VGNFOJO-BXZ3UBK-DO7JLQ6";
+    iphone = "SDE4XUA-P5E6GZF-EMPGWPV-POTQWCO-2VJKNC3-T2CQMJ4-4OJQTEU-SSUNDA4";
   };
 
   # nas01 is always behind Tailscale, latitude/airbook use dynamic discovery (same WiFi typically)
   # "dynamic" means use Syncthing's automatic discovery
   deviceAddresses = {
-    latitude = [ "dynamic" ];
-    airbook = [ "dynamic" ];
-    nas01 = [ "tcp://100.116.206.46:22000" ];  # Always use Tailscale for nas01
+    latitude = [ "tcp://latitude.warthog-royal.ts.net:22000" ];
+    airbook = [ "tcp://airbook.warthog-royal.ts.net:22000" ];
+    nas01 = [ "tcp://nas01.warthog-royal.ts.net:22000" ];  # Always use Tailscale for nas01
+    iphone = [ "tcp://scott-iphone.warthog-royal.ts.net:22000" ];
   };
 in
 {
