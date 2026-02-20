@@ -35,6 +35,12 @@
           params.keep = "5";
         };
       };
+      # tmp: Quick file transfer between mobile devices
+      tmp = {
+        path = "/home/scott/tmp";
+        devices = [ "latitude" "iphone" ];
+        # No versioning - temporary files only
+      };
     };
   };
 }
