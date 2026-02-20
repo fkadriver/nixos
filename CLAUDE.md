@@ -9,12 +9,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Apply configuration to current system (requires sudo)
 sudo nixos-rebuild switch --flake .#<hostname>
 
-# Available hostnames: prodesk, latitude, latitude-xfce, latitude-kde,
+# Available NixOS hostnames: prodesk, latitude, latitude-xfce, latitude-kde,
 # latitude-minimal, airbook, airbook-kde
 
 # Examples:
 sudo nixos-rebuild switch --flake .#latitude-kde
 sudo nixos-rebuild switch --flake .#prodesk
+
+# macOS (nix-darwin) - no sudo needed
+darwin-rebuild switch --flake .#airbook-darwin
 ```
 
 ### Build VM for Testing
@@ -128,11 +131,14 @@ Each host has a base configuration in `hosts/<hostname>/default.nix` with option
 - `hardware.nix` - Hardware-specific configuration (required)
 - `syncthing.nix` - Per-host Syncthing device configuration (optional)
 
-**Current Hosts:**
+**Current Hosts (NixOS):**
 - **prodesk** - HP ProDesk desktop (photo/AI workstation with disko)
 - **latitude** - Dell Latitude 7480 laptop (default: Borg backup + 3D printing)
-- **airbook** - MacBook Air 7,2 (Broadcom WiFi requires insecure driver)
+- **airbook** - MacBook Air 7,2 running NixOS (Broadcom WiFi requires insecure driver)
 - **installer** - Bootable ISO with automated installation script
+
+**Current Hosts (macOS/nix-darwin):**
+- **airbook-darwin** - MacBook Air 7,2 running macOS with nix-darwin
 
 ## Secrets Management with sops-nix
 
@@ -191,12 +197,54 @@ sudo nixos-install --flake github:fkadriver/nixos#<hostname>
 sudo reboot
 ```
 
+## macOS with nix-darwin
+
+### Initial Setup on macOS
+```bash
+# 1. Install Nix (multi-user installation)
+sh <(curl -L https://nixos.org/nix/install)
+
+# 2. Enable flakes
+mkdir -p ~/.config/nix
+echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
+
+# 3. Clone the config repository
+git clone https://github.com/fkadriver/nixos ~/git/nixos
+
+# 4. Bootstrap nix-darwin (first time only)
+nix run nix-darwin -- switch --flake ~/git/nixos#airbook-darwin
+
+# 5. Subsequent rebuilds
+darwin-rebuild switch --flake ~/git/nixos#airbook-darwin
+```
+
+### Darwin Configuration Structure
+- `hosts/airbook-darwin/default.nix` - Main darwin system configuration
+- `hosts/airbook-darwin/home.nix` - Home Manager user configuration
+
+### What nix-darwin Manages
+- **System packages**: CLI tools installed via Nix
+- **Homebrew**: GUI apps (casks) and formulae, with automatic cleanup
+- **macOS settings**: Dock, Finder, keyboard, trackpad preferences
+- **Services**: Tailscale VPN
+- **Home Manager**: Shell config (bash, zsh, starship), dotfiles, SSH config
+
+### Adding Secrets (sops-nix on macOS)
+After first darwin-rebuild, get the machine's age key:
+```bash
+# macOS stores the key in a different location
+sudo cat /var/root/.config/sops/age/keys.txt | grep "public key"
+# Add this key to .sops.yaml, then re-encrypt secrets
+```
+
 ## Hardware-Specific Notes
 
-### MacBook Air 7,2 (airbook)
-- **WiFi**: Uses Broadcom BCM43xx with broadcom-sta driver (insecure, marked with CVEs)
+### MacBook Air 7,2 (airbook / airbook-darwin)
 - **CPU**: Intel Core i5-5250U/i7-5650U (Broadwell)
-- Module explicitly permits insecure packages for hardware compatibility
+- **Two configurations available**:
+  - `airbook` - NixOS with Broadcom WiFi (requires insecure broadcom-sta driver)
+  - `airbook-darwin` - macOS with nix-darwin for declarative package/settings management
+- **macOS config includes**: Homebrew casks (Firefox, VSCode, iTerm2), Tailscale, Syncthing, dark mode, Touch ID sudo
 
 ### HP ProDesk (prodesk)
 - **Purpose**: Minimal photo processing and AI workstation
@@ -245,8 +293,9 @@ The configuration automatically:
 ## Important Notes
 
 - **Flake inputs tracking**: Uses nixpkgs-unstable (not stable channel)
-- **All hosts use disko**: Automated disk partitioning with 1GB boot + LVM
-- **Broadcom WiFi**: MacBook Air requires insecure broadcom-sta driver
+- **All NixOS hosts use disko**: Automated disk partitioning with 1GB boot + LVM
+- **Broadcom WiFi**: MacBook Air NixOS config requires insecure broadcom-sta driver
 - **Secrets are in git**: Encrypted with sops-nix using age keys
 - **No manual filesystem config**: All disk layouts are declarative via disko
 - **Home Manager**: Configured for user "scott" in `homeConfigurations/scott.nix`
+- **macOS support**: MacBook Air can run macOS with nix-darwin (`airbook-darwin`)

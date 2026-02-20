@@ -20,6 +20,10 @@
       url = "github:nix-community/nixos-vscode-server";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    nix-darwin = {
+      url = "github:LnL7/nix-darwin";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
   outputs = inputs:
     let
@@ -62,6 +66,11 @@
         airbook-kde = import ./hosts/airbook/kde.nix flakeContext;
         prodesk = import ./hosts/prodesk flakeContext;
         installer = import ./hosts/installer flakeContext;
+      };
+
+      # macOS configurations using nix-darwin
+      darwinConfigurations = {
+        airbook-darwin = import ./hosts/airbook-darwin flakeContext;
       };
     };
 }
