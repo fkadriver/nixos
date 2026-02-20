@@ -39,13 +39,9 @@ in
       example = [ "nas01" ];
     };
 
-    # Devices that should auto-accept folders from this host
-    autoAcceptFrom = mkOption {
-      type = types.listOf types.str;
-      default = [];
-      description = "List of device names that auto-accept folders shared by this host";
-      example = [ "nas01" ];
-    };
+    # Note: autoAcceptFolders is NOT supported when using declarative folder config
+    # (overrideFolders = true), as auto-accepted folders would be deleted on rebuild.
+    # Configure auto-accept on non-NixOS devices like nas01 instead.
 
     folders = mkOption {
       type = types.attrsOf (types.submodule {
@@ -131,8 +127,7 @@ in
           addresses = deviceAddresses.${name};
           # Mark this host as introducer for certain devices
           introducer = elem name cfg.introducerFor;
-          # Auto-accept folders from certain devices
-          autoAcceptFolders = elem name cfg.autoAcceptFrom;
+          # Note: autoAcceptFolders is incompatible with overrideFolders=true
         }) otherDevices;
 
       # Declarative folder configuration
