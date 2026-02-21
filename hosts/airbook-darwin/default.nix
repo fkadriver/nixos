@@ -67,9 +67,6 @@ let
         "rectangle"      # Window management
         "visual-studio-code"
       ];
-      taps = [
-        "homebrew/services"
-      ];
     };
 
     # macOS system settings
