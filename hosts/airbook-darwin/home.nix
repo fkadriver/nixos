@@ -70,7 +70,7 @@
         darwin-rebuild = "darwin-rebuild switch --flake ~/git/nixos#airbook-darwin";
         flush-dns = "sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder";
       };
-      initExtra = ''
+      initContent = ''
         export PATH="$PATH:$HOME/bin:$HOME/.local/bin:$HOME/go/bin"
       '';
     };
@@ -84,9 +84,11 @@
 
     git = {
       enable = true;
-      userName = "Scott";
-      userEmail = "scott@example.com";  # Update with your email
-      extraConfig = {
+      settings = {
+        user = {
+          name = "Scott";
+          email = "scott@example.com";  # Update with your email
+        };
         init.defaultBranch = "main";
         pull.rebase = true;
         push.autoSetupRemote = true;
@@ -218,11 +220,11 @@
 
     ssh = {
       enable = true;
-      addKeysToAgent = "yes";
-      extraConfig = ''
-        IdentityFile ~/.ssh/id_ed25519
-      '';
       matchBlocks = {
+        "*" = {
+          addKeysToAgent = "yes";
+          identityFile = "~/.ssh/id_ed25519";
+        };
         "nas01" = {
           hostname = "nas01.warthog-royal.ts.net";
           user = "scott";
