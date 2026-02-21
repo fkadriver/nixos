@@ -137,7 +137,7 @@ let
     };
 
     # Enable Touch ID for sudo
-    security.pam.enableSudoTouchIdAuth = true;
+    security.pam.services.sudo_local.touchIdAuth = true;
 
     # Services
     services = {
@@ -155,6 +155,9 @@ let
       useUserPackages = true;
       users.scott = import ./home.nix;
     };
+
+    # Set primary user for system defaults
+    system.primaryUser = "scott";
 
     # User configuration
     users.users.scott = {
