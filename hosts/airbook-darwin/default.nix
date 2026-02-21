@@ -136,6 +136,25 @@ let
     # Enable Touch ID for sudo
     security.pam.services.sudo_local.touchIdAuth = true;
 
+    # sops-nix for secrets management
+    sops = {
+      defaultSopsFile = ../../secrets/secrets.yaml;
+      age.keyFile = "/var/root/.config/sops/age/keys.txt";
+
+      secrets = {
+        "ssh/id_ed25519" = {
+          path = "/Users/scott/.ssh/id_ed25519";
+          mode = "0600";
+          owner = "scott";
+        };
+        "ssh/id_ed25519.pub" = {
+          path = "/Users/scott/.ssh/id_ed25519.pub";
+          mode = "0644";
+          owner = "scott";
+        };
+      };
+    };
+
     # Services
     services = {
       # Tailscale VPN
@@ -168,6 +187,7 @@ inputs.nix-darwin.lib.darwinSystem {
   specialArgs = { inherit inputs; };
   modules = [
     inputs.home-manager.darwinModules.home-manager
+    inputs.sops-nix.darwinModules.sops
     darwinModule
   ];
 }
