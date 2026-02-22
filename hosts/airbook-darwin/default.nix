@@ -47,6 +47,9 @@ let
 
       # Networking
       tailscale
+
+      # Secrets management
+      bitwarden-cli
     ];
 
     # Homebrew for GUI apps and casks
@@ -137,20 +140,52 @@ let
     security.pam.services.sudo_local.touchIdAuth = true;
 
     # sops-nix for secrets management
-    # Note: SSH keys are manually managed on macOS (already installed)
-    # The bitwarden.nix module pattern used on NixOS doesn't work on darwin
     sops = {
       defaultSopsFile = ../../secrets/secrets.yaml;
       age.keyFile = "/var/root/.config/sops/age/keys.txt";
 
-      # Secrets like Tailscale auth keys, WiFi passwords, etc. can be added here
-      # SSH keys are already manually installed in ~/.ssh
       secrets = {
-        # Example for future use:
-        # "tailscale_auth_key" = {
-        #   path = "/var/root/tailscale_auth_key";
-        #   mode = "0400";
-        # };
+        # SSH keys deployed via sops-nix
+        "ssh/id_ed25519" = {
+          path = "/Users/scott/.ssh/id_ed25519";
+          mode = "0600";
+          owner = "scott";
+        };
+        "ssh/id_ed25519.pub" = {
+          path = "/Users/scott/.ssh/id_ed25519.pub";
+          mode = "0644";
+          owner = "scott";
+        };
+        "ssh/id_ed25519_github" = {
+          path = "/Users/scott/.ssh/id_ed25519_github";
+          mode = "0600";
+          owner = "scott";
+        };
+        "ssh/id_ed25519_github.pub" = {
+          path = "/Users/scott/.ssh/id_ed25519_github.pub";
+          mode = "0644";
+          owner = "scott";
+        };
+        "ssh/id_ed25519_legacy" = {
+          path = "/Users/scott/.ssh/id_ed25519_legacy";
+          mode = "0600";
+          owner = "scott";
+        };
+        "ssh/id_ed25519_legacy.pub" = {
+          path = "/Users/scott/.ssh/id_ed25519_legacy.pub";
+          mode = "0644";
+          owner = "scott";
+        };
+        "ssh/opnsense_admin_ed25519" = {
+          path = "/Users/scott/.ssh/opnsense_admin_ed25519";
+          mode = "0600";
+          owner = "scott";
+        };
+        "ssh/opnsense_admin_ed25519.pub" = {
+          path = "/Users/scott/.ssh/opnsense_admin_ed25519.pub";
+          mode = "0644";
+          owner = "scott";
+        };
       };
     };
 
