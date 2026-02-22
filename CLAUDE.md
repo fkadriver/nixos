@@ -16,8 +16,8 @@ sudo nixos-rebuild switch --flake .#<hostname>
 sudo nixos-rebuild switch --flake .#latitude-kde
 sudo nixos-rebuild switch --flake .#prodesk
 
-# macOS (nix-darwin) - no sudo needed
-darwin-rebuild switch --flake .#airbook-darwin
+# macOS (nix-darwin) - requires sudo for system changes
+sudo darwin-rebuild switch --flake .#airbook-darwin
 ```
 
 ### Build VM for Testing
@@ -211,11 +211,11 @@ echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
 # 3. Clone the config repository
 git clone https://github.com/fkadriver/nixos ~/git/nixos
 
-# 4. Bootstrap nix-darwin (first time only)
-nix run nix-darwin -- switch --flake ~/git/nixos#airbook-darwin
+# 4. Bootstrap nix-darwin (first time only, requires sudo)
+sudo nix --extra-experimental-features 'nix-command flakes' run nix-darwin -- switch --flake ~/git/nixos#airbook-darwin
 
-# 5. Subsequent rebuilds
-darwin-rebuild switch --flake ~/git/nixos#airbook-darwin
+# 5. Subsequent rebuilds (also require sudo for system changes)
+sudo darwin-rebuild switch --flake ~/git/nixos#airbook-darwin
 ```
 
 ### Darwin Configuration Structure
