@@ -176,15 +176,16 @@ sops updatekeys secrets/secrets.yaml
 - Reference sops secrets via `config.sops.secrets."path/to/secret".path`
 
 **macOS (darwin) Systems:**
-- SSH keys are manually managed (not deployed via sops or bitwarden module)
+- SSH keys are deployed via sops-nix (stored in `secrets.yaml` under `ssh/` prefix)
 - The `bitwarden.nix` module is NixOS-specific and doesn't work on darwin
-- sops-nix is still available for service secrets (Tailscale auth keys, etc.)
+- sops-nix is used for both SSH keys and service secrets
 - Age key stored at `/var/root/.config/sops/age/keys.txt` on darwin
 
 **What's in secrets.yaml:**
-- Bitwarden login credentials (for the bitwarden CLI)
+- **SSH keys** - deployed via sops-nix on darwin systems (stored under `ssh/` prefix)
+- Bitwarden login credentials (for the bitwarden CLI on NixOS)
 - Service secrets (Tailscale auth keys, WiFi passwords, etc.)
-- **NOT** SSH keys - those are fetched from Bitwarden by the `bitwarden.nix` module on NixOS, or manually managed on macOS
+- Note: NixOS systems fetch SSH keys from Bitwarden via `bitwarden.nix` module, while darwin systems get them from `secrets.yaml` via sops-nix
 
 ## Disko and Installation
 
@@ -256,10 +257,10 @@ sops updatekeys secrets/secrets.yaml
 ```
 
 **Important Notes:**
-- SSH keys are **manually managed** on macOS (not deployed via sops)
+- SSH keys are **automatically deployed** via sops-nix on macOS
 - The `bitwarden.nix` module is NixOS-specific and doesn't work on darwin
-- sops-nix is primarily used for service secrets (Tailscale auth keys, etc.)
-- Manually install SSH keys to `~/.ssh/` before first use
+- sops-nix deploys both SSH keys and service secrets on darwin
+- After `darwin-rebuild`, SSH keys are automatically installed to `~/.ssh/`
 
 ## Hardware-Specific Notes
 
