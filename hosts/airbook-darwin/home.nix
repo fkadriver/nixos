@@ -97,6 +97,40 @@
 
     jq.enable = true;
 
+    # VSCode extensions
+    vscode = {
+      enable = true;
+      package = pkgs.vscode;
+      extensions = with pkgs.vscode-extensions; [
+        # Nix language support
+        bbenoist.nix
+        jnoortheen.nix-ide
+
+        # Python
+        ms-python.python
+        ms-python.vscode-pylance
+
+        # Git
+        eamodio.gitlens
+
+        # Themes
+        github.github-vscode-theme
+
+        # Other useful extensions
+        esbenp.prettier-vscode
+        yzhang.markdown-all-in-one
+      ];
+      userSettings = {
+        "editor.fontSize" = 14;
+        "editor.tabSize" = 2;
+        "editor.formatOnSave" = true;
+        "files.autoSave" = "afterDelay";
+        "workbench.colorTheme" = "GitHub Dark Default";
+        "git.autofetch" = true;
+        "terminal.integrated.fontSize" = 13;
+      };
+    };
+
     starship = {
       enable = true;
       enableBashIntegration = true;

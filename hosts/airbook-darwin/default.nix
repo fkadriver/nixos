@@ -59,6 +59,7 @@ let
       };
       brews = [
         "syncthing"
+        "bitwarden-cli"  # Install via brew (nix version has build issues)
       ];
       casks = [
         "bitwarden"
