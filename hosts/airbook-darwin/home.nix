@@ -44,7 +44,7 @@
         urlencode = "python3 -c 'import sys, urllib.parse as ul; print(ul.quote_plus(sys.stdin.read()))'";
 
         # Darwin rebuild
-        darwin-rebuild = "darwin-rebuild switch --flake ~/git/nixos#airbook-darwin";
+        darwin-rebuild = "sudo darwin-rebuild switch --flake ~/git/nixos#airbook-darwin";
 
         # macOS-specific
         flush-dns = "sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder";
@@ -68,7 +68,7 @@
         k = "kubectl";
         urldecode = "python3 -c 'import sys, urllib.parse as ul; print(ul.unquote_plus(sys.stdin.read()))'";
         urlencode = "python3 -c 'import sys, urllib.parse as ul; print(ul.quote_plus(sys.stdin.read()))'";
-        darwin-rebuild = "darwin-rebuild switch --flake ~/git/nixos#airbook-darwin";
+        darwin-rebuild = "sudo darwin-rebuild switch --flake ~/git/nixos#airbook-darwin";
         flush-dns = "sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder";
       };
       initContent = ''
