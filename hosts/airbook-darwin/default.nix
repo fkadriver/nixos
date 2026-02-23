@@ -191,6 +191,11 @@ let
     services = {
       # Tailscale VPN
       tailscale.enable = true;
+
+      # Syncthing file synchronization
+      # Note: Syncthing is installed via Homebrew brew above
+      # The GUI will be available at http://127.0.0.1:8384
+      # Configuration is managed through the GUI or config file
     };
 
     # Create /etc/zshrc that loads nix-darwin environment

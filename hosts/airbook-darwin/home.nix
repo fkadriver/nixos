@@ -171,16 +171,16 @@
         };
 
         git_status = {
-          conflicted = "=";
-          ahead = "^$\{count}";
-          behind = "v$\{count}";
-          diverged = "^v^$\{ahead_count}v$\{behind_count}";
-          untracked = "?$\{count}";
+          conflicted = "🏳";
+          ahead = "⇡\${count}";
+          behind = "⇣\${count}";
+          diverged = "⇕⇡\${ahead_count}⇣\${behind_count}";
+          untracked = "?\${count}";
           stashed = "$";
-          modified = "!$\{count}";
-          staged = "+$\{count}";
-          renamed = ">$\{count}";
-          deleted = "x$\{count}";
+          modified = "!\${count}";
+          staged = "+\${count}";
+          renamed = "»\${count}";
+          deleted = "✘\${count}";
           style = "bold red";
         };
 
@@ -209,7 +209,7 @@
         };
 
         custom.tailscale = {
-          command = "tailscale status >/dev/null 2>&1 && echo 'ok' || echo 'x'";
+          command = "tailscale status >/dev/null 2>&1 && echo '✓' || echo '✗'";
           when = "command -v tailscale >/dev/null 2>&1";
           format = "[TS:$output](bold green) ";
           description = "Tailscale VPN status";
@@ -217,7 +217,7 @@
 
         sudo = {
           disabled = false;
-          symbol = "# ";
+          symbol = "🧙 ";
           style = "bold red";
         };
 
@@ -228,8 +228,8 @@
         };
 
         character = {
-          success_symbol = "[>](bold green)";
-          error_symbol = "[>](bold red)";
+          success_symbol = "[➜](bold green)";
+          error_symbol = "[➜](bold red)";
         };
 
         aws.disabled = true;
