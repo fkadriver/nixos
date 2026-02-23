@@ -13,7 +13,7 @@
       go
       nodejs
       python3
-      claude-code  # Claude Code CLI
+      # claude-code  # Disabled: build fails on macOS (npm dependency issues)
 
       # Utilities
       age
@@ -98,11 +98,12 @@
 
     jq.enable = true;
 
-    # VSCode extensions
+    # VSCode extensions (using new profile format)
     vscode = {
       enable = true;
       package = pkgs.vscode;
-      extensions = with pkgs.vscode-extensions; [
+      profiles.default = {
+        extensions = with pkgs.vscode-extensions; [
         # Claude Code (AI coding assistant)
         # Note: May need to be installed manually if not available in nixpkgs
         # anthropic.claude-code
@@ -124,15 +125,16 @@
         # Other useful extensions
         esbenp.prettier-vscode
         yzhang.markdown-all-in-one
-      ];
-      userSettings = {
-        "editor.fontSize" = 14;
-        "editor.tabSize" = 2;
-        "editor.formatOnSave" = true;
-        "files.autoSave" = "afterDelay";
-        "workbench.colorTheme" = "GitHub Dark Default";
-        "git.autofetch" = true;
-        "terminal.integrated.fontSize" = 13;
+        ];
+        userSettings = {
+          "editor.fontSize" = 14;
+          "editor.tabSize" = 2;
+          "editor.formatOnSave" = true;
+          "files.autoSave" = "afterDelay";
+          "workbench.colorTheme" = "GitHub Dark Default";
+          "git.autofetch" = true;
+          "terminal.integrated.fontSize" = 13;
+        };
       };
     };
 
@@ -259,6 +261,7 @@
 
     ssh = {
       enable = true;
+      enableDefaultConfig = false;  # Disable default config to avoid warnings
       matchBlocks = {
         "*" = {
           addKeysToAgent = "yes";
@@ -271,6 +274,11 @@
         "latitude" = {
           hostname = "latitude.warthog-royal.ts.net";
           user = "scott";
+        };
+        "github.com" = {
+          hostname = "github.com";
+          user = "git";
+          identityFile = "~/.ssh/id_ed25519_github";
         };
       };
     };
