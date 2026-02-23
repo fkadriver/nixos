@@ -31,3 +31,4 @@ Thumbs.db
 *.JPEG
 .sops.yaml
 pkgs/idrive-e360/IDrive360.deb
+airbook-errors.txt
