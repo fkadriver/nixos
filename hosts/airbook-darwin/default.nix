@@ -47,9 +47,6 @@ let
 
       # Networking
       tailscale
-
-      # Secrets management
-      bitwarden-cli
     ];
 
     # Homebrew for GUI apps and casks
