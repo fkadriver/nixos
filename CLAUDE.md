@@ -239,11 +239,14 @@ sudo darwin-rebuild switch --flake ~/git/nixos#airbook-darwin
 - `hosts/airbook-darwin/home.nix` - Home Manager user configuration
 
 ### What nix-darwin Manages
-- **System packages**: CLI tools installed via Nix
-- **Homebrew**: GUI apps (casks) and formulae, with automatic cleanup
-- **macOS settings**: Dock, Finder, keyboard, trackpad preferences
-- **Services**: Tailscale VPN
-- **Home Manager**: Shell config (bash, zsh, starship), dotfiles, SSH config
+- **System packages**: CLI tools installed via Nix (age, sops, htop, go, nodejs, python3)
+- **Homebrew**: GUI apps and services
+  - Casks: Bitwarden, Firefox, iTerm2, Rectangle, Scroll Reverser, VSCode
+  - Brews: syncthing, bitwarden-cli
+- **macOS settings**: Dock, Finder, keyboard, trackpad, dark mode, Touch ID for sudo
+- **Services**: Tailscale VPN, Syncthing (via Homebrew)
+- **Home Manager**: Shell config (bash, zsh, starship), VSCode extensions, SSH config, dotfiles
+- **Secrets**: SSH keys deployed via sops-nix from encrypted secrets.yaml
 
 ### Secrets Management on macOS
 After first darwin-rebuild, get the machine's age key:
@@ -269,7 +272,11 @@ sops updatekeys secrets/secrets.yaml
 - **Two configurations available**:
   - `airbook` - NixOS with Broadcom WiFi (requires insecure broadcom-sta driver)
   - `airbook-darwin` - macOS with nix-darwin for declarative package/settings management
-- **macOS config includes**: Homebrew casks (Firefox, VSCode, iTerm2), Tailscale, Syncthing, dark mode, Touch ID sudo
+- **macOS config includes**:
+  - GUI apps: Bitwarden, Firefox, iTerm2, Rectangle, Scroll Reverser, VSCode
+  - Services: Tailscale VPN, Syncthing file sync
+  - System settings: Dark mode, Touch ID sudo, dock/keyboard/trackpad preferences
+  - Bluetooth: SEENDA keyboard and mouse (manual pairing required)
 
 ### HP ProDesk (prodesk)
 - **Purpose**: Minimal photo processing and AI workstation

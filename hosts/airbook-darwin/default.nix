@@ -65,7 +65,8 @@ let
         "bitwarden"
         "firefox"
         "iterm2"
-        "rectangle"      # Window management
+        "rectangle"          # Window management
+        "scroll-reverser"    # Natural scroll for trackpad, reversed for mouse
         "visual-studio-code"
       ];
     };
