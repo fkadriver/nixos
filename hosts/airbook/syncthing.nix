@@ -11,7 +11,7 @@
       # iPhone receives via Mobius Sync (one-way configured on iPhone side)
       Documents = {
         path = "/home/scott/Documents";
-        devices = [ "latitude" "nas01" "iphone" ];
+        devices = [ "latitude" "airbook-darwin" "nas01" "iphone" ];
         versioning = {
           type = "simple";
           params.keep = "5";
@@ -20,7 +20,7 @@
       # Photos: Full sync between computers only (no iPhone)
       Photos = {
         path = "/home/scott/Photos";
-        devices = [ "latitude" "nas01" ];
+        devices = [ "latitude" "airbook-darwin" "nas01" ];
         versioning = {
           type = "simple";
           params.keep = "5";
@@ -29,7 +29,7 @@
       # Downloads: Full sync between computers only
       Downloads = {
         path = "/home/scott/Downloads";
-        devices = [ "latitude" "nas01" ];
+        devices = [ "latitude" "airbook-darwin" "nas01" ];
         versioning = {
           type = "simple";
           params.keep = "5";
@@ -38,7 +38,7 @@
       # tmp: Quick file transfer between mobile devices
       tmp = {
         path = "/home/scott/tmp";
-        devices = [ "latitude" "iphone" ];
+        devices = [ "latitude" "airbook-darwin" "iphone" ];
         # No versioning - temporary files only
       };
     };

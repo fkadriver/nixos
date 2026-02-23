@@ -10,6 +10,7 @@ let
   deviceIds = {
     latitude = "B4FAPKC-JTGMKTY-SE223WL-W2Y3VTT-JHU65E4-X3FUZ2C-4N62X4T-IRI75QZ";
     airbook = "YWSK64M-74SMQZM-AX7M4DN-4CV3IZB-K5NZSXV-KUUPX7X-UONQQLM-Y3BEMQW";
+    airbook-darwin = "MIWPTKO-AAFMDLU-BBWGY74-VIR6B2Y-H5OQAV2-COC7RKI-MSS3ZLB-XYBLYQB";
     nas01 = "O5ICANC-MMANGNF-6S23FIO-UIUK4S2-6E6JKZK-VGNFOJO-BXZ3UBK-DO7JLQ6";
     iphone = "SDE4XUA-P5E6GZF-EMPGWPV-POTQWCO-2VJKNC3-T2CQMJ4-4OJQTEU-SSUNDA4";
   };
@@ -18,6 +19,7 @@ let
   deviceAddresses = {
     latitude = [ "tcp://latitude.warthog-royal.ts.net:22000" ];
     airbook = [ "tcp://airbook.warthog-royal.ts.net:22000" ];
+    airbook-darwin = [ "tcp://airbook.warthog-royal.ts.net:22000" ];  # Same MacBook Air, running macOS
     nas01 = [ "tcp://nas01.warthog-royal.ts.net:22000" ];  # Always use Tailscale for nas01
     iphone = [ "tcp://scott-iphone.warthog-royal.ts.net:22000" ];
   };
