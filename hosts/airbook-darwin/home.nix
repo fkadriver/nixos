@@ -13,6 +13,7 @@
       go
       nodejs
       python3
+      claude-code  # Claude Code CLI
 
       # Utilities
       age
@@ -102,6 +103,10 @@
       enable = true;
       package = pkgs.vscode;
       extensions = with pkgs.vscode-extensions; [
+        # Claude Code (AI coding assistant)
+        # Note: May need to be installed manually if not available in nixpkgs
+        # anthropic.claude-code
+
         # Nix language support
         bbenoist.nix
         jnoortheen.nix-ide
