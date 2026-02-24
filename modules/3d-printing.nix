@@ -4,52 +4,53 @@
 let
   cfg = config.my.printing;
 
-in
-{
-  options.my.printing = {
-    enable = lib.mkEnableOption "3D printing tools";
+  # Some font package names can vary across nixpkgs revisions. Only include those that exist.
+  fontPkgs =
+    (if pkgs ? "eb-garamond" then [ pkgs."eb-garamond" ] else []) ++
+    (if pkgs ? "libre-baskerville" then [ pkgs."libre-baskerville" ] else []) ++
+    (if pkgs ? "oldstandard" then [ pkgs."oldstandard" ] else []) ++
+    (if pkgs ? "junicode" then [ pkgs."junicode" ] else []) ++
+    (if pkgs ? "inter" then [ pkgs."inter" ] else []) ++
+    (if pkgs ? "source-sans" then [ pkgs."source-sans" ] else []);
 
-    fonts.enable = lib.mkEnableOption "Install slicer-safe emboss fonts (enables my.fonts.printing3d)";
-
-    repairTools = lib.mkEnableOption "SVG/STL repair & text preparation tools";
-
-    generateTestArtifacts = lib.mkEnableOption ''
-      Install generators for 3D-print font test artifacts:
-      - generate-font-plate: one big multi-font emboss plate (STL)
-      - generate-font-keychains: one keychain STL per font
-    '';
-  };
-
-  config = lib.mkIf cfg.enable (let
-    # Font installation now delegated to font.nix module via my.fonts.printing3d
-
-    generatePlateScript = pkgs.writeShellScriptBin "generate-font-plate" ''
-      set -euo pipefail
-
-      TEXT="$1"
-      if [ -z "$TEXT" ]; then
-        TEXT="Scott ♥ Steph"
+  # Build a single directory containing symlinks to all printable font files.
+  # This makes FreeCAD Draft→ShapeString much easier than browsing /nix/store.
+  freecadFontDir = pkgs.runCommand "freecad-print-fonts" {} ''
+    mkdir -p "$out"
+    for pkg in ${lib.concatStringsSep " " fontPkgs}; do
+      if [ -d "$pkg/share/fonts" ]; then
+        find "$pkg/share/fonts" -type f \( -name "*.ttf" -o -name "*.otf" \) -exec ln -s {} "$out" \;
       fi
+    done
+  '';
 
-      WORKDIR="$HOME/.cache/font-test-plate"
-      mkdir -p "$WORKDIR"
-      cd "$WORKDIR"
+  generatePlateScript = pkgs.writeShellScriptBin "generate-font-plate" ''
+    set -euo pipefail
 
-      # Build a unique list of installed font families
-      ${pkgs.fontconfig}/bin/fc-list : family | cut -d, -f1 | sort -u > all_fonts.txt
+    TEXT="$1"
+    if [ -z "$TEXT" ]; then
+      TEXT="Scott ♥ Steph"
+    fi
 
-      # Filter to a "known-good for 3D" subset by default. You can tweak this regex.
-      REGEX="Roboto|Lato|Open Sans|Montserrat|Work Sans|Oswald|Archivo|Raleway|Orbitron|Garamond|Baskerville|Old Standard|OldStandard|Junicode|Inter|Source Sans"
+    WORKDIR="$HOME/.cache/font-test-plate"
+    mkdir -p "$WORKDIR"
+    cd "$WORKDIR"
 
-      echo "fonts = [" > fonts.scad
-      grep -E "$REGEX" all_fonts.txt | sed 's/"/\\"/g; s/.*/"&",/' >> fonts.scad
-      echo "];" >> fonts.scad
+    # Build a unique list of installed font families
+    ${pkgs.fontconfig}/bin/fc-list : family | cut -d, -f1 | sort -u > all_fonts.txt
 
-      # Escape any double quotes in user text for OpenSCAD
-      SAFE_TEXT=$(printf "%s" "$TEXT" | sed 's/"/\\"/g')
-      echo "sample_text = \"$SAFE_TEXT\";" >> fonts.scad
+    # Filter to a "known-good for 3D" subset by default. You can tweak this regex.
+    REGEX="Roboto|Lato|Open Sans|Montserrat|Work Sans|Oswald|Archivo|Raleway|Orbitron|Garamond|Baskerville|Old Standard|OldStandard|Junicode|Inter|Source Sans|Noto Sans|DejaVu"
 
-      cat > font_plate.scad << 'EOF'
+    echo "fonts = [" > fonts.scad
+    grep -E "$REGEX" all_fonts.txt | sed 's/"/\\"/g; s/.*/"&",/' >> fonts.scad || true
+    echo "];" >> fonts.scad
+
+    # Escape any double quotes in user text for OpenSCAD
+    SAFE_TEXT=$(printf "%s" "$TEXT" | sed 's/"/\\"/g')
+    echo "sample_text = \"$SAFE_TEXT\";" >> fonts.scad
+
+    cat > font_plate.scad << 'EOF'
 include <fonts.scad>
 
 plate_width = 220;
@@ -96,40 +97,40 @@ union() {
 }
 EOF
 
-      ${pkgs.openscad}/bin/openscad -o font_plate.stl font_plate.scad
-      echo "Generated: $WORKDIR/font_plate.stl"
-    '';
+    ${pkgs.openscad}/bin/openscad -o font_plate.stl font_plate.scad
+    echo "Generated: $WORKDIR/font_plate.stl"
+  '';
 
-    generateKeychainsScript = pkgs.writeShellScriptBin "generate-font-keychains" ''
-      set -euo pipefail
+  generateKeychainsScript = pkgs.writeShellScriptBin "generate-font-keychains" ''
+    set -euo pipefail
 
-      TEXT="$1"
-      if [ -z "$TEXT" ]; then
-        TEXT="Scott ♥ Steph"
-      fi
+    TEXT="$1"
+    if [ -z "$TEXT" ]; then
+      TEXT="Scott ♥ Steph"
+    fi
 
-      WORKDIR="$HOME/.cache/font-keychains"
-      mkdir -p "$WORKDIR"
-      cd "$WORKDIR"
+    WORKDIR="$HOME/.cache/font-keychains"
+    mkdir -p "$WORKDIR"
+    cd "$WORKDIR"
 
-      ${pkgs.fontconfig}/bin/fc-list : family | cut -d, -f1 | sort -u > all_fonts.txt
-      REGEX="Roboto|Lato|Open Sans|Montserrat|Work Sans|Oswald|Archivo|Raleway|Orbitron|Garamond|Baskerville|Old Standard|OldStandard|Junicode|Inter|Source Sans"
-      grep -E "$REGEX" all_fonts.txt > fonts.txt || true
+    ${pkgs.fontconfig}/bin/fc-list : family | cut -d, -f1 | sort -u > all_fonts.txt
+    REGEX="Roboto|Lato|Open Sans|Montserrat|Work Sans|Oswald|Archivo|Raleway|Orbitron|Garamond|Baskerville|Old Standard|OldStandard|Junicode|Inter|Source Sans|Noto Sans|DejaVu"
+    grep -E "$REGEX" all_fonts.txt > fonts.txt || true
 
-      if [ ! -s fonts.txt ]; then
-        echo "No fonts matched REGEX. Edit REGEX in the script or install fonts, then retry."
-        exit 1
-      fi
+    if [ ! -s fonts.txt ]; then
+      echo "No fonts matched REGEX. Edit REGEX in the script or install fonts, then retry."
+      exit 1
+    fi
 
-      SAFE_TEXT=$(printf "%s" "$TEXT" | sed 's/"/\\"/g')
+    SAFE_TEXT=$(printf "%s" "$TEXT" | sed 's/"/\\"/g')
 
-      i=0
-      while IFS= read -r font; do
-        safe_font=$(printf "%s" "$font" | tr ' /' '__' | tr -cd '[:alnum:]_-.')
-        scad=$(printf "keychain_%03d_%s.scad" "$i" "$safe_font")
-        stl=$(printf "keychain_%03d_%s.stl" "$i" "$safe_font")
+    i=0
+    while IFS= read -r font; do
+      safe_font=$(printf "%s" "$font" | tr ' /' '__' | tr -cd '[:alnum:]_-.')
+      scad=$(printf "keychain_%03d_%s.scad" "$i" "$safe_font")
+      stl=$(printf "keychain_%03d_%s.stl" "$i" "$safe_font")
 
-        cat > "$scad" << EOF
+      cat > "$scad" << EOF
 tag_w = 70;
 tag_h = 22;
 tag_t = 2.4;
@@ -160,14 +161,30 @@ translate([12, tag_h/2, tag_t])
     text("$SAFE_TEXT", size=9, font="$font", halign="left", valign="center");
 EOF
 
-        ${pkgs.openscad}/bin/openscad -o "$stl" "$scad"
-        i=$((i+1))
-      done < fonts.txt
+      ${pkgs.openscad}/bin/openscad -o "$stl" "$scad"
+      i=$((i+1))
+    done < fonts.txt
 
-      echo "Generated $i keychains in $WORKDIR"
+    echo "Generated $i keychains in $WORKDIR"
+  '';
+in
+{
+  options.my.printing = {
+    enable = lib.mkEnableOption "3D printing tools";
+
+    fonts.enable = lib.mkEnableOption "Install slicer-safe emboss fonts + provide /etc/freecad/fonts";
+
+    repairTools = lib.mkEnableOption "SVG/STL repair & text preparation tools";
+
+    generateTestArtifacts = lib.mkEnableOption ''
+      Install generators for 3D-print font test artifacts:
+      - generate-font-plate: one big multi-font emboss plate (STL)
+      - generate-font-keychains: one keychain STL per font
     '';
+  };
 
-  in {
+  config = lib.mkIf cfg.enable {
+
     # Core modeling / slicing
     environment.systemPackages =
       (with pkgs; [
@@ -188,11 +205,11 @@ EOF
         generateKeychainsScript
       ];
 
-    # Enable 3D printing fonts from font.nix module
-    my.fonts = lib.mkIf cfg.fonts.enable {
-      enable = true;
-      printing3d = true;
-    };
+    # Install slicer-safe emboss fonts (optional)
+    fonts.packages = lib.mkIf cfg.fonts.enable fontPkgs;
+
+    # Provide a stable directory for FreeCAD ShapeString font browsing
+    environment.etc."freecad/fonts".source = lib.mkIf cfg.fonts.enable freecadFontDir;
 
     programs.appimage = {
       enable = true;
@@ -200,5 +217,5 @@ EOF
     };
 
     users.groups.dialout = {};
-  });
+  };
 }
