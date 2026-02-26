@@ -19,6 +19,14 @@
       age
       htop
       sops
+
+      # 3D printing fonts (from 3d-printing.nix)
+      eb-garamond
+      libre-baskerville
+      oldstandard
+      junicode
+      inter
+      source-sans
     ];
   };
 
@@ -43,8 +51,8 @@
         urldecode = "python3 -c 'import sys, urllib.parse as ul; print(ul.unquote_plus(sys.stdin.read()))'";
         urlencode = "python3 -c 'import sys, urllib.parse as ul; print(ul.quote_plus(sys.stdin.read()))'";
 
-        # Darwin rebuild
-        darwin-rebuild = "sudo darwin-rebuild switch --flake ~/git/nixos#airbook-darwin";
+        # System rebuild
+        rebuild = "sudo darwin-rebuild switch --flake ~/git/nixos#airbook-darwin";
 
         # macOS-specific
         flush-dns = "sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder";
@@ -68,7 +76,7 @@
         k = "kubectl";
         urldecode = "python3 -c 'import sys, urllib.parse as ul; print(ul.unquote_plus(sys.stdin.read()))'";
         urlencode = "python3 -c 'import sys, urllib.parse as ul; print(ul.quote_plus(sys.stdin.read()))'";
-        darwin-rebuild = "sudo darwin-rebuild switch --flake ~/git/nixos#airbook-darwin";
+        rebuild = "sudo darwin-rebuild switch --flake ~/git/nixos#airbook-darwin";
         flush-dns = "sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder";
       };
       initContent = ''

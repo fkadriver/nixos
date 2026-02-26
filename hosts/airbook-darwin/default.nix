@@ -68,6 +68,14 @@ let
         "rectangle"          # Window management
         "scroll-reverser"    # Natural scroll for trackpad, reversed for mouse
         "visual-studio-code"
+
+        # 3D printing and modeling (from 3d-printing.nix)
+        "openscad"
+        "prusaslicer"
+        "freecad"
+        "blender"
+        "meshlab"
+        "inkscape"
       ];
     };
 
