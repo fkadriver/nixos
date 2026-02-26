@@ -52,6 +52,12 @@
       HandleLidSwitchExternalPower = "ignore";
     };
 
+    # Enable keyboard backlight control for laptops (Dell, Lenovo, etc.)
+    services.udev.extraRules = ''
+      # Allow members of video group to control keyboard backlight
+      ACTION=="add", SUBSYSTEM=="leds", KERNEL=="*::kbd_backlight", RUN+="${pkgs.coreutils}/bin/chgrp video /sys/class/leds/%k/brightness", RUN+="${pkgs.coreutils}/bin/chmod g+w /sys/class/leds/%k/brightness"
+    '';
+
     programs.firefox.enable = true;
 
     environment.systemPackages = with pkgs; [
@@ -70,6 +76,9 @@
 
       borgbackup
       unzip
+
+      # Backlight control (for screen and keyboard backlighting)
+      brightnessctl
     ];
 
     programs.nix-ld = {

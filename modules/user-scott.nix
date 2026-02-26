@@ -8,6 +8,7 @@
             "docker"
             "networkmanager"
             "wheel"
+            "video"    # For backlight control
             "plugdev"  # For iPhone/iOS device access
           ];
           hashedPassword = "$y$j9T$PwV0AT33FffSLHl9QH6Uf.$bVwBG9Vy5wH9k0QW7V4fawCa68eCtpCpAOKals3vOF0";
