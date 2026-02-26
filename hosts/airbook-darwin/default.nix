@@ -120,6 +120,25 @@ let
           NSAutomaticSpellingCorrectionEnabled = false;
         };
 
+        # Software Update - Prevent automatic upgrades (important for OCLP)
+        # This prevents macOS from auto-upgrading to Tahoe while on Sequoia
+        SoftwareUpdate = {
+          AutomaticallyInstallMacOSUpdates = false;
+        };
+
+        # Additional Software Update controls via CustomUserPreferences
+        CustomUserPreferences = {
+          "com.apple.SoftwareUpdate" = {
+            AutomaticCheckEnabled = true;      # Still check for updates (to see security patches)
+            AutomaticDownload = false;         # Don't auto-download updates
+            AutomaticallyInstallMacOSUpdates = false;  # Don't auto-install macOS updates
+            CriticalUpdateInstall = false;     # Don't auto-install even "critical" updates
+          };
+          "com.apple.commerce" = {
+            AutoUpdate = false;                # Don't auto-update App Store apps
+          };
+        };
+
         # Trackpad
         trackpad = {
           Clicking = true;  # Tap to click
