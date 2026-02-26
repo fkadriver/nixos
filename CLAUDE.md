@@ -242,11 +242,16 @@ sudo darwin-rebuild switch --flake ~/git/nixos#airbook-darwin
 - **System packages**: CLI tools installed via Nix (age, sops, htop, go, nodejs, python3)
 - **Homebrew**: GUI apps and services
   - Casks: Bitwarden, Firefox, iTerm2, Rectangle, Scroll Reverser, VSCode
+  - 3D Printing: OpenSCAD, PrusaSlicer, FreeCAD, Blender, MeshLab, Inkscape
   - Brews: syncthing, bitwarden-cli
+- **Fonts**: 3D printing fonts (EB Garamond, Libre Baskerville, Old Standard, Junicode, Inter, Source Sans)
 - **macOS settings**: Dock, Finder, keyboard, trackpad, dark mode, Touch ID for sudo
 - **Services**: Tailscale VPN, Syncthing (via Homebrew)
 - **Home Manager**: Shell config (bash, zsh, starship), VSCode extensions, SSH config, dotfiles
 - **Secrets**: SSH keys deployed via sops-nix from encrypted secrets.yaml
+
+### Useful Aliases
+- `rebuild` - Runs `sudo darwin-rebuild switch --flake ~/git/nixos#airbook-darwin`
 
 ### Secrets Management on macOS
 After first darwin-rebuild, get the machine's age key:
