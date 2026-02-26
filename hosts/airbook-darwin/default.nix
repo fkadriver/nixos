@@ -79,6 +79,9 @@ let
 
         # Gaming (from daily-driver.nix)
         "heroic"           # Epic, GOG, Amazon Prime games launcher
+
+        # Utilities
+        "caffeine"         # Prevent Mac from sleeping (menubar app)
       ];
     };
 
