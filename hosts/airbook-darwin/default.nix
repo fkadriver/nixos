@@ -76,6 +76,9 @@ let
         "blender"
         "meshlab"
         "inkscape"
+
+        # Gaming (from daily-driver.nix)
+        "heroic"           # Epic, GOG, Amazon Prime games launcher
       ];
     };
 
