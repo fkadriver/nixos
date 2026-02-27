@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 sudo nixos-rebuild switch --flake .#<hostname>
 
 # Available NixOS hostnames: prodesk, latitude, latitude-xfce, latitude-kde,
-# latitude-minimal, airbook, airbook-kde
+# latitude-minimal, airbook, airbook-kde, vm01
 
 # Examples:
 sudo nixos-rebuild switch --flake .#latitude-kde
@@ -135,6 +135,7 @@ Each host has a base configuration in `hosts/<hostname>/default.nix` with option
 - **prodesk** - HP ProDesk desktop (photo/AI workstation with disko)
 - **latitude** - Dell Latitude 7480 laptop (default: Borg backup + 3D printing)
 - **airbook** - MacBook Air 7,2 running NixOS (Broadcom WiFi requires insecure driver)
+- **vm01** - Dell Latitude E7270 (Service Tag: 7NYTSF2, borg-backup + docker)
 - **installer** - Bootable ISO with automated installation script
 
 **Current Hosts (macOS/nix-darwin):**
