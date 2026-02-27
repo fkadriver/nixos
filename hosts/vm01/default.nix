@@ -6,6 +6,7 @@ let
       inputs.disko.nixosModules.disko
       inputs.self.nixosModules.disko-config
       inputs.self.nixosModules.common
+      inputs.self.nixosModules.borg-backup
       inputs.self.nixosModules.user-scott
     ];
 
