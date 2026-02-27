@@ -65,6 +65,7 @@
         airbook = import ./hosts/airbook flakeContext;
         airbook-kde = import ./hosts/airbook/kde.nix flakeContext;
         prodesk = import ./hosts/prodesk flakeContext;
+        vm01 = import ./hosts/vm01 flakeContext;
         installer = import ./hosts/installer flakeContext;
       };
 

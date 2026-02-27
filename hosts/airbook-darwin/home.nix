@@ -58,6 +58,7 @@
         prodesk = "tailscale ssh prodesk";
         slap = "tailscale ssh latitude";
         latitude = "tailscale ssh latitude";
+        vm01 = "tailscale ssh vm01";
 
         # Tailscale troubleshooting
         ts-status = "tailscale status";
@@ -149,6 +150,7 @@
         prodesk = "tailscale ssh prodesk";
         slap = "tailscale ssh latitude";
         latitude = "tailscale ssh latitude";
+        vm01 = "tailscale ssh vm01";
 
         # Tailscale troubleshooting
         ts-status = "tailscale status";
