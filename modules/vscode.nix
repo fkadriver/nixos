@@ -73,6 +73,7 @@ in
 
           # GitHub integration
           github.vscode-pull-request-github
+          github.vscode-github-actions
 
           # Remote SSH
           ms-vscode-remote.remote-ssh

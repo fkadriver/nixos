@@ -59,6 +59,16 @@
         slap = "tailscale ssh latitude";
         latitude = "tailscale ssh latitude";
 
+        # Tailscale troubleshooting
+        ts-status = "tailscale status";
+        ts-up = "sudo tailscale up";
+        ts-down = "sudo tailscale down";
+        ts-netcheck = "tailscale netcheck";
+        ts-ip = "tailscale ip";
+        ts-peers = "tailscale status --peers";
+        ts-self = "tailscale status --self";
+        ts-debug = "tailscale debug";
+
         # Grep with color
         gpc = "grep --color=always";
 
@@ -139,6 +149,16 @@
         prodesk = "tailscale ssh prodesk";
         slap = "tailscale ssh latitude";
         latitude = "tailscale ssh latitude";
+
+        # Tailscale troubleshooting
+        ts-status = "tailscale status";
+        ts-up = "sudo tailscale up";
+        ts-down = "sudo tailscale down";
+        ts-netcheck = "tailscale netcheck";
+        ts-ip = "tailscale ip";
+        ts-peers = "tailscale status --peers";
+        ts-self = "tailscale status --self";
+        ts-debug = "tailscale debug";
 
         # Grep with color
         gpc = "grep --color=always";
