@@ -13,6 +13,7 @@ let
     config = {
       networking = {
         hostName = "vm01";
+        networkmanager.enable = true;
       };
 
       # Dell Latitude E7270 - Service Tag: 7NYTSF2
