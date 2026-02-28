@@ -3,8 +3,6 @@ let
   nixosModule = { config, lib, pkgs, ... }: {
     imports = [
       ./hardware-configuration.nix
-      inputs.disko.nixosModules.disko
-      inputs.self.nixosModules.disko-config
       inputs.self.nixosModules.common
       inputs.self.nixosModules.borg-backup
       inputs.self.nixosModules.wireless
