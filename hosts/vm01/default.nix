@@ -3,6 +3,8 @@ let
   nixosModule = { config, lib, pkgs, ... }: {
     imports = [
       ./hardware-configuration.nix
+      inputs.home-manager.nixosModules.home-manager
+      (inputs.self.homeConfigurations.scott).nixosModule
       inputs.self.nixosModules.common
       inputs.self.nixosModules.bitwarden
       inputs.self.nixosModules.bitwarden-scott
@@ -12,6 +14,10 @@ let
     ];
 
     config = {
+      # Home-manager configuration
+      home-manager.useGlobalPkgs = true;
+      home-manager.useUserPackages = true;
+
       # Boot loader configuration
       boot.loader.systemd-boot.enable = true;
       boot.loader.efi.canTouchEfiVariables = true;
