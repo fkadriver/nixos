@@ -10,6 +10,10 @@ let
     ];
 
     config = {
+      # Boot loader configuration
+      boot.loader.systemd-boot.enable = true;
+      boot.loader.efi.canTouchEfiVariables = true;
+
       networking = {
         hostName = "vm01";
         networkmanager.enable = true;
