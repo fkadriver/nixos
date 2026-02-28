@@ -3,7 +3,7 @@ keys:
   - &latitude age1p06y94pdxd76p45nuradvjfz24zmywuqua5szhs3etk9jw55g5aqscqved
   - &prodesk age12ycs9vrs38n4wjqnmeqwn2cerezfpax93d3vju5g3g7hgk6xmq9s9agwxc
   - &nas01 age1ahsgphy5f7wft6vg3cqaypy8ukkxfzv4gjdpsexrdc3gz9tuqy2s2cpd7e
-  - &vm01 age1pg5gzk05asw22y0cwkpm42ftpfeg67008v267msz2umesvlxgeks7e3wm9
+  - &vm01 age1fug7k9r8qnuj3q38qy0j8mmwwzzn9qzt3utqytew7z2g8xvj3vns8pjn3j
 
   # macOS darwin
   - &airbook-darwin age1pa8nxmzlw3qldzuwatqjcggnp8cqd5axjdux3vten2znsga6a4kqh4g937
