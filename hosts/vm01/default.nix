@@ -4,6 +4,8 @@ let
     imports = [
       ./hardware-configuration.nix
       inputs.self.nixosModules.common
+      inputs.self.nixosModules.bitwarden
+      inputs.self.nixosModules.bitwarden-scott
       inputs.self.nixosModules.borg-backup
       inputs.self.nixosModules.wireless
       inputs.self.nixosModules.user-scott
