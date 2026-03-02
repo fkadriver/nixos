@@ -35,7 +35,7 @@ let
         group = "immich";
         home = "/opt/immich";
         createHome = true;
-        shell = "/run/current-system/sw/bin/nologin";
+        shell = pkgs.bash;
         extraGroups = [ "docker" ];
       };
       users.groups.immich = {};
