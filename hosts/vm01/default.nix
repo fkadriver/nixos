@@ -48,10 +48,28 @@ let
         options = [ "nofail" "x-systemd.device-timeout=5" ];
       };
 
-      # Set immich as owner of the mount point
-      systemd.tmpfiles.rules = [
-        "d /mnt/immich 0755 immich immich -"
-      ];
+      # Set immich as owner of the mount point after mount
+      systemd.services.immich-mount-permissions = {
+        description = "Set ownership of /mnt/immich";
+        after = [ "mnt-immich.mount" ];
+        requires = [ "mnt-immich.mount" ];
+        wantedBy = [ "multi-user.target" ];
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = "${pkgs.coreutils}/bin/chown immich:immich /mnt/immich";
+          RemainAfterExit = true;
+        };
+      };
+
+      # Disable starship for immich user
+      system.activationScripts.immichBashrc = ''
+        mkdir -p /opt/immich
+        cat > /opt/immich/.bashrc << 'EOF'
+# Minimal bashrc for immich service user - no starship
+export PS1='[\u@\h \W]\$ '
+EOF
+        chown immich:immich /opt/immich/.bashrc
+      '';
 
       # Borg backup to nas01
       services.borg-backup = {
