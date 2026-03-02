@@ -20,7 +20,7 @@ let
 
       # Boot loader configuration
       boot.loader.systemd-boot.enable = true;
-      boot.loader.systemd-boot.configurationLimit = 2;
+      # boot.loader.systemd-boot.configurationLimit = 2;
       boot.loader.efi.canTouchEfiVariables = true;
 
       networking = {
@@ -40,6 +40,13 @@ let
         extraGroups = [ "docker" ];
       };
       users.groups.immich = {};
+
+      # External 1TB drive for Immich
+      fileSystems."/mnt/immich" = {
+        device = "/dev/disk/by-id/usb-External_USB3.0_201703310007F-0:0-part1";
+        fsType = "ext4";
+        options = [ "nofail" "x-systemd.device-timeout=5" ];
+      };
 
       # Borg backup to nas01
       services.borg-backup = {
