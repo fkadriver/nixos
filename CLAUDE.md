@@ -135,7 +135,7 @@ Each host has a base configuration in `hosts/<hostname>/default.nix` with option
 - **prodesk** - HP ProDesk desktop (photo/AI workstation with disko)
 - **latitude** - Dell Latitude 7480 laptop (default: Borg backup + 3D printing)
 - **airbook** - MacBook Air 7,2 running NixOS (Broadcom WiFi requires insecure driver)
-- **vm01** - Dell Latitude E7270 (Service Tag: 7NYTSF2, borg-backup + docker)
+- **vm01** - Dell Latitude E7270 (Service Tag: 7NYTSF2, Immich server with external 1TB drive)
 - **installer** - Bootable ISO with automated installation script
 
 **Current Hosts (macOS/nix-darwin):**
@@ -293,6 +293,14 @@ sops updatekeys secrets/secrets.yaml
 ### Dell Latitude 7480 (latitude)
 - **Default config**: Includes Borg backup and 3D printing support
 - **Logitech support**: Mouse button tools (xdotool, xbindkeys)
+
+### Dell Latitude E7270 (vm01)
+- **Purpose**: Immich photo management server
+- **Service Tag**: 7NYTSF2
+- **Service User**: `immich` (system user, home: `/opt/immich`, member of `docker` group)
+- **External Storage**: 1TB Toshiba drive mounted at `/mnt/immich` (by UUID)
+- **Features**: Borg backup to nas01, wireless, docker
+- **Note**: Headless server, no desktop environment
 
 ## Common Development Tasks
 

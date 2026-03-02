@@ -17,6 +17,9 @@ A modular NixOS configuration for laptops and servers with automated installatio
 - **airbook**: Apple MacBook Air 7,2 (13-inch, Early 2015/Mid 2017) (XFCE)
 - **airbook-kde**: Apple MacBook Air 7,2 with KDE Plasma
 
+### Servers
+- **vm01**: Dell Latitude E7270 - Immich photo server with external 1TB storage
+
 ### Installer
 - **installer**: Bootable ISO with automated disk partitioning and installation
 
@@ -489,6 +492,23 @@ pip install torch torchvision torchaudio  # or tensorflow, etc.
 **Additional Features:**
 - Logitech wireless peripheral support with GUI tools
 
+### Dell Latitude E7270 (vm01)
+
+**Purpose:** Immich photo management server
+
+**Configuration:**
+- **Service Tag:** 7NYTSF2
+- **Service User:** `immich` (system user with bash shell for `su` access)
+  - Home directory: `/opt/immich`
+  - Member of `docker` group
+- **External Storage:** 1TB Toshiba drive
+  - Mount point: `/mnt/immich`
+  - Mounted by UUID for reliability
+  - Owned by `immich:immich`
+- **Features:** Borg backup to nas01, wireless networking, docker
+
+**Note:** Headless server - no desktop environment installed. Access via SSH or Tailscale.
+
 ## Directory Structure
 
 ```
@@ -511,6 +531,9 @@ pip install torch torchvision torchaudio  # or tensorflow, etc.
 │   │   ├── syncthing.nix          # Syncthing device config
 │   │   ├── bluetooth.nix          # Bluetooth configuration
 │   │   └── kde.nix                # KDE Plasma configuration
+│   ├── vm01/
+│   │   ├── default.nix            # Dell Latitude E7270 (Immich server)
+│   │   └── hardware-configuration.nix  # Hardware configuration
 │   └── installer/
 │       └── default.nix            # Automated installer ISO
 ├── modules/                       # Auto-discovered by flake.nix
