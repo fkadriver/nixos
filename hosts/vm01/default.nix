@@ -48,6 +48,11 @@ let
         options = [ "nofail" "x-systemd.device-timeout=5" ];
       };
 
+      # Set immich as owner of the mount point
+      systemd.tmpfiles.rules = [
+        "d /mnt/immich 0755 immich immich -"
+      ];
+
       # Borg backup to nas01
       services.borg-backup = {
         enable = true;
