@@ -29,6 +29,17 @@ let
 
       # Dell Latitude E7270 - Service Tag: 7NYTSF2
 
+      # Immich service user
+      users.users.immich = {
+        isSystemUser = true;
+        group = "immich";
+        home = "/opt/immich";
+        createHome = true;
+        shell = "/run/current-system/sw/bin/nologin";
+        extraGroups = [ "docker" ];
+      };
+      users.groups.immich = {};
+
       # Borg backup to nas01
       services.borg-backup = {
         enable = true;
