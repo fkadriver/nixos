@@ -43,7 +43,7 @@ let
 
       # External 1TB drive for Immich
       fileSystems."/mnt/immich" = {
-        device = "/dev/disk/by-id/usb-External_USB3.0_201703310007F-0:0-part1";
+        device = "/dev/disk/by-uuid/f2cd320d-fe0a-474f-8662-f6fcc4171a3e";
         fsType = "ext4";
         options = [ "nofail" "x-systemd.device-timeout=5" ];
       };
