@@ -10,7 +10,6 @@ let
       inputs.self.nixosModules.bitwarden-scott
       inputs.self.nixosModules.borg-backup
       inputs.self.nixosModules.vscode-server
-      inputs.self.nixosModules.wireless
       inputs.self.nixosModules.user-scott
     ];
 
