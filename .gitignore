@@ -30,5 +30,5 @@ Thumbs.db
 # Temp photos
 *.JPEG
 .sops.yaml
-pkgs/idrive-e360/IDrive360.deb
+archive/pkgs/idrive-e360/IDrive360.deb
 airbook-errors.txt
