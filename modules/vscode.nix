@@ -69,14 +69,14 @@ in
 
           # Docker and container support
           ms-azuretools.vscode-docker
-          ms-vscode-remote.remote-containers
 
           # GitHub integration
           github.vscode-pull-request-github
           github.vscode-github-actions
 
-          # Remote SSH
-          ms-vscode-remote.remote-ssh
+          # Note: Remote SSH and Remote Containers are NOT bundled here
+          # Install them via VS Code marketplace to get compatible versions
+          # The nixpkgs versions often lag behind and cause compatibility issues
         ] ++ [
           # Patched Claude Code extension
           claude-code-patched
