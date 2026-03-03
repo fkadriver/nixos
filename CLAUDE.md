@@ -336,6 +336,15 @@ The configuration automatically:
 - Keeps only 10 boot menu generations
 - Configured in `common.nix`
 
+### Documentation Maintenance
+**Before committing changes**, review and update relevant documentation:
+- `README.md` - Update if adding hosts or significant features
+- `docs/modules.md` - Update when adding/modifying modules
+- `docs/hosts.md` - Update when adding/modifying host configurations
+- `CLAUDE.md` - Update when changing build commands, architecture, or workflows
+
+This keeps documentation in sync with code changes and helps future development.
+
 ## Important Notes
 
 - **Flake inputs tracking**: Uses nixpkgs-unstable (not stable channel)

@@ -1,5 +1,6 @@
 { inputs, ... }@flakeContext:
-{ config, lib, pkgs, ... }: {
+{ config, lib, pkgs, ... }:
+{
   imports = [
     inputs.vscode-server.nixosModules.default
   ];
@@ -22,6 +23,28 @@
         curl
         libgit2
         icu
+
+        # Additional libraries for Claude Code native binary
+        glib
+        nss
+        nspr
+        atk
+        cups
+        libdrm
+        gtk3
+        pango
+        cairo
+        xorg.libX11
+        xorg.libXcomposite
+        xorg.libXdamage
+        xorg.libXext
+        xorg.libXfixes
+        xorg.libXrandr
+        xorg.libxcb
+        dbus
+        expat
+        libxkbcommon
+        alsa-lib
       ];
     };
 
@@ -36,7 +59,16 @@
     environment.systemPackages = with pkgs; [
       libsecret
       gnome-keyring
-      nodejs_22  # Node.js runtime for Claude Code extension
+
+      # Claude Code CLI from nixpkgs
+      claude-code
+
+      # Git is required by Claude Code
+      git
+
+      # Additional tools Claude Code uses
+      ripgrep  # For code search (rg)
+      fd       # For file finding
     ];
 
   };
