@@ -26,6 +26,10 @@ let
       networking = {
         hostName = "vm01";
         networkmanager.enable = true;
+        firewall = {
+          allowedTCPPorts = [ 8080 8443 8880 8843 6789 ];
+          allowedUDPPorts = [ 3478 10001 1900 ];
+        };
       };
 
       # Dell Latitude E7270 - Service Tag: 7NYTSF2
