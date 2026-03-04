@@ -127,21 +127,7 @@
           bind l select-pane -R
         '';
       };
-      bash = {
-        interactiveShellInit = ''
-          # Auto-start tmux for interactive sessions
-          # Skip if: already in tmux, in VS Code terminal, running scp/sftp, or non-interactive
-          if command -v tmux &> /dev/null && \
-             [ -z "$TMUX" ] && \
-             [ -z "$VSCODE_INJECTION" ] && \
-             [ -z "$SSH_CONNECTION" ] || [ -n "$SSH_TTY" ] && \
-             [[ $- == *i* ]] && \
-             [ "$TERM" != "dumb" ]; then
-            # Attach to existing session or create new one
-            tmux attach-session -t default 2>/dev/null || tmux new-session -s default
-          fi
-        '';
-      };
+      bash = {};
       starship = {
         enable = true;
         settings = {

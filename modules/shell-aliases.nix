@@ -67,6 +67,13 @@
         nos-optimize = "sudo nix-store --optimize";
         nos-list-gens = "sudo nix-env --list-generations --profile /nix/var/nix/profiles/system";
 
+        # Tmux shortcuts
+        t = "tmux attach-session -t default 2>/dev/null || tmux new-session -s default";
+        tls = "tmux list-sessions";
+        tn = "tmux new-session -s";
+        ta = "tmux attach-session -t";
+        tk = "tmux kill-session -t";
+
         # Common utilities
         ll = "ls -lah";
         la = "ls -A";
