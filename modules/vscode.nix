@@ -1,35 +1,5 @@
 { inputs, ... }@flakeContext:
-{ config, lib, pkgs, ... }: 
-
-let
-  # Create a patched version of the Claude Code extension
-  claude-code-patched = pkgs.vscode-utils.buildVscodeMarketplaceExtension {
-    mktplcRef = {
-      name = "claude-code";
-      publisher = "anthropic";
-      version = "2.1.31";
-      # Specify linux-x64 platform to get correct binary
-      arch = "linux-x64";
-      sha256 = "sha256-ZeYP9fTSqvU8d7gd6oQ8lrKpoY1p2YqMt+98/FxdGIo=";
-    };
-    
-    nativeBuildInputs = with pkgs; [ 
-      autoPatchelfHook
-    ];
-    
-    buildInputs = with pkgs; [
-      stdenv.cc.cc.lib
-    ];
-    
-    postInstall = ''
-      # Find and patch the claude binary
-      if [ -f "$out/share/vscode/extensions/anthropic.claude-code/resources/native-binary/claude" ]; then
-        chmod +x "$out/share/vscode/extensions/anthropic.claude-code/resources/native-binary/claude"
-        echo "Patching Claude binary..."
-      fi
-    '';
-  };
-in
+{ config, lib, pkgs, ... }:
 {
   config = {
     nixpkgs.config.allowUnfree = true;
@@ -42,66 +12,43 @@ in
     security.pam.services.lightdm.enableGnomeKeyring = true;
     security.pam.services.gdm.enableGnomeKeyring = true;
 
-    # Install libsecret, keyring management tools, and development tools
+    # Enable nix-ld for extensions with native binaries (Claude Code, etc.)
+    programs.nix-ld.enable = true;
+
+    # Install VS Code and supporting tools
+    # Extensions are managed via VS Code Settings Sync (GitHub account)
+    # This allows installing any marketplace extension without Nix store limitations
     environment.systemPackages = with pkgs; [
+      vscode              # Plain VS Code - extensions installed via marketplace
       libsecret
       gnome-keyring
-      seahorse  # GUI for managing keyrings
-      clang-tools  # Includes clangd for C/C++ language server
-      (vscode-with-extensions.override {
-        vscode = vscode;
-        vscodeExtensions = with vscode-extensions; [
-          # Nix language support
-          jnoortheen.nix-ide
-
-          # C/C++ support
-          llvm-vs-code-extensions.vscode-clangd
-
-          # Python support
-          ms-python.python
-          ms-python.vscode-pylance
-
-          # ChatGPT / LLM
-          continue.continue
-
-          # Tailscale extension
-          tailscale.vscode-tailscale
-
-          # Docker and container support
-          ms-azuretools.vscode-docker
-
-          # GitHub integration
-          github.vscode-pull-request-github
-          github.vscode-github-actions
-
-          # Note: Remote SSH and Remote Containers are NOT bundled here
-          # Install them via VS Code marketplace to get compatible versions
-          # The nixpkgs versions often lag behind and cause compatibility issues
-        ] ++ [
-          # Patched Claude Code extension
-          claude-code-patched
-        ];
-      })
+      seahorse            # GUI for managing keyrings
+      clang-tools         # clangd for C/C++ language server
+      nil                 # Nix language server
+      nixpkgs-fmt         # Nix formatter
     ];
 
-    # VSCode settings that apply system-wide
-    environment.etc."vscode-settings.json".text = builtins.toJSON {
-      "nix.enableLanguageServer" = true;
-      "nix.serverPath" = "${pkgs.nil}/bin/nil";
-      "nix.serverSettings" = {
-        "nil" = {
-          "formatting" = {
-            "command" = [ "${pkgs.nixpkgs-fmt}/bin/nixpkgs-fmt" ];
-          };
-        };
-      };
-      "python.defaultInterpreterPath" = "${pkgs.python3}/bin/python3";
-      "python.analysis.typeCheckingMode" = "basic";
-      "editor.formatOnSave" = true;
-      "editor.tabSize" = 2;
-      "files.autoSave" = "afterDelay";
-      "files.autoSaveDelay" = 1000;
-      "telemetry.telemetryLevel" = "off";
-    };
+    # Recommended extensions (install via marketplace, sync via GitHub):
+    # - jnoortheen.nix-ide           # Nix language support
+    # - llvm-vs-code-extensions.vscode-clangd  # C/C++ support
+    # - ms-python.python             # Python support
+    # - ms-python.vscode-pylance     # Python IntelliSense
+    # - continue.continue            # AI/LLM assistant
+    # - tailscale.vscode-tailscale   # Tailscale integration
+    # - ms-azuretools.vscode-docker  # Docker support
+    # - ms-vscode-remote.remote-ssh  # Remote SSH
+    # - ms-vscode-remote.remote-containers  # Dev containers
+    # - github.vscode-pull-request-github   # GitHub PRs
+    # - github.vscode-github-actions        # GitHub Actions
+    # - anthropic.claude-code        # Claude Code AI assistant
+
+    # Reference settings for Nix IDE (configure in VS Code settings.json):
+    # {
+    #   "nix.enableLanguageServer": true,
+    #   "nix.serverPath": "nil",
+    #   "nix.serverSettings": {
+    #     "nil": { "formatting": { "command": ["nixpkgs-fmt"] } }
+    #   }
+    # }
   };
 }
