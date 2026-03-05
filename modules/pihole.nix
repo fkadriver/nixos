@@ -4,6 +4,13 @@
   imports = [ inputs.sops-nix.nixosModules.sops ];
 
   config = {
+    # gh (GitHub CLI) fails to cross-compile for aarch64 due to a -m64 flag bug.
+    # Pi-hole servers don't need it — replace with an empty stub for aarch64 builds.
+    nixpkgs.overlays = [
+      (final: prev: lib.optionalAttrs prev.stdenv.hostPlatform.isAarch64 {
+        gh = prev.runCommandLocal "gh-stub" {} "mkdir -p $out";
+      })
+    ];
     # Pi-hole owns port 53 — disable resolved's stub listener so it doesn't conflict.
     # resolved is enabled by tailscale.nix (imported by common.nix), so we force it off here.
     services.resolved = lib.mkForce { enable = false; };
