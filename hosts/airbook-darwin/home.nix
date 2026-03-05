@@ -15,6 +15,10 @@
       python3
       # claude-code  # Disabled: build fails on macOS (npm dependency issues)
 
+      # Nix development tools (for VS Code Nix IDE)
+      nil            # Nix language server
+      nixpkgs-fmt    # Nix formatter
+
       # Utilities
       age
       htop
@@ -114,6 +118,13 @@
         urldecode = "python3 -c 'import sys, urllib.parse as ul; print(ul.unquote_plus(sys.stdin.read()))'";
         urlencode = "python3 -c 'import sys, urllib.parse as ul; print(ul.quote_plus(sys.stdin.read()))'";
 
+        # Tmux shortcuts
+        t = "tmux attach-session -t default 2>/dev/null || tmux new-session -s default";
+        tls = "tmux list-sessions";
+        tn = "tmux new-session -s";
+        ta = "tmux attach-session -t";
+        tk = "tmux kill-session -t";
+
         # System rebuild (darwin-specific)
         rebuild = "sudo darwin-rebuild switch --flake ~/git/nixos#airbook-darwin";
 
@@ -206,6 +217,13 @@
         urldecode = "python3 -c 'import sys, urllib.parse as ul; print(ul.unquote_plus(sys.stdin.read()))'";
         urlencode = "python3 -c 'import sys, urllib.parse as ul; print(ul.quote_plus(sys.stdin.read()))'";
 
+        # Tmux shortcuts
+        t = "tmux attach-session -t default 2>/dev/null || tmux new-session -s default";
+        tls = "tmux list-sessions";
+        tn = "tmux new-session -s";
+        ta = "tmux attach-session -t";
+        tk = "tmux kill-session -t";
+
         # System rebuild (darwin-specific)
         rebuild = "sudo darwin-rebuild switch --flake ~/git/nixos#airbook-darwin";
 
@@ -239,44 +257,20 @@
 
     jq.enable = true;
 
-    # VSCode extensions (using new profile format)
+    # VSCode - plain install, extensions managed via Settings Sync (GitHub account)
+    # This allows installing any marketplace extension without Nix store limitations
     vscode = {
       enable = true;
       package = pkgs.vscode;
-      profiles.default = {
-        extensions = with pkgs.vscode-extensions; [
-        # Claude Code (AI coding assistant)
-        # Note: May need to be installed manually if not available in nixpkgs
-        # anthropic.claude-code
-
-        # Nix language support
-        bbenoist.nix
-        jnoortheen.nix-ide
-
-        # Python
-        ms-python.python
-        ms-python.vscode-pylance
-
-        # Git
-        eamodio.gitlens
-
-        # Themes
-        github.github-vscode-theme
-
-        # Other useful extensions
-        esbenp.prettier-vscode
-        yzhang.markdown-all-in-one
-        ];
-        userSettings = {
-          "editor.fontSize" = 14;
-          "editor.tabSize" = 2;
-          "editor.formatOnSave" = true;
-          "files.autoSave" = "afterDelay";
-          "workbench.colorTheme" = "GitHub Dark Default";
-          "git.autofetch" = true;
-          "terminal.integrated.fontSize" = 13;
-        };
-      };
+      # Extensions are installed via VS Code marketplace and synced via GitHub Settings Sync
+      # Recommended extensions to install manually:
+      # - jnoortheen.nix-ide           # Nix language support
+      # - ms-python.python             # Python support
+      # - ms-python.vscode-pylance     # Python IntelliSense
+      # - eamodio.gitlens             # Git lens
+      # - github.github-vscode-theme  # GitHub theme
+      # - esbenp.prettier-vscode      # Prettier formatter
+      # - anthropic.claude-code       # Claude Code AI assistant
     };
 
     starship = {
@@ -356,12 +350,12 @@
           when = "command -v tailscale >/dev/null 2>&1";
           format = "[TS:$output](bold green) ";
           description = "Tailscale VPN status";
+          ignore_timeout = true;
         };
 
         sudo = {
-          disabled = false;
-          symbol = "🧙 ";
-          style = "bold red";
+          # Disabled on macOS: checking sudo credential cache via /usr/bin/sudo is slow
+          disabled = true;
         };
 
         cmd_duration = {
@@ -387,6 +381,7 @@
       terminal = "screen-256color";
       historyLimit = 10000;
       keyMode = "vi";
+      clock24 = true;
       extraConfig = ''
         # Enable mouse support
         set -g mouse on
@@ -397,6 +392,25 @@
 
         # Renumber windows when one is closed
         set -g renumber-windows on
+
+        # Better colors
+        set -g default-terminal "screen-256color"
+        set -ga terminal-overrides ",*256col*:Tc"
+
+        # Status bar styling
+        set -g status-style 'bg=#333333 fg=#ffffff'
+        set -g status-left-length 40
+        set -g status-right '%H:%M %d-%b-%y'
+
+        # Easy splits with | and -
+        bind | split-window -h -c "#{pane_current_path}"
+        bind - split-window -v -c "#{pane_current_path}"
+
+        # Vim-style pane navigation
+        bind h select-pane -L
+        bind j select-pane -D
+        bind k select-pane -U
+        bind l select-pane -R
       '';
     };
 
