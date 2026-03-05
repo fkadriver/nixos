@@ -3,6 +3,7 @@
 
 {
   imports = [
+    inputs.self.nixosModules.games
     inputs.self.nixosModules."3d-printing"
     inputs.self.nixosModules.font
     inputs.self.nixosModules.printing
@@ -63,11 +64,6 @@
     environment.systemPackages = with pkgs; [
       python3Minimal
       claude-code
-
-      heroic
-      lutris
-      wineWowPackages.stable
-      winetricks
 
       shotwell
 
