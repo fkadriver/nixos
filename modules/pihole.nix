@@ -43,8 +43,11 @@
       };
     };
 
-    # Pi-hole web admin interface
-    services.pihole-web.enable = true;
+    # Pi-hole web admin interface (ports: plain number = HTTP, "Ns" suffix = HTTPS)
+    services.pihole-web = {
+      enable = true;
+      ports = [ "80" ];
+    };
 
     # Open HTTP/HTTPS for the web UI (pihole-web handles ports, but firewall must allow them)
     networking.firewall.allowedTCPPorts = [ 80 443 ];

@@ -39,9 +39,11 @@ in
 inputs.nixpkgs.lib.nixosSystem {
   modules = [
     nixosModule
+    # nixos-hardware Pi 3B support (handles kernel, bootloader, kernel modules)
+    # raspberry-pi-nix does not support BCM2837 (Pi 3)
+    inputs.nixos-hardware.nixosModules.raspberry-pi-3
     {
       # Cross-compile from x86_64 build host to aarch64 Pi
-      # Build host needs: boot.binfmt.emulatedSystems = [ "aarch64-linux" ];
       nixpkgs.hostPlatform.system = "aarch64-linux";
       nixpkgs.buildPlatform.system = "x86_64-linux";
     }

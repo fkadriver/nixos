@@ -39,9 +39,11 @@ in
 inputs.nixpkgs.lib.nixosSystem {
   modules = [
     nixosModule
+    # raspberry-pi-nix modules imported here where inputs is accessible
+    inputs.raspberry-pi-nix.nixosModules.raspberry-pi
+    inputs.raspberry-pi-nix.nixosModules.sd-image
     {
       # Cross-compile from x86_64 build host to aarch64 Pi
-      # Build host needs: boot.binfmt.emulatedSystems = [ "aarch64-linux" ];
       nixpkgs.hostPlatform.system = "aarch64-linux";
       nixpkgs.buildPlatform.system = "x86_64-linux";
     }

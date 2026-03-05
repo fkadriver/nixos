@@ -1,28 +1,14 @@
-{ inputs, ... }@flakeContext:
 { config, lib, pkgs, modulesPath, ... }: {
 
   imports = [
-    inputs.raspberry-pi-nix.nixosModules.raspberry-pi
-    inputs.raspberry-pi-nix.nixosModules.sd-image
+    # Standard NixOS aarch64 SD image support (provides sdImage + NIXOS_SD label)
+    "${modulesPath}/installer/sd-card/sd-image-aarch64.nix"
   ];
-
-  # Raspberry Pi 3B hardware
-  hardware.raspberry-pi."3" = {
-    enable = true;
-    apply-overlays-dtmerge.enable = true;
-  };
 
   # SD card image settings
   sdImage.compressImage = false;
 
-  # Pi 3B uses its own bootloader — not systemd-boot or grub
-  boot.loader.grub.enable = false;
-  boot.loader.generic-extlinux-compatible.enable = true;
-
-  # Pi 3B aarch64 kernel
-  boot.kernelPackages = pkgs.linuxPackages_rpi3;
-
-  # Basic filesystems (SD card layout managed by raspberry-pi-nix sdImage)
+  # Root filesystem on SD card (label set by sd-image-aarch64.nix)
   fileSystems."/" = {
     device = "/dev/disk/by-label/NIXOS_SD";
     fsType = "ext4";

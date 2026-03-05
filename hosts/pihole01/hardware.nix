@@ -1,36 +1,19 @@
-{ inputs, ... }@flakeContext:
-{ config, lib, pkgs, modulesPath, ... }: {
+{ config, lib, pkgs, ... }: {
 
-  imports = [
-    inputs.raspberry-pi-nix.nixosModules.raspberry-pi
-    inputs.raspberry-pi-nix.nixosModules.sd-image
-  ];
+  # Pi 4B board selection for raspberry-pi-nix (bcm2711 = Pi 4)
+  raspberry-pi-nix.board = "bcm2711";
 
-  # Raspberry Pi 4B hardware
-  hardware.raspberry-pi."4" = {
-    enable = true;
-    # Apply all upstream firmware/device tree patches for Pi 4
-    apply-overlays-dtmerge.enable = true;
-  };
-
-  # SD card image settings
+  # SD card image settings (managed by raspberry-pi-nix sd-image module)
   sdImage.compressImage = false;
 
-  # Pi 4B uses its own bootloader — not systemd-boot or grub
-  boot.loader.grub.enable = false;
-  boot.loader.generic-extlinux-compatible.enable = true;
-
-  # Pi 4B aarch64 kernel
-  boot.kernelPackages = pkgs.linuxPackages_rpi4;
-
-  # Basic filesystems (SD card layout is managed by raspberry-pi-nix sdImage)
+  # Root filesystem on SD card
   fileSystems."/" = {
     device = "/dev/disk/by-label/NIXOS_SD";
     fsType = "ext4";
     options = [ "noatime" ];
   };
 
-  # Hardware-specific: disable zswap, enable swap on SD is hard on the card
+  # Use zram instead of SD swap to protect the card
   zramSwap = {
     enable = true;
     memoryPercent = 50;
