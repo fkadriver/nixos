@@ -20,6 +20,10 @@
       url = "github:nix-community/nixos-vscode-server";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    raspberry-pi-nix = {
+      url = "github:nix-community/raspberry-pi-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     nix-darwin = {
       url = "github:LnL7/nix-darwin";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -66,6 +70,8 @@
         airbook-kde = import ./hosts/airbook/kde.nix flakeContext;
         prodesk = import ./hosts/prodesk flakeContext;
         vm01 = import ./hosts/vm01 flakeContext;
+        pihole01 = import ./hosts/pihole01 flakeContext;
+        pihole02 = import ./hosts/pihole02 flakeContext;
         installer = import ./hosts/installer flakeContext;
       };
 

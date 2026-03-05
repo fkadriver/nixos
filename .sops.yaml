@@ -8,6 +8,12 @@ keys:
   # macOS darwin
   - &airbook-darwin age1pa8nxmzlw3qldzuwatqjcggnp8cqd5axjdux3vten2znsga6a4kqh4g937
 
+  # Pi-hole servers — add age keys after first boot:
+  #   sudo age-keygen -y /var/lib/sops-nix/key.txt
+  # Then uncomment, paste the key, and run: sops updatekeys secrets/secrets.yaml
+  # - &pihole01 age1...
+  # - &pihole02 age1...
+
 creation_rules:
   - path_regex: secrets/secrets\.yaml$
     key_groups:
@@ -17,3 +23,6 @@ creation_rules:
           - *nas01
           - *vm01
           - *airbook-darwin
+          # Add after first boot:
+          # - *pihole01
+          # - *pihole02

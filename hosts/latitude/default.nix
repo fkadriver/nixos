@@ -24,6 +24,10 @@ let
         sshKeyFile = "/home/scott/.ssh/id_ed25519";
       };
 
+      # Enable aarch64 emulation so the latitude can cross-compile Pi SD images
+      # Build: nix build .#nixosConfigurations.pihole01.config.system.build.sdImage
+      boot.binfmt.emulatedSystems = [ "aarch64-linux" ];
+
       system = {
         stateVersion = "25.11";
       };
