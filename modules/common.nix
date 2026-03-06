@@ -210,6 +210,11 @@
             success_symbol = "[➜](bold green)";
             error_symbol = "[➜](bold red)";
           };
+          hostname = {
+            ssh_only = false;
+            format = "[@$hostname]($style) ";
+            style = "bold green";
+          };
           aws.disabled = true;
           azure.disabled = true;
           gcloud.disabled = true;
