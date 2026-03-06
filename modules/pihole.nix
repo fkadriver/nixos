@@ -4,11 +4,14 @@
   imports = [ inputs.sops-nix.nixosModules.sops ];
 
   config = {
-    # gh (GitHub CLI) fails to cross-compile for aarch64 due to a -m64 flag bug.
-    # Pi-hole servers don't need it — replace with an empty stub for aarch64 builds.
+    # Several packages from common.nix fail to cross-compile for aarch64:
+    #   - gh: Go build script passes -m64 to aarch64 gcc
+    #   - ncdu: Zig build uses -target native-native instead of aarch64
+    # Pi-hole servers don't need these dev/monitoring tools — stub them out.
     nixpkgs.overlays = [
       (final: prev: lib.optionalAttrs prev.stdenv.hostPlatform.isAarch64 {
-        gh = prev.runCommandLocal "gh-stub" {} "mkdir -p $out";
+        gh   = prev.runCommandLocal "gh-stub"   {} "mkdir -p $out";
+        ncdu = prev.runCommandLocal "ncdu-stub" {} "mkdir -p $out";
       })
     ];
     # Pi-hole owns port 53 — disable resolved's stub listener so it doesn't conflict.
