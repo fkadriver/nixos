@@ -47,6 +47,9 @@ let
 
       # Networking
       tailscale
+
+      # Backup
+      borgbackup
     ];
 
     # Homebrew for GUI apps and casks
@@ -218,8 +221,67 @@ let
           mode = "0644";
           owner = "scott";
         };
+
+        # Borg backup passphrase
+        "borg/passphrase" = {
+          path = "/Users/scott/.local/share/borg/passphrase";
+          mode = "0400";
+          owner = "scott";
+        };
       };
     };
+
+    # Borg backup to nas01 via launchd (macOS equivalent of systemd)
+    launchd.daemons.borg-backup =
+      let
+        borgScript = pkgs.writeShellScript "borg-backup" ''
+          set -euo pipefail
+
+          PASSPHRASE_FILE="/Users/scott/.local/share/borg/passphrase"
+          REPO="ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/airbook-darwin"
+
+          export BORG_PASSPHRASE="$(cat "$PASSPHRASE_FILE")"
+          export BORG_RSH="${pkgs.openssh}/bin/ssh -i /Users/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new"
+          export BORG_REMOTE_PATH="/usr/bin/borg"
+
+          echo "=== Borg backup started: $(date) ==="
+
+          ${pkgs.borgbackup}/bin/borg create \
+            --stats \
+            --compression auto,zstd \
+            --exclude-caches \
+            --exclude "*/node_modules" \
+            --exclude "*/.npm" \
+            --exclude "*/.cargo" \
+            --exclude "*/.rustup" \
+            --exclude "*/.cache" \
+            --exclude "*/Cache" \
+            --exclude "*/Library/Caches" \
+            --exclude "*/Library/Application Support/*/Cache" \
+            --exclude "*.pyc" \
+            --exclude "*/__pycache__" \
+            "''${REPO}::airbook-darwin-$(date +%Y-%m-%dT%H:%M:%S)" \
+            /Users/scott
+
+          ${pkgs.borgbackup}/bin/borg prune \
+            --keep-daily 7 \
+            --keep-weekly 4 \
+            --keep-monthly 6 \
+            "$REPO"
+
+          echo "=== Borg backup complete: $(date) ==="
+        '';
+      in {
+        serviceConfig = {
+          Label = "com.local.borg-backup";
+          ProgramArguments = [ "${borgScript}" ];
+          StartCalendarInterval = [{ Hour = 2; Minute = 0; }];
+          UserName = "scott";
+          RunAtLoad = false;
+          StandardOutPath = "/Users/scott/.local/share/borg/backup.log";
+          StandardErrorPath = "/Users/scott/.local/share/borg/backup.error.log";
+        };
+      };
 
     # Services
     services = {
