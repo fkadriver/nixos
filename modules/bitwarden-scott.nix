@@ -37,7 +37,7 @@
       };
       borg_passphrase = {
         name = "borg_passphrase";
-        itemId = "Borg Encryption";  # TODO: replace with UUID from: bw get item "Borg Encryption" | jq -r '.id'
+        itemId = "91db7811-ddf1-49aa-8a42-b3d60188a6e6";  # BW_Name: Borg Encryption
         field = "password";
         mode = "0400";
       };
