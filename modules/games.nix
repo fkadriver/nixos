@@ -2,29 +2,22 @@
 { config, lib, pkgs, ... }:
 
 let
-  # Heroic 2.20.0 - nixpkgs ships 2.19.1, override to 2.20.0
-  # pnpm-lock.yaml changed between releases so pnpmDeps hash must be updated.
-  # To get the correct pnpmDeps hash:
-  #   sudo nixos-rebuild switch --flake .#<hostname>
-  # The build will fail with "got: sha256-..." — paste that hash below.
-  heroic-2_20 =
-    let
-      newSrc = pkgs.fetchFromGitHub {
-        owner = "Heroic-Games-Launcher";
-        repo = "HeroicGamesLauncher";
-        tag = "v2.20.0";
-        hash = "sha256-gjQPQ/PwpDlBUfNF1JAlWUDGJa+7hwoQtouihdSCDqI=";
-      };
-      newUnwrapped = pkgs.heroic-unwrapped.overrideAttrs (old: {
-        version = "2.20.0";
-        src = newSrc;
-        pnpmDeps = old.pnpmDeps.overrideAttrs (_: {
-          # PLACEHOLDER: replace with hash from build error output
-          hash = lib.fakeHash;
-        });
-      });
-    in
-      pkgs.heroic.override { heroic-unwrapped = newUnwrapped; };
+  # Heroic 2.20.0 via AppImage (nixpkgs ships 2.19.1 built from source)
+  heroic-2_20 = pkgs.appimageTools.wrapType2 {
+    pname = "heroic";
+    version = "2.20.0";
+    src = pkgs.fetchurl {
+      url = "https://github.com/Heroic-Games-Launcher/HeroicGamesLauncher/releases/download/v2.20.0/Heroic-2.20.0-linux-x86_64.AppImage";
+      hash = "sha256-tw9UNh1+eK6Sx7sRTmSgdaWxzakQ0akAB7pobOuzYOE=";
+    };
+    meta = {
+      description = "Epic, GOG, and Amazon Prime Games launcher";
+      homepage = "https://heroicgameslauncher.com";
+      license = lib.licenses.gpl3Only;
+      platforms = [ "x86_64-linux" ];
+      mainProgram = "heroic";
+    };
+  };
 in
 {
   config = {
