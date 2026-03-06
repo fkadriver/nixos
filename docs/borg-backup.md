@@ -1,194 +1,190 @@
 # Borg Backup Configuration
 
-This document describes how to set up and use the Borg backup module in this NixOS configuration.
+Borg Backup is a deduplicating backup program that supports compression and encryption.
+Backups are sent to `nas01` (Ubuntu server) via Tailscale.
 
-## Overview
+The passphrase is stored in Bitwarden (**Borg Encryption** item, password field) and deployed
+to `/run/bitwarden-secrets/borg_passphrase` at boot by the `bitwarden-secrets-sync` service.
 
-Borg Backup is a deduplicating backup program that supports compression and encryption. Backups are sent to `nas01` (Ubuntu server) via Tailscale, ensuring they work from any network.
+## First-Time Setup (new install or rebuild)
 
-## Configured Hosts
+Borg will not run successfully until the machine's age key is registered in `.sops.yaml`.
+Without it, sops-nix cannot decrypt Bitwarden credentials, so the passphrase is never deployed.
 
-| Host | Repository | Schedule |
-|------|------------|----------|
-| latitude | `ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/latitude` | Daily |
-| airbook | `ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/airbook` | Daily |
+### Step 1 — Get the age key
 
-## Server Setup (nas01 - Ubuntu)
-
-The backup server requires:
+After first boot (or after `nixos-rebuild switch`):
 
 ```bash
-# Install borgbackup
-sudo apt install borgbackup
-
-# Ensure SSH server is running
-sudo systemctl enable ssh
-sudo systemctl start ssh
+sudo age-keygen -y /var/lib/sops-nix/key.txt
+# Output: age1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
-## Client Setup (NixOS)
+### Step 2 — Register the key
 
-### 1. Create passphrase file on each client
+On your build machine, add the key to `.sops.yaml`:
 
-Use the same passphrase for all machines to simplify management:
-
-```bash
-# On latitude and airbook
-echo "your-secure-passphrase" | sudo tee /etc/borg-passphrase
-sudo chmod 600 /etc/borg-passphrase
+```yaml
+  - &hostname age1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
-### 2. Initialize the Borg repository (from client, first time only)
-
-This creates the repository directory and initializes it with encryption:
+And add it to the `creation_rules` key group, then re-encrypt:
 
 ```bash
-sudo borg init --encryption=repokey-blake2 --remote-path=/usr/bin/borg \
+export SOPS_AGE_KEY_FILE=~/.config/sops/age/keys.txt
+sops updatekeys secrets/secrets.yaml
+```
+
+### Step 3 — Rebuild and deploy
+
+```bash
+sudo nixos-rebuild switch --flake .#<hostname> --target-host scott@<hostname>
+```
+
+After rebuild, `bitwarden-secrets-sync` will run on boot and deploy the passphrase.
+Verify it landed:
+
+```bash
+sudo cat /run/bitwarden-secrets/borg_passphrase
+```
+
+### Step 4 — Initialize the repository (first time only)
+
+The SSH key (`id_ed25519_legacy`) and passphrase are deployed by bitwarden at boot.
+Once they're present, initialize the repo on nas01:
+
+```bash
+sudo env \
+  BORG_RSH="ssh -i /home/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new" \
+  BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" \
+  borg init --encryption=repokey-blake2 --remote-path=/usr/bin/borg \
   ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/$(hostname)
 ```
 
-**Note:** The `--remote-path=/usr/bin/borg` flag is required for manual commands because nas01 (Ubuntu) doesn't have borg in the default PATH for non-login SSH sessions. The systemd service handles this automatically.
+`--remote-path=/usr/bin/borg` is required because nas01 (Ubuntu) doesn't have borg
+in the default PATH for non-login SSH sessions.
 
-### 3. Export the repository key (important for recovery!)
+### Step 5 — Export and save the repository key
 
 ```bash
-sudo borg key export --remote-path=/usr/bin/borg \
+sudo env \
+  BORG_RSH="ssh -i /home/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new" \
+  BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" \
+  borg key export --remote-path=/usr/bin/borg \
   ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/$(hostname) \
   ~/borg-key-$(hostname).txt
+
+cat ~/borg-key-$(hostname).txt
 ```
 
-Store this key file securely (e.g., in a password manager). You need both the key and passphrase to restore backups.
+Save this key in Bitwarden. You need both the key AND the passphrase to restore backups.
 
-## Usage
-
-### Check backup service status
+### Step 6 — Trigger the first backup
 
 ```bash
-# View service status
-sudo systemctl status borgbackup-job-system.service
-
-# View timer status
-sudo systemctl list-timers | grep borg
-
-# View recent logs
-sudo journalctl -u borgbackup-job-system.service -n 50
+borg-run
+borg-logs
 ```
 
-### Manual backup
+## Shell Aliases
+
+All machines have these aliases configured in `shell-aliases.nix`:
+
+| Alias | Description |
+|-------|-------------|
+| `borg-status` | Show systemd service status |
+| `borg-logs` | Show last 50 log lines |
+| `borg-timer` | Show next scheduled run |
+| `borg-run` | Trigger a manual backup now |
+| `borg-list` | List all archives in the repo |
+| `borg-info` | Show repo size and stats |
+| `borg-check` | Verify repository integrity |
+| `borg-unlock` | Break a stale lock (after interrupted backup) |
+
+The `borg-list`, `borg-info`, `borg-check`, and `borg-unlock` aliases automatically set
+`BORG_RSH`, `BORG_PASSCOMMAND`, and `BORG_REMOTE_PATH`.
+
+## Restore
 
 ```bash
-sudo systemctl start borgbackup-job-system.service
+export BORG_RSH="ssh -i /home/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new"
+export BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase"
+export BORG_REMOTE_PATH=/usr/bin/borg
+REPO="ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/$(hostname)"
+
+# List archives
+sudo -E borg list "$REPO"
+
+# List contents of a specific archive
+sudo -E borg list "$REPO::ARCHIVE_NAME"
+
+# Extract a file
+sudo -E borg extract "$REPO::ARCHIVE_NAME" home/scott/Documents/important-file.txt
+
+# Extract entire archive
+sudo mkdir -p /tmp/restore && cd /tmp/restore
+sudo -E borg extract "$REPO::ARCHIVE_NAME"
 ```
 
-### List backups
+### Mount as filesystem (for browsing)
 
 ```bash
-sudo borg list --remote-path=/usr/bin/borg \
-  ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/$(hostname)
-```
+export BORG_RSH="ssh -i /home/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new"
+export BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase"
 
-### View backup info
-
-```bash
-sudo borg info --remote-path=/usr/bin/borg \
-  ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/$(hostname)
-```
-
-### Restore files
-
-```bash
-# List contents of a specific backup
-sudo borg list --remote-path=/usr/bin/borg \
-  ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/$(hostname)::ARCHIVE_NAME
-
-# Extract specific files to current directory
-sudo borg extract --remote-path=/usr/bin/borg \
-  ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/$(hostname)::ARCHIVE_NAME \
-  home/scott/Documents/important-file.txt
-
-# Extract entire backup to a restore directory
-sudo mkdir /tmp/restore
-cd /tmp/restore
-sudo borg extract --remote-path=/usr/bin/borg \
-  ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/$(hostname)::ARCHIVE_NAME
-```
-
-### Mount backup as filesystem (for browsing)
-
-```bash
-sudo mkdir /mnt/borg
-sudo borg mount --remote-path=/usr/bin/borg \
+sudo mkdir -p /mnt/borg
+sudo -E borg mount --remote-path=/usr/bin/borg \
   ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/$(hostname) \
   /mnt/borg
 
-# Browse backups
 ls /mnt/borg
-
-# Unmount when done
 sudo borg umount /mnt/borg
 ```
 
 ## Retention Policy
 
-Backups are automatically pruned according to this schedule:
-
 - **Daily**: Keep last 7 days
 - **Weekly**: Keep last 4 weeks
 - **Monthly**: Keep last 6 months
 
-## What's Backed Up
-
-**Included:**
-- `/home/scott` (entire home directory)
-
-**Excluded:**
-- `.cache` directories
-- `.local/share/Trash`
-- `Downloads` folder
-- `.npm`, `.cargo`, `.rustup` (package manager caches)
-- `node_modules` directories
-- Python bytecode (`*.pyc`, `__pycache__`)
-
 ## Troubleshooting
 
-### SSH connection issues
+### Passphrase not deployed
 
-Ensure Tailscale is connected:
+sops-nix couldn't decrypt Bitwarden credentials — the machine's age key is likely
+not in `.sops.yaml`. Follow steps 1-3 of First-Time Setup above.
+
 ```bash
-tailscale status
-ping nas01.warthog-royal.ts.net
+sudo systemctl status bitwarden-secrets-sync.service
+sudo journalctl -u bitwarden-secrets-sync.service -n 30
 ```
 
-### Permission denied
+### SSH key missing
 
-The backup runs as root. Ensure the SSH key is accessible:
 ```bash
-sudo ls -la /home/scott/.ssh/id_ed25519
+ls -la /home/scott/.ssh/id_ed25519_legacy
+sudo systemctl restart bitwarden-secrets-sync.service
 ```
 
-### Repository locked
+### Repository locked (interrupted backup)
 
-If a backup was interrupted:
 ```bash
-sudo borg break-lock --remote-path=/usr/bin/borg \
-  ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/$(hostname)
+borg-unlock
 ```
 
-### Check repository integrity
+### Reset a corrupted repo on nas01
 
 ```bash
-sudo borg check --remote-path=/usr/bin/borg \
-  ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/$(hostname)
+ssh scott@nas01.warthog-royal.ts.net 'rm -rf /mnt/wd18T/Backups/<hostname>'
+# Then re-run Step 4 above
 ```
 
 ## Module Options
 
-The `services.borg-backup` module supports these options:
-
 | Option | Default | Description |
 |--------|---------|-------------|
 | `enable` | `false` | Enable Borg backup service |
-| `repository` | - | Repository URL (required) |
+| `repository` | — | Repository URL (required) |
 | `paths` | `["/home"]` | Paths to back up |
 | `exclude` | (various caches) | Patterns to exclude |
 | `encryption.mode` | `repokey-blake2` | Encryption mode |
@@ -202,7 +198,8 @@ The `services.borg-backup` module supports these options:
 
 ## Security Notes
 
-1. The passphrase file (`/etc/borg-passphrase`) is readable only by root
+1. Passphrase lives only in Bitwarden and ephemerally in `/run/bitwarden-secrets/` — never on disk permanently
 2. Backups are encrypted with AES-256 (repokey-blake2 mode)
-3. The encryption key is stored in the repository but encrypted with your passphrase
-4. **Always keep a backup of your key export and passphrase** - without both, your backups are unrecoverable
+3. The repo key is stored on nas01 but encrypted by the passphrase
+4. Without both the repo key export AND the passphrase, backups are unrecoverable — keep both in Bitwarden
+5. The borg service waits for `bitwarden-secrets-sync` before running

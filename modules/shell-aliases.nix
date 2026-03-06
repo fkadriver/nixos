@@ -74,6 +74,18 @@
         ta = "tmux attach-session -t";
         tk = "tmux kill-session -t";
 
+        # Borg backup - service management
+        borg-status = "sudo systemctl status borgbackup-job-system.service";
+        borg-logs   = "sudo journalctl -u borgbackup-job-system.service -n 50";
+        borg-timer  = "systemctl list-timers | grep borg";
+        borg-run    = "sudo systemctl start borgbackup-job-system.service";
+
+        # Borg backup - repository operations (passphrase from bitwarden, legacy SSH key)
+        borg-list   = ''sudo env BORG_RSH="ssh -i /home/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new" BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" BORG_REMOTE_PATH=/usr/bin/borg borg list ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/$(hostname)'';
+        borg-info   = ''sudo env BORG_RSH="ssh -i /home/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new" BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" BORG_REMOTE_PATH=/usr/bin/borg borg info ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/$(hostname)'';
+        borg-check  = ''sudo env BORG_RSH="ssh -i /home/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new" BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" BORG_REMOTE_PATH=/usr/bin/borg borg check ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/$(hostname)'';
+        borg-unlock = ''sudo env BORG_RSH="ssh -i /home/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new" BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" BORG_REMOTE_PATH=/usr/bin/borg borg break-lock ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/$(hostname)'';
+
         # Common utilities
         ll = "ls -lah";
         la = "ls -A";
