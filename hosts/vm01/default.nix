@@ -75,19 +75,13 @@ EOF
         chown immich:immich /opt/immich/.bashrc
       '';
 
-      # Borg passphrase deployed via sops-nix (add "borg/vm01/passphrase" to secrets.yaml)
-      sops.secrets."borg/vm01/passphrase" = {
-        mode = "0400";
-      };
-
       # Borg backup to nas01
+      # Passphrase comes from bitwarden-scott.nix -> /run/bitwarden-secrets/borg_passphrase
       services.borg-backup = {
         enable = true;
         repository = "ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/vm01";
         paths = [ "/home" "/mnt/immich" ];
-        # Use the sops-deployed passphrase (path is /run/secrets/borg/vm01/passphrase)
-        encryption.passphraseFile = config.sops.secrets."borg/vm01/passphrase".path;
-        # bitwarden-scott.nix deploys this key, not id_ed25519
+        encryption.passphraseFile = "/run/bitwarden-secrets/borg_passphrase";
         sshKeyFile = "/home/scott/.ssh/id_ed25519_legacy";
       };
 

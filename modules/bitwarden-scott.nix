@@ -35,6 +35,12 @@
         field = "tskey";                                   # Custom field in Secure Note
         mode = "0400";
       };
+      borg_passphrase = {
+        name = "borg_passphrase";
+        itemId = "Borg Encryption";  # TODO: replace with UUID from: bw get item "Borg Encryption" | jq -r '.id'
+        field = "password";
+        mode = "0400";
+      };
     };
   };
 }

@@ -135,5 +135,11 @@ in
       # Extra borg create arguments
       extraCreateArgs = "--stats --show-rc";
     };
+
+    # Ensure borg runs after bitwarden has synced secrets (passphrase file)
+    systemd.services."borgbackup-job-system" = {
+      after = [ "bitwarden-secrets-sync.service" ];
+      wants = [ "bitwarden-secrets-sync.service" ];
+    };
   };
 }
