@@ -50,6 +50,7 @@ let
 
       # Backup
       borgbackup
+      bitwarden-cli
     ];
 
     # Homebrew for GUI apps and casks
@@ -62,7 +63,6 @@ let
       };
       brews = [
         "syncthing"
-        "bitwarden-cli"  # Install via brew (nix version has build issues)
       ];
       casks = [
         "bitwarden"
@@ -222,9 +222,19 @@ let
           owner = "scott";
         };
 
-        # Borg backup passphrase
-        "borg/passphrase" = {
-          path = "/Users/scott/.local/share/borg/passphrase";
+        # Bitwarden credentials (for fetching borg passphrase at backup time)
+        "bitwarden/client_id" = {
+          path = "/Users/scott/.local/share/bitwarden-secrets/client_id";
+          mode = "0400";
+          owner = "scott";
+        };
+        "bitwarden/client_secret" = {
+          path = "/Users/scott/.local/share/bitwarden-secrets/client_secret";
+          mode = "0400";
+          owner = "scott";
+        };
+        "bitwarden/master_password" = {
+          path = "/Users/scott/.local/share/bitwarden-secrets/master_password";
           mode = "0400";
           owner = "scott";
         };
@@ -237,14 +247,27 @@ let
         borgScript = pkgs.writeShellScript "borg-backup" ''
           set -euo pipefail
 
-          PASSPHRASE_FILE="/Users/scott/.local/share/borg/passphrase"
+          BW_SECRETS="/Users/scott/.local/share/bitwarden-secrets"
           REPO="ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/airbook-darwin"
+          # Borg passphrase: Bitwarden item 91db7811-ddf1-49aa-8a42-b3d60188a6e6 (Borg Encryption)
+          BW_BORG_ITEM_ID="91db7811-ddf1-49aa-8a42-b3d60188a6e6"
 
-          export BORG_PASSPHRASE="$(cat "$PASSPHRASE_FILE")"
-          export BORG_RSH="${pkgs.openssh}/bin/ssh -i /Users/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new"
-          export BORG_REMOTE_PATH="/usr/bin/borg"
+          export BW_CLIENTID="$(cat "$BW_SECRETS/client_id")"
+          export BW_CLIENTSECRET="$(cat "$BW_SECRETS/client_secret")"
+          export BW_PASSWORD="$(cat "$BW_SECRETS/master_password")"
+          export HOME="/Users/scott"
 
           echo "=== Borg backup started: $(date) ==="
+
+          # Authenticate to Bitwarden and fetch passphrase
+          ${pkgs.bitwarden-cli}/bin/bw login --apikey --quiet 2>/dev/null || true
+          BW_SESSION="$(${pkgs.bitwarden-cli}/bin/bw unlock --passwordenv BW_PASSWORD --raw)"
+          export BORG_PASSPHRASE="$(${pkgs.bitwarden-cli}/bin/bw get item "$BW_BORG_ITEM_ID" \
+            | ${pkgs.jq}/bin/jq -r '.login.password' )"
+          ${pkgs.bitwarden-cli}/bin/bw lock --quiet || true
+
+          export BORG_RSH="${pkgs.openssh}/bin/ssh -i /Users/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new"
+          export BORG_REMOTE_PATH="/usr/bin/borg"
 
           ${pkgs.borgbackup}/bin/borg create \
             --stats \
