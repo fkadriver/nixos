@@ -50,7 +50,6 @@ let
 
       # Backup
       borgbackup
-      bitwarden-cli
     ];
 
     # Homebrew for GUI apps and casks
@@ -63,6 +62,7 @@ let
       };
       brews = [
         "syncthing"
+        "bitwarden-cli"  # nix version requires xcodebuild, use homebrew instead
       ];
       casks = [
         "bitwarden"
@@ -260,11 +260,12 @@ let
           echo "=== Borg backup started: $(date) ==="
 
           # Authenticate to Bitwarden and fetch passphrase
-          ${pkgs.bitwarden-cli}/bin/bw login --apikey --quiet 2>/dev/null || true
-          BW_SESSION="$(${pkgs.bitwarden-cli}/bin/bw unlock --passwordenv BW_PASSWORD --raw)"
-          export BORG_PASSPHRASE="$(${pkgs.bitwarden-cli}/bin/bw get item "$BW_BORG_ITEM_ID" \
+          BW="/usr/local/bin/bw"
+          "$BW" login --apikey --quiet 2>/dev/null || true
+          BW_SESSION="$("$BW" unlock --passwordenv BW_PASSWORD --raw)"
+          export BORG_PASSPHRASE="$("$BW" get item "$BW_BORG_ITEM_ID" \
             | ${pkgs.jq}/bin/jq -r '.login.password' )"
-          ${pkgs.bitwarden-cli}/bin/bw lock --quiet || true
+          "$BW" lock --quiet || true
 
           export BORG_RSH="${pkgs.openssh}/bin/ssh -i /Users/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new"
           export BORG_REMOTE_PATH="/usr/bin/borg"
