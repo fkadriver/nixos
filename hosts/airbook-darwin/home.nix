@@ -1,4 +1,19 @@
-{ config, lib, pkgs, ... }: {
+{ config, lib, pkgs, ... }:
+let
+  # Fetches the borg passphrase from Bitwarden using stored API credentials
+  borgPassCmd = pkgs.writeShellScript "borg-getpass" ''
+    export BW_CLIENTID="$(cat "$HOME/.local/share/bitwarden-secrets/client_id")"
+    export BW_CLIENTSECRET="$(cat "$HOME/.local/share/bitwarden-secrets/client_secret")"
+    export BW_PASSWORD="$(cat "$HOME/.local/share/bitwarden-secrets/master_password")"
+    /usr/local/bin/bw login --apikey --quiet 2>/dev/null || true
+    export BW_SESSION="$(/usr/local/bin/bw unlock --passwordenv BW_PASSWORD --raw)"
+    /usr/local/bin/bw get item "91db7811-ddf1-49aa-8a42-b3d60188a6e6" \
+      | ${pkgs.jq}/bin/jq -r '.login.password'
+  '';
+  borgRepo = "ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/airbook-darwin";
+  borgEnv  = ''BORG_RSH="ssh -i $HOME/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new" BORG_PASSCOMMAND="${borgPassCmd}" BORG_REMOTE_PATH=/usr/bin/borg'';
+in
+{
   home = {
     username = "scott";
     homeDirectory = "/Users/scott";
@@ -125,6 +140,15 @@
         ta = "tmux attach-session -t";
         tk = "tmux kill-session -t";
 
+        # Borg backup (darwin - uses launchd instead of systemd)
+        borg-status = "sudo launchctl list com.local.borg-backup";
+        borg-logs   = "tail -100 $HOME/.local/share/borg/backup.log";
+        borg-run    = "sudo launchctl start com.local.borg-backup";
+        borg-list   = "env ${borgEnv} borg list ${borgRepo}";
+        borg-info   = "env ${borgEnv} borg info ${borgRepo}";
+        borg-check  = "env ${borgEnv} borg check ${borgRepo}";
+        borg-unlock = "env ${borgEnv} borg break-lock ${borgRepo}";
+
         # System rebuild (darwin-specific)
         rebuild = "sudo darwin-rebuild switch --flake ~/git/nixos#airbook-darwin";
 
@@ -223,6 +247,15 @@
         tn = "tmux new-session -s";
         ta = "tmux attach-session -t";
         tk = "tmux kill-session -t";
+
+        # Borg backup (darwin - uses launchd instead of systemd)
+        borg-status = "sudo launchctl list com.local.borg-backup";
+        borg-logs   = "tail -100 $HOME/.local/share/borg/backup.log";
+        borg-run    = "sudo launchctl start com.local.borg-backup";
+        borg-list   = "env ${borgEnv} borg list ${borgRepo}";
+        borg-info   = "env ${borgEnv} borg info ${borgRepo}";
+        borg-check  = "env ${borgEnv} borg check ${borgRepo}";
+        borg-unlock = "env ${borgEnv} borg break-lock ${borgRepo}";
 
         # System rebuild (darwin-specific)
         rebuild = "sudo darwin-rebuild switch --flake ~/git/nixos#airbook-darwin";
