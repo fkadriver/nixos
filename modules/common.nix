@@ -32,6 +32,8 @@
         rsync
         tcpdump       # packet analyzer
         wget
+        minicom
+        tio	      # minicom had issues with ttyUSB0 on latitude
 
         # System Monitoring
         htop
