@@ -12,7 +12,7 @@ keys:
   #   sudo age-keygen -y /var/lib/sops-nix/key.txt
   # Then uncomment, paste the key, and run: sops updatekeys secrets/secrets.yaml
   # - &pihole01 age1...
-  # - &pihole02 age1...
+  - &pihole02 age128d7atw3fargh4akm42yyz7l0avfcvjam8yt5nlzxdnwmtmytgjqcenm8x
 
 creation_rules:
   - path_regex: secrets/secrets\.yaml$
@@ -25,4 +25,4 @@ creation_rules:
           - *airbook-darwin
           # Add after first boot:
           # - *pihole01
-          # - *pihole02
+          - *pihole02

@@ -104,8 +104,8 @@ Do this once per Pi — it permanently registers the Pi's identity.
 ### 4a. Get the Pi's age public key
 
 ```bash
-ssh scott@192.168.10.11 "sudo age-keygen -y /var/lib/sops-nix/key.txt"
-# Output: age1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+ssh scott@192.168.10.11 "echo <password> | sudo -S sh -c 'mkdir -p /var/lib/sops-nix && age-keygen -o /var/lib/sops-nix/key.txt 2>&1'"
+# Output: Public key: age1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 ### 4b. Add the key to .sops.yaml
