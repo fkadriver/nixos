@@ -112,7 +112,16 @@
         dns = {
           upstreams = [ "9.9.9.9" "149.112.112.112" ];
           dnssec = true;
+          # Serve all interfaces so LAN clients can use Pi-hole for DNS
+          listeningMode = "ALL";
+          # Reply with Pi-hole's IP address for blocked queries (vs null/NXDOMAIN)
+          blocking.mode = "IP";
+          specialDomains = {
+            # Block iCloud Private Relay to prevent Apple devices bypassing Pi-hole
+            iCloudPrivateRelay = false;
+          };
         };
+        webserver.interface.theme = "default-dark";
         # pihole.toml is regenerated on each rebuild — block API config changes from the web UI
         misc.readOnly = true;
       };

@@ -18,6 +18,12 @@ let
         defaultGateway = "192.168.10.1";
       };
 
+      # Pin FTL reply addresses to this host's static IP
+      services.pihole-ftl.settings.dns.reply = {
+        host     = { force4 = true; IPv4 = "192.168.10.11"; };
+        blocking = { force4 = true; IPv4 = "192.168.10.11"; };
+      };
+
       system = {
         stateVersion = "25.11";
         nixos.label = "pihole02";
