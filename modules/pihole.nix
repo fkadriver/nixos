@@ -134,7 +134,12 @@
     };
 
     # Open HTTP/HTTPS for the web UI (pihole-web handles ports, but firewall must allow them)
-    networking.firewall.allowedTCPPorts = [ 80 443 ];
+    networking.firewall.allowedTCPPorts = [ 22 80 443 ];
+
+    services.openssh = {
+      enable = true;
+      settings.PasswordAuthentication = false;
+    };
 
     # Password hash injected via environment variable so it survives nixos-rebuild.
     # FTLCONF_ env vars override the corresponding pihole.toml settings at runtime.

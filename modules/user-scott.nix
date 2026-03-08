@@ -4,6 +4,9 @@
     users = {
       users = {
         scott = {
+          openssh.authorizedKeys.keys = [
+            "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIL4f/6/X75c3fXiXWdLLsJtWyEPxEnwCV7QqjFDLlRk7 scott@scott-ThinkPadT450S"
+          ];
           extraGroups = [
             "docker"
             "networkmanager"
