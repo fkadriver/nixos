@@ -101,6 +101,17 @@ check that the Pi is on the right VLAN/switch and the gateway is correct in
 
 Do this once per Pi — it permanently registers the Pi's identity.
 
+> **DNS note:** On first boot, `pihole-ftl` can't start because the sops secret
+> isn't decrypted yet, so `127.0.0.1` (the primary nameserver) isn't listening.
+> If you need to run any command on the Pi that requires DNS before completing
+> this phase, temporarily override resolv.conf:
+> ```bash
+> echo "nameserver 9.9.9.9" | sudo tee /etc/resolv.conf
+> ```
+> All rebuilds in this phase should be run **from your build machine** using
+> `--target-host` (step 4e), which builds locally and deploys over SSH —
+> the Pi never needs to reach GitHub itself.
+
 ### 4a. Get the Pi's age public key
 
 ```bash
