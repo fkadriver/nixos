@@ -6,6 +6,9 @@ result-*
 *.qcow2
 *.qcow2.tmp
 
+# SD card image backups
+*.img
+
 # Ignore automatically generated direnv output
 .direnv
 
