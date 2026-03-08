@@ -20,6 +20,12 @@ This document provides a high-level overview of all available modules in this re
 | `laptop-minimal.nix` | Minimal XFCE for testing (no WiFi auto-config, no Bitwarden) |
 | `daily-driver.nix` | Shared configuration for Scott's daily-driver machines (applications, fonts, 3D printing) |
 
+## Pi-hole Modules
+
+| Module | Description |
+|--------|-------------|
+| `pihole.nix` | Pi-hole FTL + web UI, slim base config (replaces `common` for Pi hosts): tailscale, shell-aliases, git, vim, curl, wget, htop, tmux, starship. Manages sops secrets for the admin password hash. |
+
 ## Networking Modules
 
 | Module | Description |

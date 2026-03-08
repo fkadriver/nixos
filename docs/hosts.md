@@ -49,6 +49,32 @@ This document provides a brief overview of all host configurations in this repos
 
 **Note:** No desktop environment - access via SSH or Tailscale.
 
+### pihole01
+**Raspberry Pi 3B** - Primary Pi-hole DNS server
+
+| | |
+|---|---|
+| IP | 192.168.10.10 (static) |
+| Purpose | Network-wide ad blocking / DNS |
+| SoC | BCM2837 (ARM Cortex-A53, aarch64) |
+| Key Features | Pi-hole FTL, Hagezi blocklists, Tailscale, sops secrets |
+| Build | `nix build .#nixosConfigurations.pihole01.config.system.build.sdImage` |
+
+**Note:** Cross-compiled from x86_64. Uses `raspberry-pi-nix` modules. No borg backup.
+
+### pihole02
+**Raspberry Pi 3B** - Secondary Pi-hole DNS server
+
+| | |
+|---|---|
+| IP | 192.168.10.11 (static) |
+| Purpose | Redundant DNS / failover for pihole01 |
+| SoC | BCM2837 (ARM Cortex-A53, aarch64) |
+| Key Features | Pi-hole FTL, Hagezi blocklists, Tailscale, sops secrets |
+| Build | `nix build .#nixosConfigurations.pihole02.config.system.build.sdImage` |
+
+**Note:** Cross-compiled from x86_64. Uses `nixos-hardware` raspberry-pi-3 module. No borg backup.
+
 ### installer
 **Bootable ISO** - Automated installation media
 
@@ -84,6 +110,8 @@ This document provides a brief overview of all host configurations in this repos
 | `airbook` | Laptop | XFCE | Mac running NixOS |
 | `airbook-kde` | Laptop | KDE | Mac running NixOS |
 | `vm01` | Server | None | Immich photo server |
+| `pihole01` | RPi 3B | None | Primary Pi-hole DNS |
+| `pihole02` | RPi 3B | None | Secondary Pi-hole DNS |
 | `installer` | ISO | N/A | Installation media |
 | `airbook-darwin` | macOS | N/A | nix-darwin on Mac |
 

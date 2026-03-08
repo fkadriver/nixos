@@ -1,21 +1,86 @@
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }: {
 
-  imports = [ inputs.sops-nix.nixosModules.sops ];
+  imports = [
+    inputs.sops-nix.nixosModules.sops
+    inputs.self.nixosModules.tailscale
+    inputs.self.nixosModules.shell-aliases
+  ];
 
   config = {
-    # Several packages from common.nix fail to cross-compile for aarch64:
-    #   - gh: Go build script passes -m64 to aarch64 gcc
-    #   - ncdu: Zig build uses -target native-native instead of aarch64
-    # Pi-hole servers don't need these dev/monitoring tools — stub them out.
-    nixpkgs.overlays = [
-      (final: prev: lib.optionalAttrs prev.stdenv.hostPlatform.isAarch64 {
-        gh   = prev.runCommandLocal "gh-stub"   {} "mkdir -p $out";
-        ncdu = prev.runCommandLocal "ncdu-stub" {} "mkdir -p $out";
-      })
+    # Slim package set — only what's needed for Pi-hole operation and git
+    environment.systemPackages = with pkgs; [
+      age     # encryption tool for SOPS
+      sops    # secret operations
+      vim
+      git
+      curl
+      wget
+      htop
     ];
+
+    nixpkgs.config.allowUnfree = true;
+
+    i18n = {
+      defaultLocale = "en_US.UTF-8";
+      extraLocaleSettings = {
+        LC_ADDRESS        = "en_US.UTF-8";
+        LC_IDENTIFICATION = "en_US.UTF-8";
+        LC_MEASUREMENT    = "en_US.UTF-8";
+        LC_MONETARY       = "en_US.UTF-8";
+        LC_NUMERIC        = "en_US.UTF-8";
+        LC_PAPER          = "en_US.UTF-8";
+        LC_TELEPHONE      = "en_US.UTF-8";
+        LC_TIME           = "en_US.UTF-8";
+      };
+    };
+
+    nix = {
+      settings.experimental-features = [ "nix-command" "flakes" ];
+      gc = {
+        automatic = true;
+        dates     = "weekly";
+        options   = "--delete-older-than 30d";
+      };
+    };
+
+    programs = {
+      git = {
+        enable = true;
+        config = {
+          user.name  = "Scott Jensen";
+          user.email = "fkadriver@gmail.com";
+        };
+      };
+      tmux = {
+        enable    = true;
+        clock24   = true;
+        keyMode   = "vi";
+        terminal  = "screen-256color";
+        historyLimit = 10000;
+        extraConfig = ''
+          set -g mouse on
+          set -g base-index 1
+          setw -g pane-base-index 1
+          set -g renumber-windows on
+          set -g status-style 'bg=#333333 fg=#ffffff'
+          set -g status-right '%H:%M %d-%b-%y'
+          bind | split-window -h -c "#{pane_current_path}"
+          bind - split-window -v -c "#{pane_current_path}"
+          bind h select-pane -L
+          bind j select-pane -D
+          bind k select-pane -U
+          bind l select-pane -R
+        '';
+      };
+      bash = {};
+      starship.enable = true;
+    };
+
+    time.timeZone = "America/Chicago";
+
     # Pi-hole owns port 53 — disable resolved's stub listener so it doesn't conflict.
-    # resolved is enabled by tailscale.nix (imported by common.nix), so we force it off here.
+    # resolved is enabled by tailscale.nix, so we force it off here.
     services.resolved = lib.mkForce { enable = false; };
 
     # Use Pi-hole for local DNS with Quad9 as an out-of-band fallback during boot
