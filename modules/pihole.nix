@@ -143,8 +143,9 @@
 
     # Password hash injected via environment variable so it survives nixos-rebuild.
     # FTLCONF_ env vars override the corresponding pihole.toml settings at runtime.
-    # Store the bcrypt hash in secrets.yaml as pihole/pwhash.
-    # Generate with: pihole setpassword, then read webserver.api.pwhash from /etc/pihole/pihole.toml
+    # Store the BALLOON-SHA256 hash in secrets.yaml as pihole/pwhash.
+    # Get it from an existing Pi-hole: sudo grep app_pwhash /etc/pihole/pihole.toml
+    # Copy the full value after the = sign (the $BALLOON-SHA256$... string)
     sops = {
       defaultSopsFile = lib.mkDefault ../secrets/secrets.yaml;
       age.keyFile = "/var/lib/sops-nix/key.txt";
@@ -152,7 +153,7 @@
       secrets."pihole/pwhash" = {};
 
       templates."pihole-ftl-env" = {
-        content = "FTLCONF_webserver_api_pwhash=${config.sops.placeholder."pihole/pwhash"}\n";
+        content = "FTLCONF_webserver_api_app_pwhash=${config.sops.placeholder."pihole/pwhash"}\n";
         owner = config.services.pihole-ftl.user;
         mode = "0400";
       };
