@@ -171,5 +171,26 @@
     # Feed the password hash to pihole-ftl without baking it into the nix store
     systemd.services.pihole-ftl.serviceConfig.EnvironmentFile =
       [ config.sops.templates."pihole-ftl-env".path ];
+
+    # Expose Pi-hole web UI over Tailscale with HTTPS (tailnet-only, not public)
+    # Accessible at https://pihole0x.<tailnet>.ts.net after Tailscale authenticates.
+    systemd.services.tailscale-serve-pihole = {
+      description = "Configure Tailscale Serve for Pi-hole web UI";
+      after = [ "tailscaled.service" "tailscaled-autoconnect.service" ];
+      wants = [ "tailscaled.service" ];
+      wantedBy = [ "multi-user.target" ];
+      path = [ pkgs.tailscale ];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        # Wait for Tailscale to authenticate before configuring serve
+        ExecStartPre = pkgs.writeShellScript "wait-for-tailscale" ''
+          until tailscale status >/dev/null 2>&1; do
+            sleep 2
+          done
+        '';
+        ExecStart = "${pkgs.tailscale}/bin/tailscale serve --bg http://localhost:80";
+      };
+    };
   };
 }
