@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 sudo nixos-rebuild switch --flake .#<hostname>
 
 # Available NixOS hostnames: prodesk, latitude, latitude-xfce, latitude-kde,
-# latitude-minimal, airbook, airbook-kde, vm01
+# latitude-minimal, vm01, pihole01, pihole02
 
 # Examples:
 sudo nixos-rebuild switch --flake .#latitude-kde
@@ -134,7 +134,6 @@ Each host has a base configuration in `hosts/<hostname>/default.nix` with option
 **Current Hosts (NixOS):**
 - **prodesk** - HP ProDesk desktop (photo/AI workstation with disko)
 - **latitude** - Dell Latitude 7480 laptop (default: Borg backup + 3D printing)
-- **airbook** - MacBook Air 7,2 running NixOS (Broadcom WiFi requires insecure driver)
 - **vm01** - Dell Latitude E7270 (Service Tag: 7NYTSF2, Immich server with external 1TB drive)
 - **installer** - Bootable ISO with automated installation script
 
@@ -273,11 +272,9 @@ sops updatekeys secrets/secrets.yaml
 
 ## Hardware-Specific Notes
 
-### MacBook Air 7,2 (airbook / airbook-darwin)
+### MacBook Air 7,2 (airbook-darwin)
 - **CPU**: Intel Core i5-5250U/i7-5650U (Broadwell)
-- **Two configurations available**:
-  - `airbook` - NixOS with Broadcom WiFi (requires insecure broadcom-sta driver)
-  - `airbook-darwin` - macOS with nix-darwin for declarative package/settings management
+- **Configuration**: `airbook-darwin` - macOS with nix-darwin (NixOS config archived)
 - **macOS config includes**:
   - GUI apps: Bitwarden, Firefox, iTerm2, Rectangle, Scroll Reverser, VSCode
   - Services: Tailscale VPN, Syncthing file sync

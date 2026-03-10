@@ -20,7 +20,10 @@
       };
     };
 
-    # Passwordless sudo for tailscale commands
+    # Trust scott for unrestricted nix settings (e.g. --no-sandbox, --option)
+    nix.settings.trusted-users = [ "root" "scott" ];
+
+    # Passwordless sudo for nix and system management commands
     security.sudo.extraRules = [
       {
         users = [ "scott" ];
@@ -34,7 +37,11 @@
             options = [ "NOPASSWD" ];
           }
           {
-            command = "/run/current-system/sw/bin/nixos-rebuild";
+            command = "/run/current-system/sw/bin/nixos-rebuild *";
+            options = [ "NOPASSWD" ];
+          }
+          {
+            command = "/run/current-system/sw/bin/nix *";
             options = [ "NOPASSWD" ];
           }
         ];

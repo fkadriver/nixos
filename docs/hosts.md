@@ -24,18 +24,6 @@ This document provides a brief overview of all host configurations in this repos
 | Key Features | Borg backup, 3D printing, Logitech support, multi-monitor |
 | Variants | `latitude-xfce`, `latitude-kde`, `latitude-minimal` |
 
-### airbook
-**Apple MacBook Air 7,2** (Early 2015/Mid 2017) - NixOS on Mac
-
-| | |
-|---|---|
-| Desktop | XFCE (default), KDE variant available |
-| CPU | Intel Core i5-5250U/i7-5650U (Broadwell) |
-| WiFi | Broadcom BCM43xx (requires insecure broadcom-sta driver) |
-| Variants | `airbook-kde` |
-
-**Security Note:** The broadcom-sta driver has known CVEs and is marked insecure.
-
 ### vm01
 **Dell Latitude E7270** - Immich photo server
 
@@ -107,8 +95,6 @@ This document provides a brief overview of all host configurations in this repos
 | `latitude-xfce` | Laptop | XFCE | Full desktop variant |
 | `latitude-kde` | Laptop | KDE | Full desktop variant |
 | `latitude-minimal` | Laptop | XFCE | Testing |
-| `airbook` | Laptop | XFCE | Mac running NixOS |
-| `airbook-kde` | Laptop | KDE | Mac running NixOS |
 | `vm01` | Server | None | Immich photo server |
 | `pihole01` | RPi 3B | None | Primary Pi-hole DNS |
 | `pihole02` | RPi 3B | None | Secondary Pi-hole DNS |
