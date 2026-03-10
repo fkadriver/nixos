@@ -4,7 +4,6 @@
   imports = [
     inputs.sops-nix.nixosModules.sops
     inputs.self.nixosModules.tailscale
-    inputs.self.nixosModules.shell-aliases
   ];
 
   config = {
@@ -42,6 +41,18 @@
         dates     = "weekly";
         options   = "--delete-older-than 30d";
       };
+    };
+
+    environment.shellAliases = {
+      # Pi-hole service management
+      ph-status  = "systemctl status pihole-ftl";
+      ph-restart = "sudo systemctl restart pihole-ftl";
+      ph-logs    = "journalctl -u pihole-ftl -f";
+      ph-gravity = "sudo pihole updateGravity";
+
+      # Basic utils
+      ll = "ls -lah";
+      ".." = "cd ..";
     };
 
     programs = {

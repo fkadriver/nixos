@@ -228,25 +228,43 @@ ssh scott@192.168.10.11 tailscale status
 
 ## Subsequent Updates
 
-After the Pi is bootstrapped, updates are just:
+`nixos-rebuild --target-host` requires the build machine to have aarch64 emulation
+active (`boot.binfmt.emulatedSystems`). After rebuilding latitude (`sudo nixos-rebuild
+switch --flake .#latitude-kde`), subsequent Pi updates can use:
 
 ```bash
-# Build locally and deploy over SSH
-sudo nixos-rebuild switch \
-  --flake .#pihole02 \
-  --target-host scott@192.168.10.11
+sudo nixos-rebuild switch --flake .#pihole02 --target-host scott@pihole02
 ```
 
-> **Note:** Do not add `--build-host localhost` — it causes nixos-rebuild to
-> SSH to localhost which fails. Without it, the build runs locally automatically.
-
-Once Tailscale is up and the Pi is in your tailnet:
+Until latitude is rebuilt, use the same 3-step manual process from Phase 4e:
 
 ```bash
-sudo nixos-rebuild switch \
-  --flake .#pihole02 \
-  --target-host scott@pihole02
+nix build --no-sandbox .#nixosConfigurations.pihole02.config.system.build.toplevel
+nix copy --no-check-sigs --to ssh://scott@pihole02 $(readlink result)
+ssh -t scott@pihole02 "sudo $(readlink result)/bin/switch-to-configuration switch"
 ```
+
+---
+
+## Tailscale Notes
+
+### Web UI via Tailscale HTTPS
+
+`pihole.nix` includes a `tailscale-serve-pihole` systemd service that automatically
+runs `tailscale serve http://localhost:80` after Tailscale authenticates. This exposes
+the Pi-hole web UI at `https://pihole0x.<tailnet>.ts.net` with a valid TLS cert —
+no manual setup needed.
+
+### Tailscale breaks LAN connectivity
+
+If you use OPNsense (or any Tailscale subnet router) advertising your local VLANs,
+the Pi will route local traffic through Tailscale instead of directly via eth0 when
+`--accept-routes` is active. Symptoms: LAN SSH and web UI stop working while
+Tailscale SSH still works.
+
+Fix is applied in `common.nix` via an ip rule that ensures local VLAN traffic
+(192.168.0.0/20) always uses the main routing table. Stop/start Tailscale if
+you experience this on a Pi that hasn't been rebuilt yet.
 
 ---
 
