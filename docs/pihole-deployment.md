@@ -114,9 +114,11 @@ Do this once per Pi — it permanently registers the Pi's identity.
 
 ### 4a. Get the Pi's age public key
 
+sops-nix generates the age key automatically on first boot. Just read it back:
+
 ```bash
-ssh scott@192.168.10.11 "echo <password> | sudo -S sh -c 'mkdir -p /var/lib/sops-nix && age-keygen -o /var/lib/sops-nix/key.txt 2>&1'"
-# Output: Public key: age1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+ssh scott@192.168.10.11 "sudo grep 'public key' /var/lib/sops-nix/key.txt"
+# Output: # public key: age1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 ### 4b. Add the key to .sops.yaml
@@ -135,23 +137,20 @@ And add it to the `creation_rules` key group:
 
 ### 4c. Get the real pihole/pwhash
 
-You need the bcrypt hash of your Pi-hole admin password. Two options:
-
-**Option A — generate a hash directly:**
+Pi-hole v6 uses a BALLOON-SHA256 hash (not bcrypt). Copy it from an existing
+running Pi-hole (pihole01):
 
 ```bash
-# On any machine with pihole-ftl available, or use an online bcrypt tool
-# The hash format is: $2y$<cost>$<salt><hash>
+ssh scott@192.168.10.10 "sudo grep app_pwhash /etc/pihole/pihole.toml"
+# webserver.api.app_pwhash = "$BALLOON-SHA256$v=1$..."
 ```
 
-**Option B — set the password on first boot and read the hash back:**
+Copy the full value after the `=` sign (the `$BALLOON-SHA256$...` string).
+
+Alternatively, set a new password on the Pi's web UI and then read the hash back:
 
 ```bash
-# SSH into the Pi and set the password manually (bypasses sops for now)
-ssh scott@192.168.10.11
-sudo pihole setpassword yourpassword
-sudo grep pwhash /etc/pihole/pihole.toml
-# webserver.api.pwhash = "$2y$..."
+ssh scott@192.168.10.11 "sudo grep app_pwhash /etc/pihole/pihole.toml"
 ```
 
 ### 4d. Update secrets.yaml with the real hash
@@ -164,20 +163,36 @@ sops updatekeys secrets/secrets.yaml   # re-encrypts for the new pihole age key
 sops secrets/secrets.yaml             # replace placeholder with real hash
 ```
 
-Update the `pihole.pwhash` value to the bcrypt hash from step 4c.
+Update the `pihole.pwhash` value to the BALLOON-SHA256 hash from step 4c.
 
 ### 4e. Rebuild and deploy over SSH
 
-No reflash needed — push the updated config directly:
+No reflash needed — push the updated config directly. The Pi's nix daemon
+rejects unsigned store paths by default, but `pihole.nix` sets
+`nix.settings.require-sigs = false`. On **first deploy**, this setting isn't
+active yet, so you need a one-time workaround to break the read-only nix.conf
+symlink on the Pi before copying:
 
 ```bash
-sudo nixos-rebuild switch \
-  --flake .#pihole02 \
-  --target-host scott@192.168.10.11 \
-  --build-host localhost
+# Step 1 — Allow unsigned paths on the Pi (first deploy only)
+ssh -t scott@192.168.10.11 "sudo rm /etc/nix/nix.conf && \
+  sudo sh -c 'cat /etc/static/nix/nix.conf > /etc/nix/nix.conf' && \
+  echo 'require-sigs = false' | sudo tee -a /etc/nix/nix.conf && \
+  sudo systemctl restart nix-daemon"
+
+# Step 2 — Build locally (--no-sandbox required for QEMU binfmt aarch64)
+nix build --no-sandbox .#nixosConfigurations.pihole02.config.system.build.toplevel
+
+# Step 3 — Copy closure to Pi
+nix copy --no-check-sigs --to ssh://scott@192.168.10.11 $(readlink result)
+
+# Step 4 — Activate
+ssh -t scott@192.168.10.11 "sudo $(readlink result)/bin/switch-to-configuration switch"
 ```
 
-This cross-compiles on your x86_64 machine and deploys to the Pi over SSH.
+After this deploy, `require-sigs = false` is baked into the NixOS config and
+subsequent deploys work without the workaround (see Subsequent Updates below).
+
 `pihole-ftl` will start successfully once it can decrypt `pihole/pwhash`.
 
 ### 4f. Commit the changes
@@ -193,20 +208,17 @@ git push
 ## Phase 5: Verify
 
 ```bash
-ssh scott@192.168.10.11
+# Check Pi-hole service (pihole-web doesn't exist in v6 — web UI is built into FTL)
+ssh scott@192.168.10.11 systemctl status pihole-ftl
 
-# Check Pi-hole services
-systemctl status pihole-ftl
-systemctl status pihole-web
-
-# Check DNS is working
-dig @127.0.0.1 google.com
+# Check DNS from your build machine (dig is not installed on the Pi)
+dig @192.168.10.11 google.com +short
 
 # Check firewall
-sudo nft list ruleset | grep -E "80|443|53"
+ssh scott@192.168.10.11 "sudo nft list ruleset | grep -E '80|443|53'"
 
 # Check Tailscale connected
-tailscale status
+ssh scott@192.168.10.11 tailscale status
 
 # Web UI (from your laptop, on same network)
 # http://192.168.10.11
@@ -219,14 +231,16 @@ tailscale status
 After the Pi is bootstrapped, updates are just:
 
 ```bash
-# Edit config, then:
+# Build locally and deploy over SSH
 sudo nixos-rebuild switch \
   --flake .#pihole02 \
-  --target-host scott@192.168.10.11 \
-  --build-host localhost
+  --target-host scott@192.168.10.11
 ```
 
-Or once Tailscale is up and the Pi is in your tailnet:
+> **Note:** Do not add `--build-host localhost` — it causes nixos-rebuild to
+> SSH to localhost which fails. Without it, the build runs locally automatically.
+
+Once Tailscale is up and the Pi is in your tailnet:
 
 ```bash
 sudo nixos-rebuild switch \

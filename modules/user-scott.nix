@@ -44,6 +44,10 @@
             command = "/run/current-system/sw/bin/nix *";
             options = [ "NOPASSWD" ];
           }
+          {
+            command = "/nix/store/*/bin/switch-to-configuration *";
+            options = [ "NOPASSWD" ];
+          }
         ];
       }
     ];

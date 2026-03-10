@@ -79,6 +79,10 @@
 
     time.timeZone = "America/Chicago";
 
+    # Accept unsigned nix store paths from the build machine (latitude builds locally
+    # and copies over SSH; paths aren't signed with a trusted key)
+    nix.settings.require-sigs = false;
+
     # Pi-hole owns port 53 — disable resolved's stub listener so it doesn't conflict.
     # resolved is enabled by tailscale.nix, so we force it off here.
     services.resolved = lib.mkForce { enable = false; };
