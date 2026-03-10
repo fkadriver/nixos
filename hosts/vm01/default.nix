@@ -30,12 +30,6 @@ let
           allowedTCPPorts = [ 8080 8443 8880 8843 6789 ];
           allowedUDPPorts = [ 3478 10001 1900 ];
         };
-        # Tailscale accepts OPNsense's subnet route (192.168.0.0/20 via table 52),
-        # which overrides direct VLAN routing and breaks local connectivity.
-        # This rule ensures local VLAN traffic uses the direct interface, not Tailscale.
-        localCommands = ''
-          ${pkgs.iproute2}/bin/ip rule add to 192.168.0.0/20 priority 100 table main 2>/dev/null || true
-        '';
       };
 
       # Dell Latitude E7270 - Service Tag: 7NYTSF2

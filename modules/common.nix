@@ -232,5 +232,16 @@
 
     # Docker virtualization
     virtualisation.docker.enable = true;
+
+    # Tailscale accepts OPNsense's subnet routes, which override direct VLAN
+    # routing and break local LAN connectivity. These rules ensure local VLAN
+    # traffic uses the direct interface, not Tailscale. Safe for all hosts —
+    # if the host isn't on a subnet, main table has no route and falls through.
+    # Covers all local VLANs: MGMT (.1), SERVERS (.10), WIFI (.11),
+    #                          GUEST (.20), HOME_ASSIST (.21)
+    networking.localCommands = ''
+      ${pkgs.iproute2}/bin/ip rule add to 192.168.0.0/20 priority 100 table main 2>/dev/null || true
+      ${pkgs.iproute2}/bin/ip rule add to 192.168.16.0/20 priority 101 table main 2>/dev/null || true
+    '';
   };
 }
