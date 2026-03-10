@@ -20,7 +20,8 @@
         airbook = "tailscale ssh airbook";
         nas01 = "tailscale ssh nas01";
         log01 = "tailscale ssh sands-log01";
-        pi-hole = "tailscale ssh pi-hole";
+        pihole01 = "tailscale ssh pihole01";
+        pihole02 = "tailscale ssh pihole02";
         prodesk = "tailscale ssh prodesk";
         slap = "tailscale ssh latitude";
         vm01 = "tailscale ssh vm01";

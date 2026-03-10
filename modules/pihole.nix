@@ -90,6 +90,11 @@
     # Use Pi-hole for local DNS with Quad9 as an out-of-band fallback during boot
     networking.nameservers = lib.mkDefault [ "127.0.0.1" "9.9.9.9" ];
 
+    # Local DNS entries — shared across all Pi-hole instances
+    networking.extraHosts = ''
+      192.168.10.21 unifi
+    '';
+
     # Pi-hole FTL daemon
     services.pihole-ftl = {
       enable = true;

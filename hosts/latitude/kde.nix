@@ -15,10 +15,16 @@ let
         hostName = "latitude";
       };
 
-      # Enable aarch64 emulation for building Pi configs and SD images
+      # Enable aarch64 emulation so the latitude can build Pi configs and SD images
+      # Build: nix build .#nixosConfigurations.pihole02.config.system.build.sdImage
       # Deploy: nixos-rebuild switch --flake .#pihole02 --target-host scott@192.168.10.11
       boot.binfmt.emulatedSystems = [ "aarch64-linux" ];
+
+      # Expose the binfmt QEMU wrapper into nix build sandboxes so aarch64
+      # derivations can be executed via QEMU during sandboxed builds on x86_64
       nix.settings.extra-sandbox-paths = [ "/run/binfmt" ];
+
+      # Tell nix this machine can build aarch64 derivations via QEMU binfmt emulation
       nix.settings.extra-platforms = [ "aarch64-linux" ];
 
       system = {
