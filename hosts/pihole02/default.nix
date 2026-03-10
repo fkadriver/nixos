@@ -38,9 +38,11 @@ inputs.nixpkgs.lib.nixosSystem {
     # raspberry-pi-nix does not support BCM2837 (Pi 3)
     inputs.nixos-hardware.nixosModules.raspberry-pi-3
     {
-      # Cross-compile from x86_64 build host to aarch64 Pi
+      # Target platform is aarch64 (Raspberry Pi 3B).
+      # buildPlatform is intentionally omitted — it auto-detects from the build host.
+      # On x86_64 (latitude with binfmt aarch64 emulation): cross-compiles.
+      # On the Pi itself (--target-host deploys): builds natively.
       nixpkgs.hostPlatform.system = "aarch64-linux";
-      nixpkgs.buildPlatform.system = "x86_64-linux";
     }
   ];
 }
