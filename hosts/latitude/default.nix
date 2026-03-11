@@ -10,6 +10,7 @@ let
       inputs.self.nixosModules.multi-monitor
       inputs.self.nixosModules.user-scott
       inputs.self.nixosModules.virtualbox
+      inputs.self.nixosModules.pi-builder
     ];
     config = {
       networking = {
@@ -23,18 +24,6 @@ let
         encryption.passphraseFile = "/etc/borg-passphrase";
         sshKeyFile = "/home/scott/.ssh/id_ed25519";
       };
-
-      # Enable aarch64 emulation so the latitude can build Pi configs and SD images
-      # Build: nix build .#nixosConfigurations.pihole02.config.system.build.sdImage
-      # Deploy: nixos-rebuild switch --flake .#pihole02 --target-host scott@192.168.10.11
-      boot.binfmt.emulatedSystems = [ "aarch64-linux" ];
-
-      # Expose the binfmt QEMU wrapper into nix build sandboxes so aarch64
-      # derivations can be executed via QEMU during sandboxed builds on x86_64
-      nix.settings.extra-sandbox-paths = [ "/run/binfmt" ];
-
-      # Tell nix this machine can build aarch64 derivations via QEMU binfmt emulation
-      nix.settings.extra-platforms = [ "aarch64-linux" ];
 
       # Allow nixos-rebuild --build-host localhost to build Pi configs locally over SSH loopback.
       # Without this, --target-host delegates the build to the Pi (which lacks sandbox support).

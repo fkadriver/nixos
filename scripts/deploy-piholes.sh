@@ -2,9 +2,14 @@
 # Deploy NixOS updates to pihole01 and pihole02 sequentially.
 # Verifies each Pi is healthy before moving to the next.
 #
-# Prerequisites: latitude must be rebuilt with localhost sshd active:
-#   sudo nixos-rebuild switch --flake .#latitude
-# Then this script can run as the regular user (no sudo needed here).
+# Build host selection (in order of preference):
+#   1. vm01   — always-on server, preferred when available
+#   2. localhost — latitude loopback sshd (requires latitude rebuild)
+#
+# Usage:
+#   ./scripts/deploy-piholes.sh              # auto-select build host
+#   ./scripts/deploy-piholes.sh --build-host vm01
+#   ./scripts/deploy-piholes.sh --build-host localhost
 
 set -euo pipefail
 
@@ -27,6 +32,40 @@ ok()   { echo -e "${GREEN}  ✓${NC} $*"; }
 fail() { echo -e "${RED}  ✗${NC} $*"; }
 warn() { echo -e "${YELLOW}  !${NC} $*"; }
 
+# Parse --build-host argument
+BUILD_HOST=""
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --build-host) BUILD_HOST="$2"; shift 2 ;;
+        *) echo "Unknown argument: $1"; exit 1 ;;
+    esac
+done
+
+# Auto-select build host if not specified
+if [[ -z "$BUILD_HOST" ]]; then
+    if ssh -o ConnectTimeout=3 -o BatchMode=yes scott@vm01 true 2>/dev/null; then
+        BUILD_HOST="scott@vm01"
+    elif ssh -o ConnectTimeout=3 -o BatchMode=yes localhost true 2>/dev/null; then
+        BUILD_HOST="localhost"
+    else
+        echo -e "${RED}ERROR: No build host available.${NC}"
+        echo "Neither vm01 nor localhost SSH is reachable. Options:"
+        echo "  • Rebuild latitude:  sudo nixos-rebuild switch --flake .#latitude"
+        echo "  • Ensure vm01 is up: ssh scott@vm01"
+        exit 1
+    fi
+fi
+
+verify_build_host() {
+    log "Verifying build host: ${BUILD_HOST}"
+    if ssh -o ConnectTimeout=5 -o BatchMode=yes "${BUILD_HOST}" true 2>/dev/null; then
+        ok "Build host ${BUILD_HOST} reachable"
+    else
+        fail "Build host ${BUILD_HOST} not reachable"
+        exit 1
+    fi
+}
+
 verify_pi() {
     local name=$1
     local dns_ip=${PI_DNS[$name]}
@@ -34,7 +73,6 @@ verify_pi() {
 
     log "Verifying $name..."
 
-    # Check pihole-ftl is active
     if ssh "$ssh_target" "systemctl is-active --quiet pihole-ftl" 2>/dev/null; then
         ok "pihole-ftl is running"
     else
@@ -42,7 +80,6 @@ verify_pi() {
         return 1
     fi
 
-    # Check DNS responds
     if dig "@${dns_ip}" google.com +short +time=5 +tries=2 >/dev/null 2>&1; then
         ok "DNS responding on ${dns_ip}"
     else
@@ -50,11 +87,11 @@ verify_pi() {
         return 1
     fi
 
-    # Check Tailscale serve is up (non-fatal — may take a moment after boot)
+    # Non-fatal: Tailscale serve may still be starting up
     if ssh "$ssh_target" "systemctl is-active --quiet tailscale-serve-pihole" 2>/dev/null; then
         ok "Tailscale serve active"
     else
-        warn "tailscale-serve-pihole not active (may still be starting)"
+        warn "tailscale-serve-pihole not active yet (may still be starting)"
     fi
 
     return 0
@@ -65,12 +102,12 @@ deploy_pi() {
     local ssh_target="scott@${name}"
 
     echo ""
-    log "━━━ Deploying ${name} ━━━"
+    log "━━━ Deploying ${name} (build: ${BUILD_HOST}) ━━━"
 
     if nixos-rebuild switch \
         --flake "${FLAKE_DIR}#${name}" \
         --target-host "$ssh_target" \
-        --build-host localhost \
+        --build-host "${BUILD_HOST}" \
         --use-remote-sudo; then
         ok "nixos-rebuild switch completed"
     else
@@ -86,21 +123,14 @@ echo -e "${BLUE}Pi-hole deployment — $(date)${NC}"
 echo -e "${BLUE}Flake: ${FLAKE_DIR}${NC}"
 echo ""
 
-# Check localhost SSH is working before starting
-if ! ssh -o ConnectTimeout=3 -o BatchMode=yes localhost true 2>/dev/null; then
-    echo -e "${RED}ERROR: ssh localhost failed.${NC}"
-    echo "Latitude needs to be rebuilt first to activate localhost sshd:"
-    echo "  sudo nixos-rebuild switch --flake .#latitude"
-    exit 1
-fi
-ok "localhost SSH reachable"
+verify_build_host
 
 for pi in "${PIHOLES[@]}"; do
     deploy_pi "$pi" || {
         echo ""
         echo -e "${RED}Deployment failed on ${pi} — stopping.${NC}"
         echo "Fix the issue and re-run, or deploy individually:"
-        echo "  nixos-rebuild switch --flake .#${pi} --target-host scott@${pi} --build-host localhost --use-remote-sudo"
+        echo "  nixos-rebuild switch --flake .#${pi} --target-host scott@${pi} --build-host ${BUILD_HOST} --use-remote-sudo"
         exit 1
     }
 done

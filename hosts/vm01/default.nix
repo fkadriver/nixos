@@ -11,6 +11,7 @@ let
       inputs.self.nixosModules.borg-backup
       inputs.self.nixosModules.vscode-server
       inputs.self.nixosModules.user-scott
+      inputs.self.nixosModules.pi-builder
     ];
 
     config = {
