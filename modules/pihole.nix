@@ -94,6 +94,25 @@
     # and copies over SSH; paths aren't signed with a trusted key)
     nix.settings.require-sigs = false;
 
+    # ── Minimal kernel footprint ──────────────────────────────────────────────
+    # Restrict supported filesystems to what the Pi actually uses.
+    # This is the biggest win: prevents ZFS kernel module from being built/included
+    # (ZFS compilation on aarch64 via QEMU was the longest part of the initial build).
+    boot.supportedFilesystems = lib.mkForce [ "ext4" "vfat" ];
+
+    # Headless server — no audio hardware or use case
+    hardware.bluetooth.enable = false;
+
+    # Blacklist kernel modules not needed on a headless wired-only Pi-hole server
+    boot.blacklistedKernelModules = [
+      # Sound subsystem
+      "snd" "snd_pcm" "snd_timer" "snd_seq" "snd_seq_device"
+      # Wi-Fi (using wired ethernet only; Pi 3B: brcmfmac, Pi 4B: brcmfmac)
+      "brcmfmac" "brcmutil" "cfg80211"
+      # Bluetooth (Pi onboard BT — unused)
+      "bluetooth" "btbcm" "hci_uart"
+    ];
+
     # Pi-hole owns port 53 — disable resolved's stub listener so it doesn't conflict.
     # resolved is enabled by tailscale.nix, so we force it off here.
     services.resolved = lib.mkForce { enable = false; };
