@@ -228,15 +228,20 @@ ssh scott@192.168.10.11 tailscale status
 
 ## Subsequent Updates
 
-`nixos-rebuild --target-host` requires the build machine to have aarch64 emulation
-active (`boot.binfmt.emulatedSystems`). After rebuilding latitude (`sudo nixos-rebuild
-switch --flake .#latitude-kde`), subsequent Pi updates can use:
+`nixos-rebuild --target-host` by default builds on the target host (the Pi). The Pi
+lacks kernel namespace support for sandboxing, so `--build-host localhost` is required
+to force the build to run on latitude over SSH loopback. Latitude's config enables
+sshd on `127.0.0.1` for this purpose.
+
+After rebuilding latitude (`sudo nixos-rebuild switch --flake .#latitude`):
 
 ```bash
-sudo nixos-rebuild switch --flake .#pihole02 --target-host scott@pihole02
+sudo nixos-rebuild switch --flake .#pihole02 \
+  --target-host scott@pihole02 \
+  --build-host localhost
 ```
 
-Until latitude is rebuilt, use the same 3-step manual process from Phase 4e:
+If latitude hasn't been rebuilt yet, use the 3-step manual process:
 
 ```bash
 nix build --no-sandbox .#nixosConfigurations.pihole02.config.system.build.toplevel

@@ -65,7 +65,6 @@
         latitude = import ./hosts/latitude flakeContext;
         latitude-minimal = import ./hosts/latitude/minimal.nix flakeContext;
         latitude-xfce = import ./hosts/latitude/xfce.nix flakeContext;
-        latitude-kde = import ./hosts/latitude/kde.nix flakeContext;
         prodesk = import ./hosts/prodesk flakeContext;
         vm01 = import ./hosts/vm01 flakeContext;
         pihole01 = import ./hosts/pihole01 flakeContext;

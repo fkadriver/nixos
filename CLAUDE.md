@@ -9,11 +9,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Apply configuration to current system (requires sudo)
 sudo nixos-rebuild switch --flake .#<hostname>
 
-# Available NixOS hostnames: prodesk, latitude, latitude-xfce, latitude-kde,
+# Available NixOS hostnames: prodesk, latitude, latitude-xfce,
 # latitude-minimal, vm01, pihole01, pihole02
 
 # Examples:
-sudo nixos-rebuild switch --flake .#latitude-kde
+sudo nixos-rebuild switch --flake .#latitude
 sudo nixos-rebuild switch --flake .#prodesk
 
 # macOS (nix-darwin) - requires sudo for system changes

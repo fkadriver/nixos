@@ -36,6 +36,14 @@ let
       # Tell nix this machine can build aarch64 derivations via QEMU binfmt emulation
       nix.settings.extra-platforms = [ "aarch64-linux" ];
 
+      # Allow nixos-rebuild --build-host localhost to build Pi configs locally over SSH loopback.
+      # Without this, --target-host delegates the build to the Pi (which lacks sandbox support).
+      services.openssh = {
+        enable = true;
+        listenAddresses = [{ addr = "127.0.0.1"; port = 22; }];
+        settings.PasswordAuthentication = false;
+      };
+
       system = {
         stateVersion = "25.11";
       };
