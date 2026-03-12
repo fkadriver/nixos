@@ -63,6 +63,7 @@ let
       brews = [
         "syncthing"
         "bitwarden-cli"  # nix version requires xcodebuild, use homebrew instead
+        "osxphotos"      # Apple Photos integration for photo-organizer (requires pyobjc)
       ];
       casks = [
         "bitwarden"
