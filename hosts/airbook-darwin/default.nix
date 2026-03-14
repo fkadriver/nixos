@@ -241,6 +241,12 @@ let
       };
     };
 
+    # Fix ownership of sops-created directories (sops runs as root and creates parent dirs as root)
+    system.activationScripts.fixSopsOwnership.text = ''
+      chown scott:staff /Users/scott/.local/share || true
+      chown scott:staff /Users/scott/.local/share/bitwarden-secrets || true
+    '';
+
     # Borg backup to nas01 via launchd (macOS equivalent of systemd)
     launchd.daemons.borg-backup =
       let
