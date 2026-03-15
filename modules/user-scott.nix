@@ -45,6 +45,14 @@
             options = [ "NOPASSWD" ];
           }
           {
+            command = "/run/current-system/sw/bin/nix-env *";
+            options = [ "NOPASSWD" ];
+          }
+          {
+            command = "/nix/store/*/bin/nix-env *";
+            options = [ "NOPASSWD" ];
+          }
+          {
             command = "/nix/store/*/bin/switch-to-configuration *";
             options = [ "NOPASSWD" ];
           }

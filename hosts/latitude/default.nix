@@ -33,6 +33,18 @@ let
         settings.PasswordAuthentication = false;
       };
 
+      # Root SSH key for --build-host localhost (nixos-rebuild SSHes as root to 127.0.0.1)
+      users.users.root.openssh.authorizedKeys.keys = [
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINUZTnLU32N52prAhAMVb8MbqgNe1d5VemjwbWcv4A7l root@latitude"
+      ];
+
+      # Tell root's SSH to use the build key when connecting to localhost
+      programs.ssh.extraConfig = ''
+        Host localhost
+          IdentityFile /root/.ssh/id_ed25519_build
+          StrictHostKeyChecking no
+      '';
+
       system = {
         stateVersion = "25.11";
       };
