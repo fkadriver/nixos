@@ -117,6 +117,15 @@
       "bluetooth" "btbcm" "hci_uart"
     ];
 
+    # Tailscale accepts OPNsense's subnet routes, which override direct VLAN routing
+    # and break LAN connectivity. These rules ensure local traffic uses the direct
+    # interface so DNS responses go back via eth0, not through Tailscale.
+    # (pihole.nix doesn't import common.nix, so the fix must be repeated here)
+    networking.localCommands = ''
+      ${pkgs.iproute2}/bin/ip rule add to 192.168.0.0/20 priority 100 table main 2>/dev/null || true
+      ${pkgs.iproute2}/bin/ip rule add to 192.168.16.0/20 priority 101 table main 2>/dev/null || true
+    '';
+
     # Pi-hole owns port 53 — disable resolved's stub listener so it doesn't conflict.
     # resolved is enabled by tailscale.nix, so we force it off here.
     services.resolved = lib.mkForce { enable = false; };
