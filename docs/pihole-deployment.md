@@ -284,11 +284,18 @@ sudo systemctl status pihole-ftl
 journalctl -u pihole-ftl -n 50
 
 # Is the sops secret decrypted?
-ls -la /run/secrets/pihole/pwhash
-ls -la /run/secrets-rendered/pihole-ftl-env
+sudo find /run/secrets.d -type f
 ```
 
-If the files don't exist, the Pi's age key isn't in `.sops.yaml` yet — repeat Phase 4.
+If `/run/secrets.d` is empty, the Pi's age key isn't in `.sops.yaml` yet — repeat Phase 4.
+
+If the secrets exist in `/run/secrets.d/<n>/` but pihole-ftl hit its 5-restart limit
+before sops finished (common on first boot), reset and start manually:
+
+```bash
+sudo systemctl reset-failed pihole-ftl
+sudo systemctl start pihole-ftl
+```
 
 ### SSH unreachable after flash
 

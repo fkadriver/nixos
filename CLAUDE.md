@@ -11,6 +11,7 @@ sudo nixos-rebuild switch --flake .#<hostname>
 
 # Available NixOS hostnames: prodesk, latitude, latitude-xfce,
 # latitude-minimal, vm01, pihole01, pihole02
+# Note: latitude-kde merged into latitude; latitude-minimal kept as fallback
 
 # Examples:
 sudo nixos-rebuild switch --flake .#latitude
