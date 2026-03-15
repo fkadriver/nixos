@@ -108,7 +108,7 @@ deploy_pi() {
         --flake "${FLAKE_DIR}#${name}" \
         --target-host "$ssh_target" \
         --build-host "${BUILD_HOST}" \
-        --use-remote-sudo; then
+        --sudo; then
         ok "nixos-rebuild switch completed"
     else
         fail "nixos-rebuild switch failed for ${name}"
@@ -130,7 +130,7 @@ for pi in "${PIHOLES[@]}"; do
         echo ""
         echo -e "${RED}Deployment failed on ${pi} — stopping.${NC}"
         echo "Fix the issue and re-run, or deploy individually:"
-        echo "  nixos-rebuild switch --flake .#${pi} --target-host scott@${pi} --build-host ${BUILD_HOST} --use-remote-sudo"
+        echo "  nixos-rebuild switch --flake .#${pi} --target-host scott@${pi} --build-host ${BUILD_HOST} --sudo"
         exit 1
     }
 done
