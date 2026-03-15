@@ -50,6 +50,10 @@
       ph-logs    = "journalctl -u pihole-ftl -f";
       ph-gravity = "sudo pihole updateGravity";
 
+      # Tailscale SSH shortcuts (connect to other piholes)
+      ts-ssh-pihole01 = "tailscale ssh scott@pihole01";
+      ts-ssh-pihole02 = "tailscale ssh scott@pihole02";
+
       # Basic utils
       ll = "ls -lah";
       ".." = "cd ..";
