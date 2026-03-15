@@ -24,6 +24,25 @@ let
       # boot.loader.systemd-boot.configurationLimit = 2;
       boot.loader.efi.canTouchEfiVariables = true;
 
+      # Allow nixos-rebuild --build-host localhost to build Pi configs locally over SSH loopback.
+      services.openssh = {
+        enable = true;
+        listenAddresses = [{ addr = "127.0.0.1"; port = 22; }];
+        settings.PasswordAuthentication = false;
+      };
+
+      # Root SSH key for --build-host localhost
+      users.users.root.openssh.authorizedKeys.keys = [
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIKQAbdUJryCwtrqb9DvuMFZYvYrFj795KhiKTk0NEyC root@vm01"
+      ];
+
+      # Tell root's SSH to use the build key when connecting to localhost
+      programs.ssh.extraConfig = ''
+        Host localhost
+          IdentityFile /root/.ssh/id_ed25519_build
+          StrictHostKeyChecking no
+      '';
+
       networking = {
         hostName = "vm01";
         networkmanager.enable = true;
@@ -33,7 +52,7 @@ let
         };
       };
 
-      # Dell Latitude E7270 - Service Tag: 7NYTSF2
+# Dell Latitude E7270 - Service Tag: 7NYTSF2
 
       # Immich service user
       users.users.immich = {
