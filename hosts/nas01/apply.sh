@@ -14,6 +14,11 @@ echo "Repo: ${REPO_DIR}"
 
 # Install Nix if not present
 if ! command -v nix &>/dev/null; then
+    # Remove stale Nix installer backup files that block re-installation
+    for f in /etc/bash.bashrc /etc/bashrc /etc/zshrc /etc/profile.d/nix.sh; do
+        [[ -f "${f}.backup-before-nix" ]] && rm -f "${f}.backup-before-nix"
+    done
+
     echo "Installing Nix..."
     sh <(curl -L https://nixos.org/nix/install) --daemon
     # Source nix after install
