@@ -1,10 +1,9 @@
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }:
 # MAINTENANCE: When updating aliases here, also update:
-#   - nas01: ~/.bash_aliases  (Ubuntu server, not Nix-managed)
-#             deploy via: tailscale ssh scott@nas01
 #   - Darwin: hosts/airbook-darwin/home.nix
 #             (programs.bash.shellAliases / programs.zsh.shellAliases)
+# nas01 gets aliases via home-manager (homeConfigurations/scott.nix)
 {
   config = {
     environment = {

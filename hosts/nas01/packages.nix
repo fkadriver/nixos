@@ -22,5 +22,6 @@ pkgs.buildEnv {
     lsof              # Open file/socket inspection
     ncdu              # Disk usage analyzer
     htop              # System monitoring
+    home-manager      # Manages starship, shell aliases, bash config (run: home-manager switch --flake .#scott)
   ];
 }

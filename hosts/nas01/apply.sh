@@ -25,6 +25,10 @@ fi
 echo "Updating Nix packages..."
 nix profile install --profile "${NIX_PROFILE}" "${REPO_DIR}#nas01-env"
 
+# Apply home-manager config (starship, shell aliases, bash config)
+echo "Applying home-manager config (starship, shell aliases)..."
+home-manager switch --flake "${REPO_DIR}#scott"
+
 # Samba config
 echo "Installing Samba config..."
 mkdir -p /etc/samba /var/log/samba /run/samba
