@@ -8,32 +8,16 @@ with limited secrets) and finalize (add the Pi's age key, deploy real secrets).
 
 - **pihole01** — Pi 4B, static IP `192.168.10.10`
 - **pihole02** — Pi 3B, static IP `192.168.10.11`
-- Both use sops-nix for secrets. The age key is generated on first boot, so
-  `pihole-ftl` (which needs `pihole/pwhash`) will not fully start until Phase 2.
+- Both use sops-nix for secrets (Bitwarden credentials). The Pi's age key is generated
+  on first boot and must be added to `.sops.yaml` before secrets can be decrypted.
+- The Pi-hole web UI password is fetched from Bitwarden at boot (the "Pi-Hole" item's
+  password field holds the BALLOON-SHA256 hash). No sops entry is needed for the hash.
 
 ---
 
 ## Phase 1: Build the SD Image
 
-### 1a. Add pihole/pwhash placeholder to secrets.yaml
-
-The sops-nix module validates that all referenced secrets exist at build time.
-`pihole/pwhash` must exist in `secrets.yaml` or the build will fail.
-
-```bash
-sops secrets/secrets.yaml
-```
-
-Add a placeholder (sops encrypts on save):
-
-```yaml
-pihole:
-    pwhash: placeholder
-```
-
-Save and exit. Commit the updated secrets.yaml.
-
-### 1b. Build
+### 1a. Build
 
 ```bash
 # pihole02 (Pi 3B)
@@ -135,37 +119,7 @@ And add it to the `creation_rules` key group:
           - *pihole02
 ```
 
-### 4c. Get the real pihole/pwhash
-
-Pi-hole v6 uses a BALLOON-SHA256 hash (not bcrypt). Copy it from an existing
-running Pi-hole (pihole01):
-
-```bash
-ssh scott@192.168.10.10 "sudo grep app_pwhash /etc/pihole/pihole.toml"
-# webserver.api.app_pwhash = "$BALLOON-SHA256$v=1$..."
-```
-
-Copy the full value after the `=` sign (the `$BALLOON-SHA256$...` string).
-
-Alternatively, set a new password on the Pi's web UI and then read the hash back:
-
-```bash
-ssh scott@192.168.10.11 "sudo grep app_pwhash /etc/pihole/pihole.toml"
-```
-
-### 4d. Update secrets.yaml with the real hash
-
-Back on your build machine:
-
-```bash
-export SOPS_AGE_KEY_FILE=~/.config/sops/age/keys.txt
-sops updatekeys secrets/secrets.yaml   # re-encrypts for the new pihole age key
-sops secrets/secrets.yaml             # replace placeholder with real hash
-```
-
-Update the `pihole.pwhash` value to the BALLOON-SHA256 hash from step 4c.
-
-### 4e. Rebuild and deploy over SSH
+### 4c. Rebuild and deploy over SSH
 
 No reflash needed — push the updated config directly. The Pi's nix daemon
 rejects unsigned store paths by default, but `pihole.nix` sets
@@ -195,11 +149,11 @@ subsequent deploys work without the workaround (see Subsequent Updates below).
 
 `pihole-ftl` will start successfully once it can decrypt `pihole/pwhash`.
 
-### 4f. Commit the changes
+### 4d. Commit the changes
 
 ```bash
 git add .sops.yaml secrets/secrets.yaml
-git commit -m "pihole02: add age key, set real pihole/pwhash"
+git commit -m "pihole02: add age key"
 git push
 ```
 
@@ -230,18 +184,47 @@ ssh scott@192.168.10.11 tailscale status
 
 `nixos-rebuild --target-host` by default builds on the target host (the Pi). The Pi
 lacks kernel namespace support for sandboxing, so `--build-host localhost` is required
-to force the build to run on latitude over SSH loopback. Latitude's config enables
-sshd on `127.0.0.1` for this purpose.
+to force the build to run locally over SSH loopback.
 
-After rebuilding latitude (`sudo nixos-rebuild switch --flake .#latitude`):
+Both **latitude** and **vm01** have sshd on `127.0.0.1` configured for this purpose.
+
+### Using the deploy script (preferred)
+
+From latitude or vm01:
+
+```bash
+./scripts/deploy-piholes.sh
+```
+
+The script auto-detects the available build host (vm01 first, then localhost) and
+deploys pihole01 then pihole02 sequentially.
+
+### Manual deploy
 
 ```bash
 sudo nixos-rebuild switch --flake .#pihole02 \
   --target-host scott@pihole02 \
-  --build-host localhost
+  --build-host localhost \
+  --sudo
 ```
 
-If latitude hasn't been rebuilt yet, use the 3-step manual process:
+### Pre-seeding vm01's nix store (avoids recompilation)
+
+If latitude has already built the Pi closures, copy them to vm01 before running the
+deploy script there — it will find the paths in the local store and skip the aarch64
+QEMU compilation entirely:
+
+```bash
+# Run on latitude
+nix copy --to ssh://scott@vm01 \
+  $(nix build .#nixosConfigurations.pihole01.config.system.build.toplevel --no-link --print-out-paths)
+nix copy --to ssh://scott@vm01 \
+  $(nix build .#nixosConfigurations.pihole02.config.system.build.toplevel --no-link --print-out-paths)
+```
+
+### Fallback: manual 3-step deploy
+
+If `nixos-rebuild` is unavailable:
 
 ```bash
 nix build --no-sandbox .#nixosConfigurations.pihole02.config.system.build.toplevel
@@ -267,8 +250,9 @@ the Pi will route local traffic through Tailscale instead of directly via eth0 w
 `--accept-routes` is active. Symptoms: LAN SSH and web UI stop working while
 Tailscale SSH still works.
 
-Fix is applied in `common.nix` via an ip rule that ensures local VLAN traffic
-(192.168.0.0/20) always uses the main routing table. Stop/start Tailscale if
+Fix is applied in `pihole.nix` via an ip rule that ensures local VLAN traffic
+(192.168.0.0/20) always uses the main routing table (piholes don't import
+`common.nix` so the fix is repeated there directly). Stop/start Tailscale if
 you experience this on a Pi that hasn't been rebuilt yet.
 
 ---
