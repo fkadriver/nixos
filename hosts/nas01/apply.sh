@@ -51,7 +51,7 @@ nix --extra-experimental-features 'nix-command flakes' \
 
 # Apply home-manager config as scott (must run as user, not root)
 echo "Applying home-manager config (starship, shell aliases)..."
-sudo -u scott "${NIX_PROFILE}/bin/home-manager" switch --flake "${REPO_DIR}#scott"
+sudo -u scott env PATH="${PATH}" "${NIX_PROFILE}/bin/home-manager" switch --flake "${REPO_DIR}#scott"
 
 # Samba config
 echo "Installing Samba config..."
