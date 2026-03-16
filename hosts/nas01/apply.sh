@@ -12,18 +12,27 @@ NIX_PROFILE="/nix/var/nix/profiles/nas01"
 echo "=== nas01 Deploy ==="
 echo "Repo: ${REPO_DIR}"
 
-# Install Nix if not present
-if ! command -v nix &>/dev/null; then
+# Source nix profile if available (sudo shells don't inherit it)
+# shellcheck disable=SC1091
+[[ -f /etc/profile.d/nix.sh ]] && source /etc/profile.d/nix.sh
+
+# Install Nix if not present (check by binary path, not just PATH)
+NIX_BIN="/nix/var/nix/profiles/default/bin/nix"
+if ! command -v nix &>/dev/null && [[ ! -x "${NIX_BIN}" ]]; then
     # Remove stale Nix installer backup files that block re-installation
     for f in /etc/bash.bashrc /etc/bashrc /etc/zshrc /etc/profile.d/nix.sh; do
         [[ -f "${f}.backup-before-nix" ]] && rm -f "${f}.backup-before-nix"
     done
 
     echo "Installing Nix..."
-    sh <(curl -L https://nixos.org/nix/install) --daemon
-    # Source nix after install
+    sh <(curl -L https://nixos.org/nix/install) --daemon --yes
+    # Source nix after fresh install
     # shellcheck disable=SC1091
     source /etc/profile.d/nix.sh
+else
+    echo "Nix already installed, skipping."
+    # Ensure nix is in PATH if source didn't pick it up
+    export PATH="${NIX_BIN%/nix}:${PATH}"
 fi
 
 # Enable experimental features (nix-command and flakes) if not already set
