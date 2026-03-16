@@ -56,6 +56,9 @@
     {
       inherit nixosModules;
 
+      # Nix package environments for non-NixOS systems managed by Nix package manager
+      packages.x86_64-linux.nas01-env = import ./hosts/nas01/packages.nix { inherit inputs; };
+
       # Export home-manager configurations
       homeConfigurations = {
         scott = scottHome;

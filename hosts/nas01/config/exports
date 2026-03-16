@@ -1,0 +1,16 @@
+# /etc/exports - NFS export configuration for nas01
+#
+# After editing, reload with: sudo exportfs -ra
+# View active exports:       sudo exportfs -v
+#
+# TODO: Adjust paths to match ZFS dataset mountpoints
+# TODO: Adjust IP ranges to match your local network (currently 192.168.1.0/24)
+
+# Main data share - read/write for local network
+/pool/data    192.168.1.0/24(rw,sync,no_subtree_check,no_root_squash)
+
+# Media (read-only if clients should not write)
+# /pool/media  192.168.1.0/24(ro,sync,no_subtree_check)
+
+# Specific host access example:
+# /pool/data   192.168.1.10(rw,sync,no_subtree_check,no_root_squash)

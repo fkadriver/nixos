@@ -1,0 +1,18 @@
+# Systemd service for Nix-installed Samba (nmbd) NetBIOS name service on Ubuntu
+# Install to: /etc/systemd/system/nmbd.service
+# Then: sudo systemctl daemon-reload && sudo systemctl enable --now nmbd
+
+[Unit]
+Description=Samba NMB Daemon (Nix)
+After=network.target
+
+[Service]
+Type=forking
+# Path to nmbd from Nix nas01 profile
+ExecStart=/nix/var/nix/profiles/nas01/bin/nmbd --foreground --no-process-group
+ExecReload=/bin/kill -HUP $MAINPID
+LimitNOFILE=16384
+PIDFile=/run/samba/nmbd.pid
+
+[Install]
+WantedBy=multi-user.target

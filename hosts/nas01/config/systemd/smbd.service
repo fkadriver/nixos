@@ -1,0 +1,19 @@
+# Systemd service for Nix-installed Samba (smbd) on Ubuntu
+# Install to: /etc/systemd/system/smbd.service
+# Then: sudo systemctl daemon-reload && sudo systemctl enable --now smbd
+
+[Unit]
+Description=Samba SMB Daemon (Nix)
+After=network.target
+
+[Service]
+Type=notify
+# Path to smbd from Nix nas01 profile
+ExecStart=/nix/var/nix/profiles/nas01/bin/smbd --foreground --no-process-group
+ExecReload=/bin/kill -HUP $MAINPID
+LimitNOFILE=16384
+PIDFile=/run/samba/smbd.pid
+NotifyAccess=all
+
+[Install]
+WantedBy=multi-user.target
