@@ -21,13 +21,23 @@ if ! command -v nix &>/dev/null; then
     source /etc/profile.d/nix.sh
 fi
 
+# Enable experimental features (nix-command and flakes) if not already set
+NIX_CONF="/etc/nix/nix.conf"
+if ! grep -q "experimental-features" "${NIX_CONF}" 2>/dev/null; then
+    echo "Enabling nix-command and flakes in ${NIX_CONF}..."
+    echo "experimental-features = nix-command flakes" >> "${NIX_CONF}"
+    systemctl restart nix-daemon
+    sleep 2
+fi
+
 # Install/update packages to the nas01 Nix profile
 echo "Updating Nix packages..."
-nix profile install --profile "${NIX_PROFILE}" "${REPO_DIR}#nas01-env"
+nix --extra-experimental-features 'nix-command flakes' \
+    profile install --profile "${NIX_PROFILE}" "${REPO_DIR}#nas01-env"
 
 # Apply home-manager config (starship, shell aliases, bash config)
 echo "Applying home-manager config (starship, shell aliases)..."
-home-manager switch --flake "${REPO_DIR}#scott"
+"${NIX_PROFILE}/bin/home-manager" switch --flake "${REPO_DIR}#scott"
 
 # Samba config
 echo "Installing Samba config..."
