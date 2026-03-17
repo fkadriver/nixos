@@ -87,7 +87,14 @@ verify_pi() {
         return 1
     fi
 
-    if dig "@${dns_ip}" google.com +short +time=5 +tries=2 >/dev/null 2>&1; then
+    local dns_ok=false
+    for i in 1 2 3 4 5; do
+        if dig "@${dns_ip}" google.com +short +time=5 +tries=1 >/dev/null 2>&1; then
+            dns_ok=true; break
+        fi
+        [[ $i -lt 5 ]] && { warn "DNS not ready yet, retrying (${i}/5)..."; sleep 3; }
+    done
+    if $dns_ok; then
         ok "DNS responding on ${dns_ip}"
     else
         fail "DNS not responding on ${dns_ip}"
