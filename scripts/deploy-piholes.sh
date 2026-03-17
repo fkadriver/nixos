@@ -7,9 +7,11 @@
 #   2. localhost — latitude loopback sshd (requires latitude rebuild)
 #
 # Usage:
-#   ./scripts/deploy-piholes.sh              # auto-select build host
+#   ./scripts/deploy-piholes.sh                        # deploy both, auto-select build host
+#   ./scripts/deploy-piholes.sh pihole01               # deploy only pihole01
+#   ./scripts/deploy-piholes.sh pihole02               # deploy only pihole02
 #   ./scripts/deploy-piholes.sh --build-host vm01
-#   ./scripts/deploy-piholes.sh --build-host localhost
+#   ./scripts/deploy-piholes.sh pihole01 --build-host localhost
 
 set -euo pipefail
 
@@ -32,14 +34,19 @@ ok()   { echo -e "${GREEN}  ✓${NC} $*"; }
 fail() { echo -e "${RED}  ✗${NC} $*"; }
 warn() { echo -e "${YELLOW}  !${NC} $*"; }
 
-# Parse --build-host argument
+# Parse arguments
 BUILD_HOST=""
+TARGET=()
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --build-host) BUILD_HOST="$2"; shift 2 ;;
+        pihole01|pihole02) TARGET+=("$1"); shift ;;
         *) echo "Unknown argument: $1"; exit 1 ;;
     esac
 done
+
+# Default to both if no target specified
+[[ ${#TARGET[@]} -eq 0 ]] && TARGET=("${PIHOLES[@]}")
 
 # Auto-select build host if not specified
 if [[ -z "$BUILD_HOST" ]]; then
@@ -125,7 +132,7 @@ echo ""
 
 verify_build_host
 
-for pi in "${PIHOLES[@]}"; do
+for pi in "${TARGET[@]}"; do
     deploy_pi "$pi" || {
         echo ""
         echo -e "${RED}Deployment failed on ${pi} — stopping.${NC}"
@@ -136,4 +143,8 @@ for pi in "${PIHOLES[@]}"; do
 done
 
 echo ""
-echo -e "${GREEN}━━━ All Pi-holes updated successfully ━━━${NC}"
+if [[ ${#TARGET[@]} -eq 1 ]]; then
+    echo -e "${GREEN}━━━ ${TARGET[0]} updated successfully ━━━${NC}"
+else
+    echo -e "${GREEN}━━━ All Pi-holes updated successfully ━━━${NC}"
+fi
