@@ -136,6 +136,8 @@
     # Local DNS entries — shared across all Pi-hole instances
     networking.extraHosts = ''
       192.168.10.21 unifi
+      192.168.1.2   sw01  # HP1920
+      192.168.1.3   sw02  # TL-SG108E
     '';
 
     # Pi-hole FTL daemon
@@ -168,6 +170,15 @@
           listeningMode = "ALL";
           # Reply with Pi-hole's IP address for blocked queries (vs null/NXDOMAIN)
           blocking.mode = "IP";
+          # Conditional forwarding — forward reverse lookups for each VLAN
+          # to the corresponding gateway so Pi-hole resolves local hostnames.
+          revServers = [
+            "true,192.168.1.0/24,192.168.1.1"
+            "true,192.168.10.0/24,192.168.10.1"
+            "true,192.168.11.0/24,192.168.11.1"
+            "true,192.168.20.0/24,192.168.20.1"
+            "true,192.168.21.0/24,192.168.21.1"
+          ];
           specialDomains = {
             # Block iCloud Private Relay to prevent Apple devices bypassing Pi-hole
             iCloudPrivateRelay = false;
