@@ -184,7 +184,14 @@
             iCloudPrivateRelay = false;
           };
         };
-        webserver.interface.theme = "default-dark";
+        webserver = {
+          interface.theme = "default-dark";
+          api = {
+            # Exclude local infrastructure from Top Domain/Client lists and query log
+            excludeDomains = [ "^unifi$" "^unifi\\.lan$" ];
+            excludeClients = [ "^unifi$" "^unifi\\.lan$" ];
+          };
+        };
         # pihole.toml is regenerated on each rebuild — block API config changes from the web UI
         misc.readOnly = true;
       };
