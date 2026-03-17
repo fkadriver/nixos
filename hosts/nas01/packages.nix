@@ -23,5 +23,6 @@ pkgs.buildEnv {
     ncdu              # Disk usage analyzer
     htop              # System monitoring
     home-manager      # Manages starship, shell aliases, bash config (run: home-manager switch --flake .#scott)
+    tailscale         # VPN (tailscaled daemon + tailscale CLI)
   ];
 }

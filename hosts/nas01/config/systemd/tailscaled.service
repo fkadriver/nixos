@@ -1,0 +1,22 @@
+# Systemd service for Nix-installed Tailscale daemon on Ubuntu
+# Install to: /etc/systemd/system/tailscaled.service
+# Then: sudo systemctl daemon-reload && sudo systemctl enable --now tailscaled
+# Then authenticate: sudo tailscale up
+
+[Unit]
+Description=Tailscale node agent (Nix)
+Documentation=https://tailscale.com/kb/
+After=network-pre.target NetworkManager.service systemd-resolved.service
+
+[Service]
+ExecStartPre=/sbin/modprobe tun
+# Path to tailscaled from Nix nas01 profile
+ExecStart=/nix/var/nix/profiles/nas01/bin/tailscaled --state=/var/lib/tailscale/tailscaled.state --socket=/run/tailscale/tailscaled.sock
+RuntimeDirectory=tailscale
+RuntimeDirectoryMode=0755
+StateDirectory=tailscale
+StateDirectoryMode=0700
+Type=notify
+
+[Install]
+WantedBy=multi-user.target

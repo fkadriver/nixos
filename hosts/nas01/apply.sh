@@ -64,20 +64,35 @@ mkdir -p /var/lib/samba/private
 echo "Installing NFS exports..."
 install -m 644 "${NAS01_DIR}/config/exports" /etc/exports
 
-# Systemd service files (Nix-installed smbd/nmbd)
+# Systemd service files (Nix-installed smbd/nmbd/tailscaled)
 echo "Installing systemd services..."
 install -m 644 "${NAS01_DIR}/config/systemd/smbd.service" /etc/systemd/system/smbd.service
 install -m 644 "${NAS01_DIR}/config/systemd/nmbd.service" /etc/systemd/system/nmbd.service
+install -m 644 "${NAS01_DIR}/config/systemd/tailscaled.service" /etc/systemd/system/tailscaled.service
 systemctl daemon-reload
 
 echo ""
 echo "=== apt prerequisites (run if not already installed) ==="
+echo "  # Required by Ubuntu kernel integration (cannot be replaced by Nix equivalents):"
 echo "  sudo apt install nfs-kernel-server zfsutils-linux"
+echo ""
+echo "  # Bootstrap dependencies (needed before Nix is installed):"
+echo "  sudo apt install curl git"
+echo "  # Note: tar is pre-installed on Ubuntu"
 echo ""
 echo "=== Enable services ==="
 echo "  sudo systemctl enable --now smbd nmbd"
 echo "  sudo systemctl enable --now nfs-kernel-server"
 echo "  sudo exportfs -ra"
+echo "  sudo systemctl enable --now tailscaled"
+echo "  sudo tailscale up   # authenticate to Tailscale network (one-time)"
+echo ""
+echo "=== iDrive e360 (cloud backup) ==="
+echo "  iDrive e360 cannot be packaged via Nix (no stable download URL; installer"
+echo "  modifies system paths at install time). Download the .deb directly from:"
+echo "    https://www.idrive.com/endpoint-backup/  ->  Add Devices  ->  Linux tab"
+echo "  See archive/modules/idrive-e360.nix and archive/pkgs/idrive-e360/ for a"
+echo "  prior NixOS packaging attempt that was archived due to these limitations."
 echo ""
 echo "=== One-time setup ==="
 echo "  sudo bash ${NAS01_DIR}/config/borg-server-setup.sh"
