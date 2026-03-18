@@ -13,7 +13,7 @@
     nixpkgs.overlays = [
       (final: prev: {
         bitwarden-cli = prev.bitwarden-cli.overrideAttrs (old: {
-          npmFlags = (old.npmFlags or "") + " --ignore-scripts";
+          npmFlags = lib.toList (old.npmFlags or []) ++ [ "--ignore-scripts" ];
         });
       })
     ];
