@@ -29,11 +29,17 @@
               if [[ "''${1-}" == rebuild ]]; then
                 local dir="$PWD/node_modules/msgpackr-extract"
                 if [[ -d "$dir" ]]; then
-                  # Remove binding.gyp so node-gyp has nothing to build.
-                  # Also strip "gypfile":true from package.json so npm rebuild
-                  # doesn't try to invoke node-gyp at all for this module.
+                  # Remove binding.gyp and strip gypfile from package.json so
+                  # npm rebuild doesn't invoke node-gyp for this module at all.
+                  # Use node (guaranteed present) to edit the JSON safely.
                   rm -f "$dir/binding.gyp"
-                  sed -i '/"gypfile"/d' "$dir/package.json" 2>/dev/null || true
+                  node -e "
+                    var fs = require('fs'), f = '$dir/package.json';
+                    var p = JSON.parse(fs.readFileSync(f, 'utf8'));
+                    delete p.gypfile;
+                    if (p.scripts) delete p.scripts.install;
+                    fs.writeFileSync(f, JSON.stringify(p));
+                  " 2>/dev/null || true
                 fi
               fi
               command npm "$@"
