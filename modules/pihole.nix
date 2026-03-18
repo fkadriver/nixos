@@ -13,12 +13,25 @@
     nixpkgs.overlays = [
       (final: prev: {
         bitwarden-cli = prev.bitwarden-cli.overrideAttrs (old: {
-          # msgpackr-extract native build fails on aarch64: node-gyp hits a
-          # Python str-vs-int type error in binding.gyp evaluation. Remove
-          # binding.gyp after deps are unpacked so npm rebuild skips native
-          # compilation; msgpackr transparently falls back to pure JS.
-          postConfigure = (old.postConfigure or "") + ''
-            rm -f node_modules/msgpackr-extract/binding.gyp
+          # npmConfigHook is a postPatch hook that runs:
+          #   npm ci --ignore-scripts   (creates node_modules)
+          #   npm rebuild               (FAILS: msgpackr-extract binding.gyp has
+          #                             a Python-3.12-incompatible >= comparison)
+          #
+          # Define a bash 'npm' function in postPatch (which runs before
+          # postPatchHooks). Bash functions shadow external commands in the same
+          # shell, so when npmConfigHook calls 'npm rebuild', our function fires
+          # first — it replaces msgpackr-extract's binding.gyp with an empty
+          # no-op target so node-gyp succeeds without building native code.
+          # msgpackr transparently falls back to pure JS.
+          postPatch = (old.postPatch or "") + ''
+            npm() {
+              if [[ "''${1-}" == rebuild ]]; then
+                local f="$PWD/node_modules/msgpackr-extract/binding.gyp"
+                [[ -f "$f" ]] && printf '{"variables":{},"targets":[]}' > "$f"
+              fi
+              command npm "$@"
+            }
           '';
         });
       })
