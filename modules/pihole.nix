@@ -1,23 +1,22 @@
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }: {
 
-  # bitwarden-cli 2025.12.1 fails to build on aarch64 because msgpackr-extract's
-  # native module (node-gyp) hits a Python/str-vs-int type error. Override it to
-  # skip native module compilation; bitwarden-cli falls back to pure-JS msgpackr.
-  nixpkgs.overlays = [
-    (final: prev: {
-      bitwarden-cli = prev.bitwarden-cli.overrideAttrs (old: {
-        npmFlags = (old.npmFlags or "") + " --ignore-scripts";
-      });
-    })
-  ];
-
   imports = [
     inputs.self.nixosModules.bitwarden
     inputs.self.nixosModules.tailscale
   ];
 
   config = {
+    # bitwarden-cli 2025.12.1 fails to build on aarch64 because msgpackr-extract's
+    # native module (node-gyp) hits a Python/str-vs-int type error. Override it to
+    # skip native module compilation; bitwarden-cli falls back to pure-JS msgpackr.
+    nixpkgs.overlays = [
+      (final: prev: {
+        bitwarden-cli = prev.bitwarden-cli.overrideAttrs (old: {
+          npmFlags = (old.npmFlags or "") + " --ignore-scripts";
+        });
+      })
+    ];
     # Slim package set — only what's needed for Pi-hole operation and git
     environment.systemPackages = with pkgs; [
       age     # encryption tool for SOPS
