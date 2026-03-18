@@ -13,7 +13,13 @@
     nixpkgs.overlays = [
       (final: prev: {
         bitwarden-cli = prev.bitwarden-cli.overrideAttrs (old: {
-          npmFlags = lib.toList (old.npmFlags or []) ++ [ "--ignore-scripts" ];
+          # msgpackr-extract native build fails on aarch64: node-gyp hits a
+          # Python str-vs-int type error in binding.gyp evaluation. Remove
+          # binding.gyp after deps are unpacked so npm rebuild skips native
+          # compilation; msgpackr transparently falls back to pure JS.
+          postConfigure = (old.postConfigure or "") + ''
+            rm -f node_modules/msgpackr-extract/binding.gyp
+          '';
         });
       })
     ];
