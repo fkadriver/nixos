@@ -27,8 +27,14 @@
           postPatch = (old.postPatch or "") + ''
             npm() {
               if [[ "''${1-}" == rebuild ]]; then
-                local f="$PWD/node_modules/msgpackr-extract/binding.gyp"
-                [[ -f "$f" ]] && printf '{"variables":{},"targets":[]}' > "$f"
+                local dir="$PWD/node_modules/msgpackr-extract"
+                if [[ -d "$dir" ]]; then
+                  # Remove binding.gyp so node-gyp has nothing to build.
+                  # Also strip "gypfile":true from package.json so npm rebuild
+                  # doesn't try to invoke node-gyp at all for this module.
+                  rm -f "$dir/binding.gyp"
+                  sed -i '/"gypfile"/d' "$dir/package.json" 2>/dev/null || true
+                fi
               fi
               command npm "$@"
             }
