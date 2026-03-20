@@ -6,6 +6,25 @@ Backups are sent to `nas01` (Ubuntu server) via Tailscale.
 The passphrase is stored in Bitwarden (**Borg Encryption** item, password field) and deployed
 to `/run/bitwarden-secrets/borg_passphrase` at boot by the `bitwarden-secrets-sync` service.
 
+## Tailscale SSH Requirements
+
+Borg connects as `scott@nas01.warthog-royal.ts.net` over Tailscale SSH — not regular SSH.
+The tailnet ACL policy must permit this:
+
+| Requirement | Detail |
+|-------------|--------|
+| Client tag | `tag:backup-client` must be applied to the backup client device in the Tailscale admin console |
+| Server tag | `tag:nas` or `tag:server` must be applied to nas01 |
+| SSH rule | The automation rule allows `tag:backup-client` → `tag:nas` as `scott` and `root` (no check mode) |
+
+If borg fails with `tailnet policy does not permit you to SSH as user "scott"`, verify the
+client device has `tag:backup-client` applied at [login.tailscale.com/admin/machines](https://login.tailscale.com/admin/machines).
+
+Admin workstations that also run borg (e.g., latitude) need **both** `tag:mgmt-admin` and
+`tag:backup-client`.
+
+---
+
 ## nas01 Server Setup (one-time)
 
 Clients connect as `scott` via SSH. No separate borg user or forced command is needed —

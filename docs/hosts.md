@@ -13,6 +13,7 @@ This document provides a brief overview of all host configurations in this repos
 | Purpose | Daily driver development laptop |
 | Key Features | Borg backup, 3D printing, Logitech support, multi-monitor |
 | Variants | `latitude-xfce`, `latitude-kde`, `latitude-minimal` |
+| Tailscale tags | `tag:mgmt-admin` (SSH to all infra as scott), `tag:backup-client` (borg to nas01) |
 
 ### vm01
 **Dell Latitude E7270** - Immich photo server
@@ -24,6 +25,7 @@ This document provides a brief overview of all host configurations in this repos
 | Storage | 1TB Toshiba external drive at `/mnt/immich` |
 | Service User | `immich` (home: `/opt/immich`, member of docker group) |
 | Key Features | Borg backup to nas01, wireless, docker, VS Code Server |
+| Tailscale tags | `tag:backup-client` (borg to nas01), `tag:container` (Immich) |
 
 **Note:** No desktop environment - access via SSH or Tailscale.
 
