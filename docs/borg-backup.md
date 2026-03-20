@@ -6,6 +6,38 @@ Backups are sent to `nas01` (Ubuntu server) via Tailscale.
 The passphrase is stored in Bitwarden (**Borg Encryption** item, password field) and deployed
 to `/run/bitwarden-secrets/borg_passphrase` at boot by the `bitwarden-secrets-sync` service.
 
+## nas01 Server Setup (one-time)
+
+Clients connect as `scott` via SSH. No separate borg user or forced command is needed —
+this is a trusted home network behind Tailscale.
+
+### Step A — Create repo directories
+
+```bash
+sudo bash hosts/nas01/config/borg-server-setup.sh
+```
+
+This creates `/pool/borg/repos/{latitude,vm01,prodesk,airbook-darwin}` and prints the next steps.
+
+### Step B — Authorize client SSH keys
+
+SSH keys are deployed to `/home/scott/.ssh/` by `apply.sh` (via sops). Add the public keys
+to `authorized_keys` so clients can connect:
+
+```bash
+grep -qF "$(cat ~/.ssh/id_ed25519.pub)" ~/.ssh/authorized_keys \
+  || cat ~/.ssh/id_ed25519.pub >> ~/.ssh/authorized_keys
+
+grep -qF "$(cat ~/.ssh/id_ed25519_legacy.pub)" ~/.ssh/authorized_keys \
+  || cat ~/.ssh/id_ed25519_legacy.pub >> ~/.ssh/authorized_keys
+```
+
+Key usage:
+- `id_ed25519` — latitude
+- `id_ed25519_legacy` — vm01, airbook-darwin, and all `borg-*` shell aliases
+
+---
+
 ## First-Time Setup (new install or rebuild)
 
 Borg will not run successfully until the machine's age key is registered in `.sops.yaml`.
@@ -50,12 +82,13 @@ sudo cat /run/bitwarden-secrets/borg_passphrase
 
 ### Step 4 — Initialize the repository (first time only)
 
-The SSH key (`id_ed25519_legacy`) and passphrase are deployed by bitwarden at boot.
-Once they're present, initialize the repo on nas01:
+SSH keys and passphrase are deployed by bitwarden at boot. Once present, initialize
+the repo on nas01. Use the key matching the host (see nas01 Server Setup above):
 
 ```bash
+# latitude uses id_ed25519; vm01 and airbook-darwin use id_ed25519_legacy
 sudo env \
-  BORG_RSH="ssh -i /home/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new" \
+  BORG_RSH="ssh -i /home/scott/.ssh/<key> -o StrictHostKeyChecking=accept-new" \
   BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" \
   borg init --encryption=repokey-blake2 --remote-path=/nix/var/nix/profiles/nas01/bin/borg \
   ssh://scott@nas01.warthog-royal.ts.net/pool/borg/repos/$(hostname)
