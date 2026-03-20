@@ -254,7 +254,7 @@ let
           set -euo pipefail
 
           BW_SECRETS="/Users/scott/.local/share/bitwarden-secrets"
-          REPO="ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/airbook-darwin"
+          REPO="ssh://scott@nas01.warthog-royal.ts.net/pool/borg/repos/airbook-darwin"
           # Borg passphrase: Bitwarden item 91db7811-ddf1-49aa-8a42-b3d60188a6e6 (Borg Encryption)
           BW_BORG_ITEM_ID="91db7811-ddf1-49aa-8a42-b3d60188a6e6"
 

@@ -25,7 +25,7 @@ let
       # Uncomment and configure if you want backups
       # services.borg-backup = {
       #   enable = true;
-      #   repository = "ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18T/Backups/prodesk";
+      #   repository = "ssh://scott@nas01.warthog-royal.ts.net/pool/borg/repos/prodesk";
       #   encryption.passphraseFile = "/etc/borg-passphrase";
       #   sshKeyFile = "/home/scott/.ssh/id_ed25519";
       # };
