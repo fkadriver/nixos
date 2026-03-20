@@ -2,7 +2,7 @@ keys:
   # Existing systems (from secrets.yaml)
   - &latitude age1p06y94pdxd76p45nuradvjfz24zmywuqua5szhs3etk9jw55g5aqscqved
   - &prodesk age12ycs9vrs38n4wjqnmeqwn2cerezfpax93d3vju5g3g7hgk6xmq9s9agwxc
-  - &nas01 age1ahsgphy5f7wft6vg3cqaypy8ukkxfzv4gjdpsexrdc3gz9tuqy2s2cpd7e
+  - &nas01 age1j0uk4x4ea4mj0rq0e5ul4av6nhc2997g4vhlpscj2t07x28kaqeq9ke0wj
   - &vm01 age1fug7k9r8qnuj3q38qy0j8mmwwzzn9qzt3utqytew7z2g8xvj3vns8pjn3j
 
   # macOS darwin
