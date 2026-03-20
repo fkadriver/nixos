@@ -121,7 +121,7 @@ let
             "...." = "cd ../../..";
           };
           initExtra = ''
-            export PATH="$PATH:$HOME/bin:$HOME/.local/bin:$HOME/go/bin"
+            export PATH="$PATH:$HOME/bin:$HOME/.local/bin:$HOME/go/bin:/nix/var/nix/profiles/nas01/bin"
           '';
         };
         direnv = {

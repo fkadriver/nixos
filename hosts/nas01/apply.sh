@@ -45,12 +45,12 @@ if ! grep -q "experimental-features" "${NIX_CONF}" 2>/dev/null; then
 fi
 
 # Install/update packages to the nas01 Nix profile
-# Always remove and reinstall to pick up any package additions/removals
+# Remove entry 0 (the only entry) then reinstall to pick up package changes
 echo "Updating Nix packages..."
 nix --extra-experimental-features 'nix-command flakes' \
-    profile remove --profile "${NIX_PROFILE}" '.*' 2>/dev/null || true
+    profile remove --profile "${NIX_PROFILE}" 0 2>/dev/null || true
 nix --extra-experimental-features 'nix-command flakes' \
-    profile install --profile "${NIX_PROFILE}" "${REPO_DIR}#nas01-env"
+    profile add --profile "${NIX_PROFILE}" "${REPO_DIR}#nas01-env"
 
 # Apply home-manager config as scott (must run as user, not root)
 echo "Applying home-manager config (starship, shell aliases)..."
