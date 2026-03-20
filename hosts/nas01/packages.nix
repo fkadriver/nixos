@@ -22,6 +22,8 @@ pkgs.buildEnv {
     lsof              # Open file/socket inspection
     ncdu              # Disk usage analyzer
     htop              # System monitoring
+    tree              # Directory tree viewer
+    docker            # Container runtime
     vim               # Text editor
     home-manager      # Manages starship, shell aliases, bash config (run: home-manager switch --flake .#scott)
     tailscale         # VPN (tailscaled daemon + tailscale CLI)
