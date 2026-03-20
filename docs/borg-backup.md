@@ -25,16 +25,11 @@ SSH keys are deployed to `/home/scott/.ssh/` by `apply.sh` (via sops). Add the p
 to `authorized_keys` so clients can connect:
 
 ```bash
-grep -qF "$(cat ~/.ssh/id_ed25519.pub)" ~/.ssh/authorized_keys \
-  || cat ~/.ssh/id_ed25519.pub >> ~/.ssh/authorized_keys
-
 grep -qF "$(cat ~/.ssh/id_ed25519_legacy.pub)" ~/.ssh/authorized_keys \
   || cat ~/.ssh/id_ed25519_legacy.pub >> ~/.ssh/authorized_keys
 ```
 
-Key usage:
-- `id_ed25519` — latitude
-- `id_ed25519_legacy` — vm01, airbook-darwin, and all `borg-*` shell aliases
+All clients use `id_ed25519_legacy` (deployed by bitwarden on NixOS machines, by sops on nas01).
 
 ---
 
@@ -86,9 +81,8 @@ SSH keys and passphrase are deployed by bitwarden at boot. Once present, initial
 the repo on nas01. Use the key matching the host (see nas01 Server Setup above):
 
 ```bash
-# latitude uses id_ed25519; vm01 and airbook-darwin use id_ed25519_legacy
 sudo env \
-  BORG_RSH="ssh -i /home/scott/.ssh/<key> -o StrictHostKeyChecking=accept-new" \
+  BORG_RSH="ssh -i /home/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new" \
   BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" \
   borg init --encryption=repokey-blake2 --remote-path=/nix/var/nix/profiles/nas01/bin/borg \
   ssh://scott@nas01.warthog-royal.ts.net/pool/borg/repos/$(hostname)
