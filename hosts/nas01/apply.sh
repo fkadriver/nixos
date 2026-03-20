@@ -58,6 +58,11 @@ cat > /etc/profile.d/nas01-nix.sh << 'EOF'
 export PATH="/nix/var/nix/profiles/nas01/bin:$PATH"
 EOF
 
+# Add scott to borg group (needed to access borg repos)
+if getent group borg &>/dev/null; then
+    usermod -aG borg scott
+fi
+
 # Apply home-manager config as scott (must run as user, not root)
 echo "Applying home-manager config (starship, shell aliases)..."
 sudo -u scott env PATH="${PATH}" "${NIX_PROFILE}/bin/home-manager" switch -b backup --flake "${REPO_DIR}#scott"
