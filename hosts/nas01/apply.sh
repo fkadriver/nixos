@@ -132,8 +132,12 @@ systemctl daemon-reload
 
 echo ""
 echo "=== apt prerequisites (run if not already installed) ==="
-echo "  # Required by Ubuntu kernel integration (cannot be replaced by Nix equivalents):"
+echo "  # Kernel integration (must match Ubuntu kernel via DKMS — cannot use Nix equivalents):"
 echo "  sudo apt install nfs-kernel-server zfsutils-linux"
+echo ""
+echo "  # Docker Engine (systemd service + docker group — use apt, not the Nix package):"
+echo "  sudo apt install docker.io"
+echo "  sudo usermod -aG docker scott"
 echo ""
 echo "  # Bootstrap dependencies (needed before Nix is installed):"
 echo "  sudo apt install curl git"
