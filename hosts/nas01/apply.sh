@@ -77,11 +77,18 @@ if [[ -f "${AGE_KEY}" ]]; then
         local secret_path="$1"
         local dest="$2"
         local mode="$3"
-        SOPS_AGE_KEY_FILE="${AGE_KEY}" "${NIX_PROFILE}/bin/sops" \
-            --decrypt --extract "[\"${secret_path}\"]" "${SECRETS}" \
-            > "${dest}"
-        chmod "${mode}" "${dest}"
-        chown scott:scott "${dest}"
+        # Convert "ssh/key_name" → ["ssh"]["key_name"] for sops --extract
+        local extract_path
+        extract_path=$(echo "${secret_path}" | awk -F/ '{for(i=1;i<=NF;i++) printf "[\"" $i "\"]"}')
+        local tmp
+        tmp=$(mktemp)
+        if SOPS_AGE_KEY_FILE="${AGE_KEY}" "${NIX_PROFILE}/bin/sops" \
+                --decrypt --extract "${extract_path}" "${SECRETS}" > "${tmp}"; then
+            install -m "${mode}" -o scott -g scott "${tmp}" "${dest}"
+        else
+            rm -f "${tmp}"
+            echo "WARNING: Failed to deploy ${dest}"
+        fi
     }
 
     deploy_key "ssh/id_ed25519"               "${SSH_DIR}/id_ed25519"               600
