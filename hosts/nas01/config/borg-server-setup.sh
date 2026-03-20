@@ -4,12 +4,15 @@
 #
 # Borg server requires NO daemon - it uses SSH with a restricted command.
 # Each client authenticates with its own SSH key, restricted to its repo path.
+#
+# Repos live on the 18TB drive at /mnt/wd18T/Backups/<hostname>
+# This matches the path used by all NixOS clients and airbook-darwin.
 
 set -euo pipefail
 
 BORG_USER="borg"
-BORG_HOME="/pool/borg"
-BORG_REPOS_DIR="${BORG_HOME}/repos"
+BORG_HOME="/home/borg"
+BORG_REPOS_DIR="/mnt/wd18T/Backups"
 
 echo "=== Borg Server Setup ==="
 
@@ -24,10 +27,14 @@ if ! id "${BORG_USER}" &>/dev/null; then
     echo "Created user: ${BORG_USER}"
 fi
 
-# Create repos directory on ZFS pool
+# Ensure repos directory exists on the 18TB drive
+# NOTE: /mnt/wd18T must already be mounted before running this script
+if ! mountpoint -q /mnt/wd18T; then
+    echo "ERROR: /mnt/wd18T is not mounted. Mount the 18TB drive first."
+    exit 1
+fi
 mkdir -p "${BORG_REPOS_DIR}"
-chown -R "${BORG_USER}:${BORG_USER}" "${BORG_HOME}"
-chmod 700 "${BORG_HOME}"
+chown "${BORG_USER}:${BORG_USER}" "${BORG_REPOS_DIR}"
 
 # Set up SSH authorized_keys
 SSH_DIR="${BORG_HOME}/.ssh"
@@ -40,22 +47,23 @@ chown -R "${BORG_USER}:${BORG_USER}" "${SSH_DIR}"
 
 echo ""
 echo "=== Add client SSH keys ==="
-echo "For each NixOS client, add an entry to:"
+echo "For each client, add an entry to:"
 echo "  ${AUTH_KEYS}"
 echo ""
 echo "Format for each client (one line per client):"
 cat <<'EOF'
-command="borg serve --restrict-to-path /pool/borg/repos/<hostname>",restrict ssh-ed25519 AAAA... user@hostname
+command="borg serve --restrict-to-path /mnt/wd18T/Backups/<hostname>",restrict ssh-ed25519 AAAA... user@hostname
 EOF
 echo ""
 echo "The 'restrict' keyword disables port forwarding, X11 forwarding, etc."
 echo "The 'command=' forces borg serve regardless of what the client requests."
 echo ""
-echo "Repo paths per host (create these dirs after ZFS pool is set up):"
-echo "  mkdir -p /pool/borg/repos/latitude"
-echo "  mkdir -p /pool/borg/repos/vm01"
-echo "  mkdir -p /pool/borg/repos/prodesk"
-echo "  chown -R borg:borg /pool/borg/repos/"
+echo "Repo dirs to create (one per client):"
+echo "  mkdir -p /mnt/wd18T/Backups/latitude"
+echo "  mkdir -p /mnt/wd18T/Backups/vm01"
+echo "  mkdir -p /mnt/wd18T/Backups/prodesk"
+echo "  mkdir -p /mnt/wd18T/Backups/airbook-darwin"
+echo "  chown -R borg:borg /mnt/wd18T/Backups/"
 echo ""
 echo "=== Current NixOS client borg SSH keys (from this repo) ==="
 echo "Check modules/borg-backup.nix and secrets/secrets.yaml for the public keys"
