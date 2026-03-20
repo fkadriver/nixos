@@ -45,13 +45,54 @@ if ! grep -q "experimental-features" "${NIX_CONF}" 2>/dev/null; then
 fi
 
 # Install/update packages to the nas01 Nix profile
+# Always remove and reinstall to pick up any package additions/removals
 echo "Updating Nix packages..."
+nix --extra-experimental-features 'nix-command flakes' \
+    profile remove --profile "${NIX_PROFILE}" '.*' 2>/dev/null || true
 nix --extra-experimental-features 'nix-command flakes' \
     profile install --profile "${NIX_PROFILE}" "${REPO_DIR}#nas01-env"
 
 # Apply home-manager config as scott (must run as user, not root)
 echo "Applying home-manager config (starship, shell aliases)..."
 sudo -u scott env PATH="${PATH}" "${NIX_PROFILE}/bin/home-manager" switch -b backup --flake "${REPO_DIR}#scott"
+
+# Deploy SSH keys from secrets.yaml via sops
+# Requires: age key at /var/lib/sops-nix/key.txt (generate once with: sudo age-keygen -y /var/lib/sops-nix/key.txt)
+SSH_DIR="/home/scott/.ssh"
+AGE_KEY="/var/lib/sops-nix/key.txt"
+SECRETS="${REPO_DIR}/secrets/secrets.yaml"
+
+if [[ -f "${AGE_KEY}" ]]; then
+    echo "Deploying SSH keys from secrets.yaml..."
+    mkdir -p "${SSH_DIR}"
+    chmod 700 "${SSH_DIR}"
+
+    deploy_key() {
+        local secret_path="$1"
+        local dest="$2"
+        local mode="$3"
+        SOPS_AGE_KEY_FILE="${AGE_KEY}" "${NIX_PROFILE}/bin/sops" \
+            --decrypt --extract "[\"${secret_path}\"]" "${SECRETS}" \
+            > "${dest}"
+        chmod "${mode}" "${dest}"
+        chown scott:scott "${dest}"
+    }
+
+    deploy_key "ssh/id_ed25519"               "${SSH_DIR}/id_ed25519"               600
+    deploy_key "ssh/id_ed25519.pub"            "${SSH_DIR}/id_ed25519.pub"            644
+    deploy_key "ssh/id_ed25519_github"         "${SSH_DIR}/id_ed25519_github"         600
+    deploy_key "ssh/id_ed25519_github.pub"     "${SSH_DIR}/id_ed25519_github.pub"     644
+    deploy_key "ssh/id_ed25519_legacy"         "${SSH_DIR}/id_ed25519_legacy"         600
+    deploy_key "ssh/id_ed25519_legacy.pub"     "${SSH_DIR}/id_ed25519_legacy.pub"     644
+    deploy_key "ssh/opnsense_admin_ed25519"    "${SSH_DIR}/opnsense_admin_ed25519"    600
+    deploy_key "ssh/opnsense_admin_ed25519.pub" "${SSH_DIR}/opnsense_admin_ed25519.pub" 644
+
+    echo "SSH keys deployed to ${SSH_DIR}"
+else
+    echo "WARNING: Age key not found at ${AGE_KEY} — skipping SSH key deployment."
+    echo "  To generate: sudo age-keygen -o ${AGE_KEY}"
+    echo "  Then add the public key to .sops.yaml and re-encrypt: sops updatekeys secrets/secrets.yaml"
+fi
 
 # Samba config
 echo "Installing Samba config..."

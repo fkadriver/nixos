@@ -24,5 +24,7 @@ pkgs.buildEnv {
     htop              # System monitoring
     home-manager      # Manages starship, shell aliases, bash config (run: home-manager switch --flake .#scott)
     tailscale         # VPN (tailscaled daemon + tailscale CLI)
+    sops              # Decrypt secrets.yaml for SSH key deployment
+    age               # Age encryption (required by sops for nas01 age key)
   ];
 }
