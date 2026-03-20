@@ -11,7 +11,7 @@ let
       | ${pkgs.jq}/bin/jq -r '.login.password'
   '';
   borgRepo = "ssh://scott@nas01.warthog-royal.ts.net/pool/borg/repos/airbook-darwin";
-  borgEnv  = ''BORG_RSH="ssh -i $HOME/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new" BORG_PASSCOMMAND="${borgPassCmd}" BORG_REMOTE_PATH=/usr/bin/borg'';
+  borgEnv  = ''BORG_RSH="ssh -i $HOME/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new" BORG_PASSCOMMAND="${borgPassCmd}" BORG_REMOTE_PATH=/nix/var/nix/profiles/nas01/bin/borg'';
 in
 {
   imports = [ ../../home-modules/freecad.nix ];

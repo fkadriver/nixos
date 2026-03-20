@@ -99,7 +99,7 @@ in
 
     remotePath = mkOption {
       type = types.nullOr types.str;
-      default = "/usr/bin/borg";
+      default = "/nix/var/nix/profiles/nas01/bin/borg";
       description = "Path to borg executable on remote server (for SSH repos)";
     };
   };

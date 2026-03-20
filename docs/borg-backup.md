@@ -57,12 +57,12 @@ Once they're present, initialize the repo on nas01:
 sudo env \
   BORG_RSH="ssh -i /home/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new" \
   BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" \
-  borg init --encryption=repokey-blake2 --remote-path=/usr/bin/borg \
+  borg init --encryption=repokey-blake2 --remote-path=/nix/var/nix/profiles/nas01/bin/borg \
   ssh://scott@nas01.warthog-royal.ts.net/pool/borg/repos/$(hostname)
 ```
 
-`--remote-path=/usr/bin/borg` is required because nas01 (Ubuntu) doesn't have borg
-in the default PATH for non-login SSH sessions.
+`--remote-path=/nix/var/nix/profiles/nas01/bin/borg` is required because borg is installed via the
+Nix nas01 profile, which is not in PATH for non-login SSH sessions.
 
 ### Step 5 — Export and save the repository key
 
@@ -70,7 +70,7 @@ in the default PATH for non-login SSH sessions.
 sudo env \
   BORG_RSH="ssh -i /home/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new" \
   BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" \
-  borg key export --remote-path=/usr/bin/borg \
+  borg key export --remote-path=/nix/var/nix/profiles/nas01/bin/borg \
   ssh://scott@nas01.warthog-royal.ts.net/pool/borg/repos/$(hostname) \
   ~/borg-key-$(hostname).txt
 
@@ -109,7 +109,7 @@ The `borg-list`, `borg-info`, `borg-check`, and `borg-unlock` aliases automatica
 ```bash
 export BORG_RSH="ssh -i /home/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new"
 export BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase"
-export BORG_REMOTE_PATH=/usr/bin/borg
+export BORG_REMOTE_PATH=/nix/var/nix/profiles/nas01/bin/borg
 REPO="ssh://scott@nas01.warthog-royal.ts.net/pool/borg/repos/$(hostname)"
 
 # List archives
@@ -133,7 +133,7 @@ export BORG_RSH="ssh -i /home/scott/.ssh/id_ed25519_legacy -o StrictHostKeyCheck
 export BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase"
 
 sudo mkdir -p /mnt/borg
-sudo -E borg mount --remote-path=/usr/bin/borg \
+sudo -E borg mount --remote-path=/nix/var/nix/profiles/nas01/bin/borg \
   ssh://scott@nas01.warthog-royal.ts.net/pool/borg/repos/$(hostname) \
   /mnt/borg
 
@@ -190,7 +190,7 @@ ssh scott@nas01.warthog-royal.ts.net 'rm -rf /pool/borg/repos/<hostname>'
 | `encryption.mode` | `repokey-blake2` | Encryption mode |
 | `encryption.passphraseFile` | `null` | Path to passphrase file |
 | `sshKeyFile` | `null` | SSH private key for remote repos |
-| `remotePath` | `/usr/bin/borg` | Path to borg on remote server |
+| `remotePath` | `/nix/var/nix/profiles/nas01/bin/borg` | Path to borg on remote server |
 | `schedule` | `daily` | Systemd calendar expression |
 | `prune.keep.daily` | `7` | Daily backups to keep |
 | `prune.keep.weekly` | `4` | Weekly backups to keep |

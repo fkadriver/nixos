@@ -274,7 +274,7 @@ let
           "$BW" lock --quiet || true
 
           export BORG_RSH="${pkgs.openssh}/bin/ssh -i /Users/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new"
-          export BORG_REMOTE_PATH="/usr/bin/borg"
+          export BORG_REMOTE_PATH="/nix/var/nix/profiles/nas01/bin/borg"
 
           ${pkgs.borgbackup}/bin/borg create \
             --stats \
