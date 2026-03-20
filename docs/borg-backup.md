@@ -100,10 +100,15 @@ sudo env \
   ssh://scott@nas01.warthog-royal.ts.net/pool/borg/repos/$(hostname) \
   ~/borg-key-$(hostname).txt
 
-cat ~/borg-key-$(hostname).txt
+sudo cat ~/borg-key-$(hostname).txt
 ```
 
 Save this key in Bitwarden. You need both the key AND the passphrase to restore backups.
+
+```bash
+# After saving to Bitwarden, remove the key file
+sudo rm ~/borg-key-$(hostname).txt
+```
 
 ### Step 6 — Trigger the first backup
 
