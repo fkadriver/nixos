@@ -19,7 +19,6 @@ echo "Creating repo directories..."
 mkdir -p \
     "${BORG_REPOS_DIR}/latitude" \
     "${BORG_REPOS_DIR}/vm01" \
-    "${BORG_REPOS_DIR}/prodesk" \
     "${BORG_REPOS_DIR}/airbook-darwin"
 chown -R scott:scott "${BORG_REPOS_DIR}"
 chmod 750 "${BORG_REPOS_DIR}"

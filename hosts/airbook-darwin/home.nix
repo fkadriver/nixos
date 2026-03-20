@@ -76,7 +76,6 @@ in
         nas01 = "tailscale ssh nas01";
         log01 = "tailscale ssh sands-log01";
         pi-hole = "tailscale ssh pi-hole";
-        prodesk = "tailscale ssh prodesk";
         slap = "tailscale ssh latitude";
         latitude = "tailscale ssh latitude";
         vm01 = "tailscale ssh vm01";
@@ -184,7 +183,6 @@ in
         nas01 = "tailscale ssh nas01";
         log01 = "tailscale ssh sands-log01";
         pi-hole = "tailscale ssh pi-hole";
-        prodesk = "tailscale ssh prodesk";
         slap = "tailscale ssh latitude";
         latitude = "tailscale ssh latitude";
         vm01 = "tailscale ssh vm01";

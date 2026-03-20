@@ -9,13 +9,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Apply configuration to current system (requires sudo)
 sudo nixos-rebuild switch --flake .#<hostname>
 
-# Available NixOS hostnames: prodesk, latitude, latitude-xfce,
+# Available NixOS hostnames: latitude, latitude-xfce,
 # latitude-minimal, vm01, pihole01, pihole02
 # Note: latitude-kde merged into latitude; latitude-minimal kept as fallback
 
 # Examples:
 sudo nixos-rebuild switch --flake .#latitude
-sudo nixos-rebuild switch --flake .#prodesk
 
 # macOS (nix-darwin) - requires sudo for system changes
 sudo darwin-rebuild switch --flake .#airbook-darwin
@@ -133,7 +132,7 @@ Each host has a base configuration in `hosts/<hostname>/default.nix` with option
 - `syncthing.nix` - Per-host Syncthing device configuration (optional)
 
 **Current Hosts (NixOS):**
-- **prodesk** - HP ProDesk desktop (photo/AI workstation with disko)
+
 - **latitude** - Dell Latitude 7480 laptop (default: Borg backup + 3D printing)
 - **vm01** - Dell Latitude E7270 (Service Tag: 7NYTSF2, Immich server with external 1TB drive)
 - **installer** - Bootable ISO with automated installation script
@@ -281,12 +280,6 @@ sops updatekeys secrets/secrets.yaml
   - Services: Tailscale VPN, Syncthing file sync
   - System settings: Dark mode, Touch ID sudo, dock/keyboard/trackpad preferences
   - Bluetooth: SEENDA keyboard and mouse (manual pairing required)
-
-### HP ProDesk (prodesk)
-- **Purpose**: Minimal photo processing and AI workstation
-- **Optimized for**: photoAlbumOrganizer (OpenCV, dlib, face_recognition)
-- **Desktop**: Lightweight KDE Plasma 6
-- **No Borg backup configured** (not a primary system)
 
 ### Dell Latitude 7480 (latitude)
 - **Default config**: Includes Borg backup and 3D printing support

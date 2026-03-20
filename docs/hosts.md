@@ -4,16 +4,6 @@ This document provides a brief overview of all host configurations in this repos
 
 ## NixOS Hosts
 
-### prodesk
-**HP ProDesk 600 G4** - Minimal photo/AI workstation
-
-| | |
-|---|---|
-| Desktop | KDE Plasma 6 (minimal) |
-| Purpose | Photo processing, AI/ML development |
-| Key Features | Python with OpenCV/dlib, VSCode, disko partitioning |
-| Backup | None configured |
-
 ### latitude
 **Dell Latitude 7480** - Primary laptop (KDE default)
 
@@ -90,7 +80,6 @@ This document provides a brief overview of all host configurations in this repos
 
 | Host | Type | Desktop | Primary Use |
 |------|------|---------|-------------|
-| `prodesk` | Desktop | KDE (minimal) | Photo/AI workstation |
 | `latitude` | Laptop | KDE | Daily driver |
 | `latitude-xfce` | Laptop | XFCE | Full desktop variant |
 | `latitude-kde` | Laptop | KDE | Full desktop variant |

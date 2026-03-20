@@ -22,7 +22,6 @@ nix build .#nixosConfigurations.<hostname>.config.system.build.vm
 
 | Host | Hardware | Desktop | Purpose |
 |------|----------|---------|---------|
-| `prodesk` | HP ProDesk | KDE (minimal) | Photo/AI workstation |
 | `latitude` | Dell Latitude 7480 | KDE | Daily driver (Borg backup, 3D printing) |
 | `latitude-xfce` | Dell Latitude 7480 | XFCE | Full desktop variant |
 | `latitude-kde` | Dell Latitude 7480 | KDE | Full desktop variant |
@@ -41,7 +40,6 @@ See [docs/hosts.md](docs/hosts.md) for detailed host documentation.
 .
 ├── flake.nix              # Main flake configuration
 ├── hosts/                 # Host-specific configurations
-│   ├── prodesk/          # HP ProDesk desktop
 │   ├── latitude/         # Dell Latitude 7480 (+ variants)
 │   ├── airbook/          # MacBook Air 7,2 NixOS
 │   ├── airbook-darwin/   # MacBook Air 7,2 macOS

@@ -6,7 +6,6 @@ This guide explains how to add new hosts or host configurations to this NixOS fl
 
 ### Hosts vs Host Configurations
 
-- **Host**: A physical or virtual machine (e.g., `latitude`, `prodesk`, `airbook`)
 - **Host Configuration**: A variant of a host with a different desktop environment or module set (e.g., `latitude-kde`, `latitude-xfce`, `latitude-minimal`)
 
 ### Directory Layout
@@ -20,7 +19,6 @@ hosts/
 │   ├── minimal.nix      # Minimal testing configuration
 │   ├── hardware.nix     # Hardware-specific settings
 │   └── syncthing.nix    # Host-specific syncthing config
-├── prodesk/
 │   ├── default.nix
 │   └── hardware.nix
 └── airbook/
@@ -298,7 +296,6 @@ imports = [
 ];
 ```
 
-See the `prodesk` configuration for an example.
 
 ## Bitwarden Secrets Setup
 

@@ -17,7 +17,6 @@ this is a trusted home network behind Tailscale.
 sudo bash hosts/nas01/config/borg-server-setup.sh
 ```
 
-This creates `/pool/borg/repos/{latitude,vm01,prodesk,airbook-darwin}` and prints the next steps.
 
 ### Step B — Authorize client SSH keys
 
