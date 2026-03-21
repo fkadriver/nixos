@@ -29,5 +29,6 @@ pkgs.buildEnv {
     tailscale         # VPN (tailscaled daemon + tailscale CLI)
     sops              # Decrypt secrets.yaml for SSH key deployment
     age               # Age encryption (required by sops for nas01 age key)
+    syncthing         # File synchronization
   ];
 }

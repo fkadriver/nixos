@@ -1,0 +1,19 @@
+# Systemd service for Nix-installed Syncthing on Ubuntu
+# Install to: /etc/systemd/system/syncthing.service
+# Then: sudo systemctl daemon-reload && sudo systemctl enable --now syncthing
+
+[Unit]
+Description=Syncthing (Nix) - Open Source Continuous File Synchronization
+Documentation=man:syncthing(1)
+After=network.target
+
+[Service]
+User=scott
+ExecStart=/nix/var/nix/profiles/nas01/bin/syncthing serve --no-browser --no-restart --logflags=0
+Restart=on-failure
+RestartSec=5
+SuccessExitStatus=3 4
+RestartForceExitStatus=3 4
+
+[Install]
+WantedBy=multi-user.target

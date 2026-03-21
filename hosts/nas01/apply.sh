@@ -128,6 +128,7 @@ echo "Installing systemd services..."
 install -m 644 "${NAS01_DIR}/config/systemd/smbd.service" /etc/systemd/system/smbd.service
 install -m 644 "${NAS01_DIR}/config/systemd/nmbd.service" /etc/systemd/system/nmbd.service
 install -m 644 "${NAS01_DIR}/config/systemd/tailscaled.service" /etc/systemd/system/tailscaled.service
+install -m 644 "${NAS01_DIR}/config/systemd/syncthing.service" /etc/systemd/system/syncthing.service
 systemctl daemon-reload
 
 echo ""
@@ -149,6 +150,7 @@ echo "  sudo systemctl enable --now nfs-kernel-server"
 echo "  sudo exportfs -ra"
 echo "  sudo systemctl enable --now tailscaled"
 echo "  sudo tailscale up   # authenticate to Tailscale network (one-time)"
+echo "  sudo systemctl enable --now syncthing"
 echo ""
 echo "=== iDrive e360 (cloud backup) ==="
 echo "  iDrive e360 cannot be packaged via Nix (no stable download URL; installer"

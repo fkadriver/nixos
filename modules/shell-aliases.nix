@@ -3,7 +3,10 @@
 # MAINTENANCE: When updating aliases here, also update:
 #   - Darwin: hosts/airbook-darwin/home.nix
 #             (programs.bash.shellAliases / programs.zsh.shellAliases)
-# nas01 gets aliases via home-manager (homeConfigurations/scott.nix)
+#   - nas01:  homeConfigurations/scott.nix (standalone home-manager)
+# Rebuild aliases by host:
+#   nix-rebuild  → latitude, vm01 (nixos-rebuild), airbook (darwin-rebuild)
+#   nix-upgrade  → nas01 (runs hosts/nas01/apply.sh)
 {
   config = {
     environment = {
@@ -64,7 +67,7 @@ slap = "tailscale ssh latitude";
         nix-shell-python = "nix-shell -p python3 python3Packages.pip";
 
         # NixOS system shortcuts with automatic hostname detection
-        rebuild = "sudo nixos-rebuild switch --flake .#$(hostname)";
+        nix-rebuild = "cd ~/git/nixos && git pull && sudo nixos-rebuild switch --flake ~/git/nixos#$(hostname)";
         nos-rebuild = "sudo nixos-rebuild switch --flake .";
         nos-test = "sudo nixos-rebuild test --flake .";
         nos-boot = "sudo nixos-rebuild boot --flake .";
