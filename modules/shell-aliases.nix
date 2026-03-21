@@ -6,7 +6,7 @@
 #   - nas01:  homeConfigurations/scott.nix (standalone home-manager)
 # Rebuild aliases by host:
 #   nix-rebuild  → latitude, vm01 (nixos-rebuild), airbook (darwin-rebuild)
-#   nix-upgrade  → nas01 (runs hosts/nas01/apply.sh)
+#   nix-apply    → nas01 (runs hosts/nas01/apply.sh)
 {
   config = {
     environment = {
