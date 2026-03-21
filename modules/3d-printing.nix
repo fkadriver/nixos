@@ -212,6 +212,23 @@ in
     # Provide a stable directory for FreeCAD ShapeString font browsing
     environment.etc."freecad/fonts".source = lib.mkIf cfg.fonts.enable freecadFontDir;
 
+    # Symlink orca-settings repo as OrcaSlicer user config (runs after each rebuild).
+    # No-op if the repo hasn't been cloned yet.
+    system.activationScripts.orcaSettings = {
+      text = ''
+        REPO="/home/scott/git/orca-settings"
+        ORCA_DIR="/home/scott/.config/OrcaSlicer"
+        if [ -d "$REPO" ]; then
+          mkdir -p "$ORCA_DIR"
+          if [ ! -L "$ORCA_DIR/user" ]; then
+            rm -rf "$ORCA_DIR/user"
+            ln -sfn "$REPO" "$ORCA_DIR/user"
+            chown -h scott:users "$ORCA_DIR/user" 2>/dev/null || true
+          fi
+        fi
+      '';
+    };
+
     services.avahi = {
       enable = true;
       nssmdns4 = true;

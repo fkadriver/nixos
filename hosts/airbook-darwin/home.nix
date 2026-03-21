@@ -24,6 +24,20 @@ in
     # Add ~/.local/bin to PATH
     sessionPath = [ "$HOME/.local/bin" "$HOME/go/bin" ];
 
+    # Symlink orca-settings repo as OrcaSlicer user config (runs after each rebuild).
+    # No-op if the repo hasn't been cloned yet.
+    activation.orcaSettings = lib.hm.dag.entryAfter ["writeBoundary"] ''
+      REPO="$HOME/git/orca-settings"
+      ORCA_DIR="$HOME/Library/Application Support/OrcaSlicer"
+      if [ -d "$REPO" ]; then
+        mkdir -p "$ORCA_DIR"
+        if [ ! -L "$ORCA_DIR/user" ]; then
+          rm -rf "$ORCA_DIR/user"
+          ln -sfn "$REPO" "$ORCA_DIR/user"
+        fi
+      fi
+    '';
+
     # User packages (in addition to system packages)
     packages = with pkgs; [
       # Development
