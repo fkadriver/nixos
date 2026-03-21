@@ -189,6 +189,7 @@ in
     environment.systemPackages =
       (with pkgs; [
         openscad
+        orca-slicer
         prusa-slicer
         freecad
         blender
@@ -210,6 +211,11 @@ in
 
     # Provide a stable directory for FreeCAD ShapeString font browsing
     environment.etc."freecad/fonts".source = lib.mkIf cfg.fonts.enable freecadFontDir;
+
+    services.avahi = {
+      enable = true;
+      nssmdns4 = true;
+    };
 
     programs.appimage = {
       enable = true;
