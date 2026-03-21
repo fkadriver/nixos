@@ -58,6 +58,10 @@ cat > /etc/profile.d/nas01-nix.sh << 'EOF'
 export PATH="/nix/var/nix/profiles/nas01/bin:$PATH"
 EOF
 
+# Increase inotify watch limit (required by Syncthing and Docker)
+echo "fs.inotify.max_user_watches=524288" > /etc/sysctl.d/99-inotify.conf
+sysctl -p /etc/sysctl.d/99-inotify.conf
+
 # Add scott to borg group (needed to access borg repos)
 if getent group borg &>/dev/null; then
     usermod -aG borg scott
