@@ -3,44 +3,35 @@
     enable = true;
     deviceName = "latitude";
 
-    # Latitude is the introducer for nas01 (not managed by NixOS)
-    # This allows nas01 to discover other devices through latitude
-    introducerFor = [ "nas01" ];
-
     folders = {
-      # Documents: Full sync with all devices including iPhone
-      # iPhone receives via Mobius Sync (one-way configured on iPhone side)
       Documents = {
         path = "/home/scott/Documents";
-        devices = [ "airbook" "airbook-darwin" "nas01" "iphone" ];
+        devices = [ "airbook-darwin" "nas01" ];
         versioning = {
           type = "simple";
           params.keep = "5";
         };
       };
-      # Photos: Full sync between computers only (no iPhone)
-      Photos = {
-        path = "/home/scott/Photos";
-        devices = [ "airbook" "airbook-darwin" "nas01" ];
-        versioning = {
-          type = "simple";
-          params.keep = "5";
-        };
-      };
-      # Downloads: Full sync between computers only
       Downloads = {
         path = "/home/scott/Downloads";
-        devices = [ "airbook" "airbook-darwin" "nas01" ];
+        devices = [ "airbook-darwin" "nas01" ];
         versioning = {
           type = "simple";
           params.keep = "5";
         };
       };
-      # tmp: Quick file transfer between mobile devices
+      Photos = {
+        path = "/home/scott/Photos";
+        devices = [ "airbook-darwin" "nas01" ];
+        versioning = {
+          type = "simple";
+          params.keep = "5";
+        };
+      };
+      # tmp: quick transfer between personal devices (no nas01)
       tmp = {
         path = "/home/scott/tmp";
-        devices = [ "airbook" "airbook-darwin" "iphone" ];
-        # No versioning - temporary files only
+        devices = [ "airbook-darwin" "iphone" ];
       };
     };
   };

@@ -8,20 +8,18 @@ let
 
   # Device IDs - these are public identifiers, not secrets
   deviceIds = {
-    latitude = "B4FAPKC-JTGMKTY-SE223WL-W2Y3VTT-JHU65E4-X3FUZ2C-4N62X4T-IRI75QZ";
-    airbook = "YWSK64M-74SMQZM-AX7M4DN-4CV3IZB-K5NZSXV-KUUPX7X-UONQQLM-Y3BEMQW";
+    latitude      = "B4FAPKC-JTGMKTY-SE223WL-W2Y3VTT-JHU65E4-X3FUZ2C-4N62X4T-IRI75QZ";
     airbook-darwin = "MIWPTKO-AAFMDLU-BBWGY74-VIR6B2Y-H5OQAV2-COC7RKI-MSS3ZLB-XYBLYQB";
-    nas01 = "O5ICANC-MMANGNF-6S23FIO-UIUK4S2-6E6JKZK-VGNFOJO-BXZ3UBK-DO7JLQ6";
-    iphone = "SDE4XUA-P5E6GZF-EMPGWPV-POTQWCO-2VJKNC3-T2CQMJ4-4OJQTEU-SSUNDA4";
+    nas01         = "BN4CDEN-NZTKSXN-B4XORCQ-EU4OGF2-ZQSRPNN-FYLHHHH-UBJZFLB-RQ4SDQ6";
+    iphone        = "SDE4XUA-P5E6GZF-EMPGWPV-POTQWCO-2VJKNC3-T2CQMJ4-4OJQTEU-SSUNDA4";
   };
 
-  # All devices are always behind Tailscale
+  # All traffic over Tailscale - no local/global discovery or relays
   deviceAddresses = {
-    latitude = [ "tcp://latitude.warthog-royal.ts.net:22000" ];
-    airbook = [ "tcp://airbook.warthog-royal.ts.net:22000" ];
-    airbook-darwin = [ "tcp://airbook.warthog-royal.ts.net:22000" ];  # Same MacBook Air, running macOS
-    nas01 = [ "tcp://nas01.warthog-royal.ts.net:22000" ];  # Always use Tailscale for nas01
-    iphone = [ "tcp://scott-iphone.warthog-royal.ts.net:22000" ];
+    latitude       = [ "tcp://latitude.warthog-royal.ts.net:22000" ];
+    airbook-darwin = [ "tcp://airbook.warthog-royal.ts.net:22000" ];
+    nas01          = [ "tcp://nas01.warthog-royal.ts.net:22000" ];
+    iphone         = [ "tcp://scott-iphone.warthog-royal.ts.net:22000" ];
   };
 in
 {
@@ -131,6 +129,14 @@ in
           introducer = elem name cfg.introducerFor;
           # Note: autoAcceptFolders is incompatible with overrideFolders=true
         }) otherDevices;
+
+      # Tailscale-only: disable all discovery and relay mechanisms
+      settings.options = {
+        globalAnnounceEnabled = false;
+        localAnnounceEnabled  = false;
+        relaysEnabled         = false;
+        natTraversalEnabled   = false;
+      };
 
       # Declarative folder configuration
       overrideFolders = true;
