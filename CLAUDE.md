@@ -251,7 +251,7 @@ sudo darwin-rebuild switch --flake ~/git/nixos#airbook-darwin
 - **Secrets**: SSH keys deployed via sops-nix from encrypted secrets.yaml
 
 ### Useful Aliases
-- `rebuild` - Runs `sudo darwin-rebuild switch --flake ~/git/nixos#airbook-darwin`
+- `nix-rebuild` - Runs `cd ~/git/nixos && git pull && sudo darwin-rebuild switch --flake ~/git/nixos#airbook-darwin; cd -`
 
 ### Secrets Management on macOS
 After first darwin-rebuild, get the machine's age key:
