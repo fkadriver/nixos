@@ -152,7 +152,8 @@ sudo systemctl status borgbackup-job-system # Check status
 ## Shell Aliases
 
 Defined in `modules/shell-aliases.nix`:
-- `nos-rebuild` - `sudo nixos-rebuild switch --flake .`
+- `nix-rebuild` - Pull latest and rebuild current host (NixOS) or darwin (airbook)
+- `nix-apply` - Pull latest and run `hosts/nas01/apply.sh` (nas01 only)
 - `nos-test` - `sudo nixos-rebuild test --flake .`
 - `nos-boot` - `sudo nixos-rebuild boot --flake .`
 
