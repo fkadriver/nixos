@@ -151,7 +151,7 @@ in
         borg-unlock = "env ${borgEnv} borg break-lock ${borgRepo}";
 
         # System rebuild (darwin-specific)
-        nix-rebuild = "cd ~/git/nixos && git pull && sudo darwin-rebuild switch --flake ~/git/nixos#airbook-darwin";
+        nix-rebuild = "cd ~/git/nixos && git pull && sudo darwin-rebuild switch --flake ~/git/nixos#airbook-darwin; cd -";
 
         # macOS-specific
         flush-dns = "sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder";
@@ -258,7 +258,7 @@ in
         borg-unlock = "env ${borgEnv} borg break-lock ${borgRepo}";
 
         # System rebuild (darwin-specific)
-        nix-rebuild = "cd ~/git/nixos && git pull && sudo darwin-rebuild switch --flake ~/git/nixos#airbook-darwin";
+        nix-rebuild = "cd ~/git/nixos && git pull && sudo darwin-rebuild switch --flake ~/git/nixos#airbook-darwin; cd -";
 
         # macOS-specific
         flush-dns = "sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder";
