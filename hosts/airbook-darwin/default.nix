@@ -74,6 +74,7 @@ let
 
         # 3D printing and modeling (from 3d-printing.nix)
         "openscad"
+        "orca-slicer"
         "prusaslicer"
         "freecad"
         "blender"
