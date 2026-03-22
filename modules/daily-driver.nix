@@ -90,6 +90,7 @@
     };
     my.printing = {
       enable = true;
+      fonts.enable = true;
       repairTools = true;
       generateTestArtifacts = true;
     };

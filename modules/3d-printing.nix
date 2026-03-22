@@ -4,6 +4,15 @@
 let
   cfg = config.my.printing;
 
+  # Some font package names can vary across nixpkgs revisions. Only include those that exist.
+  fontPkgs =
+    (if pkgs ? "eb-garamond" then [ pkgs."eb-garamond" ] else []) ++
+    (if pkgs ? "libre-baskerville" then [ pkgs."libre-baskerville" ] else []) ++
+    (if pkgs ? "oldstandard" then [ pkgs."oldstandard" ] else []) ++
+    (if pkgs ? "junicode" then [ pkgs."junicode" ] else []) ++
+    (if pkgs ? "inter" then [ pkgs."inter" ] else []) ++
+    (if pkgs ? "source-sans" then [ pkgs."source-sans" ] else []);
+
   generatePlateScript = pkgs.writeShellScriptBin "generate-font-plate" ''
     set -euo pipefail
 
@@ -152,6 +161,8 @@ in
   options.my.printing = {
     enable = lib.mkEnableOption "3D printing tools";
 
+    fonts.enable = lib.mkEnableOption "Install slicer-safe emboss fonts";
+
     repairTools = lib.mkEnableOption "SVG/STL repair & text preparation tools";
 
     generateTestArtifacts = lib.mkEnableOption ''
@@ -183,6 +194,8 @@ in
         generatePlateScript
         generateKeychainsScript
       ];
+
+    fonts.packages = lib.mkIf cfg.fonts.enable fontPkgs;
 
     # Symlink orca-settings repo as OrcaSlicer user config (runs after each rebuild).
     # No-op if the repo hasn't been cloned yet.
