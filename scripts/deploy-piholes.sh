@@ -27,6 +27,10 @@ declare -A PI_DNS
 PI_DNS[pihole01]="192.168.10.10"
 PI_DNS[pihole02]="192.168.10.11"
 
+declare -A PI_DNS_RETRIES
+PI_DNS_RETRIES[pihole01]=5
+PI_DNS_RETRIES[pihole02]=15
+
 PIHOLES=("pihole01" "pihole02")
 
 log()  { echo -e "${BLUE}[$(date +%H:%M:%S)]${NC} $*"; }
@@ -88,11 +92,12 @@ verify_pi() {
     fi
 
     local dns_ok=false
-    for i in 1 2 3 4 5; do
+    local max_retries=${PI_DNS_RETRIES[$name]}
+    for i in $(seq 1 "$max_retries"); do
         if dig "@${dns_ip}" google.com +short +time=5 +tries=1 >/dev/null 2>&1; then
             dns_ok=true; break
         fi
-        [[ $i -lt 5 ]] && { warn "DNS not ready yet, retrying (${i}/5)..."; sleep 3; }
+        [[ $i -lt $max_retries ]] && { warn "DNS not ready yet, retrying (${i}/${max_retries})..."; sleep 5; }
     done
     if $dns_ok; then
         ok "DNS responding on ${dns_ip}"
@@ -118,7 +123,7 @@ deploy_pi() {
     echo ""
     log "━━━ Deploying ${name} (build: ${BUILD_HOST}) ━━━"
 
-    if nixos-rebuild switch \
+    if echo "$SUDO_PASS" | nixos-rebuild switch \
         --flake "${FLAKE_DIR}#${name}" \
         --target-host "$ssh_target" \
         --build-host "${BUILD_HOST}" \
@@ -138,6 +143,10 @@ echo -e "${BLUE}Flake: ${FLAKE_DIR}${NC}"
 echo ""
 
 verify_build_host
+
+# Prompt once before any building begins
+read -rs -p "Sudo password for Pi-holes: " SUDO_PASS
+echo ""
 
 for pi in "${TARGET[@]}"; do
     deploy_pi "$pi" || {
