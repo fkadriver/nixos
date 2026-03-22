@@ -1,7 +1,6 @@
 { inputs, ... }@flakeContext:
 let
   homeModule = { config, lib, pkgs, ... }: {
-    imports = [ ../home-modules/freecad.nix ];
     config = {
       home = {
         username = "scott";

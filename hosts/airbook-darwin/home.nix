@@ -14,8 +14,6 @@ let
   borgEnv  = ''BORG_RSH="ssh -i $HOME/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new" BORG_PASSCOMMAND="${borgPassCmd}" BORG_REMOTE_PATH=/nix/var/nix/profiles/nas01/bin/borg'';
 in
 {
-  imports = [ ../../home-modules/freecad.nix ];
-
   home = {
     username = "scott";
     homeDirectory = "/Users/scott";

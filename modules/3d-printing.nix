@@ -4,26 +4,6 @@
 let
   cfg = config.my.printing;
 
-  # Some font package names can vary across nixpkgs revisions. Only include those that exist.
-  fontPkgs =
-    (if pkgs ? "eb-garamond" then [ pkgs."eb-garamond" ] else []) ++
-    (if pkgs ? "libre-baskerville" then [ pkgs."libre-baskerville" ] else []) ++
-    (if pkgs ? "oldstandard" then [ pkgs."oldstandard" ] else []) ++
-    (if pkgs ? "junicode" then [ pkgs."junicode" ] else []) ++
-    (if pkgs ? "inter" then [ pkgs."inter" ] else []) ++
-    (if pkgs ? "source-sans" then [ pkgs."source-sans" ] else []);
-
-  # Build a single directory containing symlinks to all printable font files.
-  # This makes FreeCAD Draft→ShapeString much easier than browsing /nix/store.
-  freecadFontDir = pkgs.runCommand "freecad-print-fonts" {} ''
-    mkdir -p "$out"
-    for pkg in ${lib.concatStringsSep " " fontPkgs}; do
-      if [ -d "$pkg/share/fonts" ]; then
-        find "$pkg/share/fonts" -type f \( -name "*.ttf" -o -name "*.otf" \) -exec ln -s {} "$out" \;
-      fi
-    done
-  '';
-
   generatePlateScript = pkgs.writeShellScriptBin "generate-font-plate" ''
     set -euo pipefail
 
@@ -172,8 +152,6 @@ in
   options.my.printing = {
     enable = lib.mkEnableOption "3D printing tools";
 
-    fonts.enable = lib.mkEnableOption "Install slicer-safe emboss fonts + provide /etc/freecad/fonts";
-
     repairTools = lib.mkEnableOption "SVG/STL repair & text preparation tools";
 
     generateTestArtifacts = lib.mkEnableOption ''
@@ -205,12 +183,6 @@ in
         generatePlateScript
         generateKeychainsScript
       ];
-
-    # Install slicer-safe emboss fonts (optional)
-    fonts.packages = lib.mkIf cfg.fonts.enable fontPkgs;
-
-    # Provide a stable directory for FreeCAD ShapeString font browsing
-    environment.etc."freecad/fonts".source = lib.mkIf cfg.fonts.enable freecadFontDir;
 
     # Symlink orca-settings repo as OrcaSlicer user config (runs after each rebuild).
     # No-op if the repo hasn't been cloned yet.
