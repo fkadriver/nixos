@@ -13,6 +13,16 @@ let
     (if pkgs ? "inter" then [ pkgs."inter" ] else []) ++
     (if pkgs ? "source-sans" then [ pkgs."source-sans" ] else []);
 
+  # Single directory of symlinks for FreeCAD Draft→ShapeString font browsing.
+  freecadFontDir = pkgs.runCommand "freecad-print-fonts" {} ''
+    mkdir -p "$out"
+    for pkg in ${lib.concatStringsSep " " fontPkgs}; do
+      if [ -d "$pkg/share/fonts" ]; then
+        find "$pkg/share/fonts" -type f \( -name "*.ttf" -o -name "*.otf" \) -exec ln -s {} "$out" \;
+      fi
+    done
+  '';
+
   generatePlateScript = pkgs.writeShellScriptBin "generate-font-plate" ''
     set -euo pipefail
 
@@ -196,6 +206,9 @@ in
       ];
 
     fonts.packages = lib.mkIf cfg.fonts.enable fontPkgs;
+
+    # Stable path for FreeCAD Draft→ShapeString font browsing
+    environment.etc."freecad/fonts".source = lib.mkIf cfg.fonts.enable freecadFontDir;
 
     # Symlink orca-settings repo as OrcaSlicer user config (runs after each rebuild).
     # No-op if the repo hasn't been cloned yet.
