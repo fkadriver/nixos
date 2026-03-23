@@ -86,6 +86,7 @@ let
 
         # Utilities
         "caffeine"         # Prevent Mac from sleeping (menubar app)
+        "rustdesk"         # Remote desktop to latitude (via Tailscale)
       ];
     };
 

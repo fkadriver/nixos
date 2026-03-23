@@ -45,6 +45,25 @@ let
           StrictHostKeyChecking no
       '';
 
+      # RustDesk remote desktop - Tailscale-only access from airbook
+      environment.systemPackages = [ pkgs.rustdesk ];
+
+      # Only allow RustDesk ports on the Tailscale interface
+      networking.firewall.interfaces."tailscale0".allowedTCPPortRanges = [
+        { from = 21115; to = 21119; }
+      ];
+      networking.firewall.interfaces."tailscale0".allowedUDPPorts = [ 21116 ];
+
+      systemd.user.services.rustdesk = {
+        description = "RustDesk Remote Desktop daemon";
+        wantedBy = [ "graphical-session.target" ];
+        after = [ "graphical-session.target" ];
+        serviceConfig = {
+          ExecStart = "${pkgs.rustdesk}/bin/rustdesk --service";
+          Restart = "on-failure";
+        };
+      };
+
       system = {
         stateVersion = "25.11";
       };
