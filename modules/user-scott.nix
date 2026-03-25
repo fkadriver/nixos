@@ -72,7 +72,7 @@
 
         # GitHub
         Host github.com
-          IdentityFile ~/.ssh/id_ed25519
+          IdentityFile ~/.ssh/id_ed25519_legacy
           IdentitiesOnly yes
 
         # Legacy systems
