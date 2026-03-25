@@ -99,7 +99,7 @@ EOF
       # Passphrase comes from bitwarden-scott.nix -> /run/bitwarden-secrets/borg_passphrase
       services.borg-backup = {
         enable = true;
-        repository = "ssh://scott@nas01.warthog-royal.ts.net/pool/borg/repos/vm01";
+        repository = "ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18t_3/borg/vm01";
         paths = [ "/home" "/mnt/immich" ];
         encryption.passphraseFile = "/run/bitwarden-secrets/borg_passphrase";
         sshKeyFile = "/home/scott/.ssh/id_ed25519_legacy";

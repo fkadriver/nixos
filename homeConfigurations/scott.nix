@@ -99,7 +99,7 @@ slap = "tailscale ssh latitude";
             tk = "tmux kill-session -t";
 
             # Borg backup - server-side repo overview (run on nas01)
-            borg-repos = ''echo "=== Borg Repos ===" && for repo in /pool/borg/repos/*/; do host=$(basename "$repo"); last=$(sudo env BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" borg list --last 1 --format "{time}" "$repo" 2>/dev/null); printf "%-20s %s\n" "$host" "''${last:-no archives}"; done'';
+            borg-repos = ''echo "=== Borg Repos ===" && for repo in /mnt/wd18t_3/borg/*/; do host=$(basename "$repo"); last=$(sudo env BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" borg list --last 1 --format "{time}" "$repo" 2>/dev/null); printf "%-20s %s\n" "$host" "''${last:-no archives}"; done'';
 
             # Borg backup - service management
             borg-status = "sudo systemctl status borgbackup-job-system.service";
@@ -108,10 +108,10 @@ slap = "tailscale ssh latitude";
             borg-run    = "sudo systemctl start borgbackup-job-system.service";
 
             # Borg backup - repository operations (passphrase from bitwarden, legacy SSH key)
-            borg-list   = ''sudo env BORG_RSH="ssh -i /home/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new" BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" BORG_REMOTE_PATH=/nix/var/nix/profiles/nas01/bin/borg borg list ssh://scott@nas01.warthog-royal.ts.net/pool/borg/repos/$(hostname)'';
-            borg-info   = ''sudo env BORG_RSH="ssh -i /home/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new" BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" BORG_REMOTE_PATH=/nix/var/nix/profiles/nas01/bin/borg borg info ssh://scott@nas01.warthog-royal.ts.net/pool/borg/repos/$(hostname)'';
-            borg-check  = ''sudo env BORG_RSH="ssh -i /home/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new" BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" BORG_REMOTE_PATH=/nix/var/nix/profiles/nas01/bin/borg borg check ssh://scott@nas01.warthog-royal.ts.net/pool/borg/repos/$(hostname)'';
-            borg-unlock = ''sudo env BORG_RSH="ssh -i /home/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new" BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" BORG_REMOTE_PATH=/nix/var/nix/profiles/nas01/bin/borg borg break-lock ssh://scott@nas01.warthog-royal.ts.net/pool/borg/repos/$(hostname)'';
+            borg-list   = ''sudo env BORG_RSH="ssh -i /home/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new" BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" BORG_REMOTE_PATH=/nix/var/nix/profiles/nas01/bin/borg borg list ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18t_3/borg/$(hostname)'';
+            borg-info   = ''sudo env BORG_RSH="ssh -i /home/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new" BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" BORG_REMOTE_PATH=/nix/var/nix/profiles/nas01/bin/borg borg info ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18t_3/borg/$(hostname)'';
+            borg-check  = ''sudo env BORG_RSH="ssh -i /home/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new" BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" BORG_REMOTE_PATH=/nix/var/nix/profiles/nas01/bin/borg borg check ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18t_3/borg/$(hostname)'';
+            borg-unlock = ''sudo env BORG_RSH="ssh -i /home/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new" BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" BORG_REMOTE_PATH=/nix/var/nix/profiles/nas01/bin/borg borg break-lock ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18t_3/borg/$(hostname)'';
 
             # Temperature monitoring
             temps = "echo '=== CPU Temps ===' && sensors 2>/dev/null || echo '(run: sudo sensors-detect)'; echo ''; echo '=== Drive Temps ===' && for d in /dev/sd?; do echo -n \"$d: \"; sudo hddtemp $d 2>/dev/null || sudo smartctl -A $d | grep -i 'temperature\\|194'; done";

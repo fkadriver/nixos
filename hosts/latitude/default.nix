@@ -20,7 +20,7 @@ let
       # Borg backup to nas01
       services.borg-backup = {
         enable = true;
-        repository = "ssh://scott@nas01.warthog-royal.ts.net/pool/borg/repos/latitude";
+        repository = "ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18t_3/borg/latitude";
         encryption.passphraseFile = "/etc/borg-passphrase";
         sshKeyFile = "/home/scott/.ssh/id_ed25519_legacy";
       };
