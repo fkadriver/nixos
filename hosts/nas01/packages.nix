@@ -19,6 +19,9 @@ pkgs.buildEnv {
     rsync             # Data migration (btrfs → ZFS)
     smartmontools     # Drive health monitoring (smartctl)
     hdparm            # Drive identification and management
+    hddtemp           # Hard drive temperature monitoring
+    lm_sensors        # CPU/board temperature sensors (sensors command)
+    btop              # TUI system monitor with CPU temps
     lsof              # Open file/socket inspection
     ncdu              # Disk usage analyzer
     htop              # System monitoring
