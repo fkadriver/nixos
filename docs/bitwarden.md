@@ -350,10 +350,54 @@ sudo nixos-rebuild switch --flake .#newmachine
 
 ### SSH Keys
 
+To replace an SSH key stored as a **SSH Key type item** (type 5) in Bitwarden:
+
 ```bash
-# Update key in Bitwarden, then rebuild
+# 1. Unlock vault
+export BW_SESSION=$(bw unlock --raw)
+bw sync
+
+# 2. Generate a new key (or skip if reusing an existing one)
+ssh-keygen -t ed25519 -C "scott@hostname" -f /tmp/new_ssh_key
+
+# 3. Inspect the item to confirm its structure
+bw get item <item-id> | jq '{type, notes, sshKey}'
+
+# 4. Update the item (SSH Key type — has sshKey.privateKey)
+NEW_PRIV=$(cat /tmp/new_ssh_key)
+NEW_PUB=$(cat /tmp/new_ssh_key.pub)
+FINGERPRINT=$(ssh-keygen -lf /tmp/new_ssh_key.pub | awk '{print $2}')
+
+bw get item <item-id> \
+  | jq --arg priv "$NEW_PRIV" --arg pub "$NEW_PUB" --arg fp "$FINGERPRINT" \
+      '.sshKey.privateKey = $priv | .sshKey.publicKey = $pub | .sshKey.keyFingerprint = $fp' \
+  | bw encode \
+  | bw edit item <item-id>
+
+# 4. (Alternative) Update the item (Secure Note type — key stored in notes)
+NEW_PRIV=$(cat /tmp/new_ssh_key)
+bw get item <item-id> \
+  | jq --arg key "$NEW_PRIV" '.notes = $key' \
+  | bw encode \
+  | bw edit item <item-id>
+
+# 5. Clean up temp files
+rm -f /tmp/new_ssh_key /tmp/new_ssh_key.pub
+
+# 6. Redeploy — activation script re-fetches keys from Bitwarden
 sudo nixos-rebuild switch --flake .#hostname
 ```
+
+**Known SSH Key Item IDs** (from `modules/bitwarden-scott.nix`):
+
+| Key Name | BW Item ID | BW Item Name |
+|----------|-----------|--------------|
+| `id_ed25519_github` | `4eb21873-7ca7-4114-9b0e-b3c90164bc7e` | github ssh |
+| `id_ed25519_legacy` | `40b6efe1-5699-46a1-875f-b39800fd3105` | scott (ssh-ed25519) |
+| `opnsense_admin_ed25519` | `21397fb4-104e-4528-90ef-b3ce00fe7c43` | opnsense ssh |
+
+After updating `id_ed25519_github`, also register the new public key at
+**github.com → Settings → SSH and GPG keys → New SSH key**.
 
 ### Service Secrets
 
