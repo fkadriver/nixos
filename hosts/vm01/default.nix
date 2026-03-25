@@ -44,6 +44,10 @@ let
           StrictHostKeyChecking no
       '';
 
+      # Start ssh-agent as a systemd user socket service.
+      # AddKeysToAgent yes (in user-scott.nix) auto-adds keys on first use.
+      programs.ssh.startAgent = true;
+
       networking = {
         hostName = "vm01";
         networkmanager.enable = true;
