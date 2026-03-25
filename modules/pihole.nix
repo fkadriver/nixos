@@ -179,6 +179,8 @@
       192.168.10.21 unifi
       192.168.1.2   sw01  # HP1920
       192.168.1.3   sw02  # TL-SG108E
+      192.168.11.50 LBP162  # Canon LBP
+      192.168.11.51 Ender3V3KE   # Creality Ender-3 KEv3
     '';
 
     # Pi-hole FTL daemon
@@ -219,6 +221,7 @@
             "true,192.168.11.0/24,192.168.11.1"
             "true,192.168.20.0/24,192.168.20.1"
             "true,192.168.21.0/24,192.168.21.1"
+            "true,192.168.30.0/24,192.168.30.1"
           ];
           specialDomains = {
             # Block iCloud Private Relay to prevent Apple devices bypassing Pi-hole
