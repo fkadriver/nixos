@@ -83,7 +83,7 @@ slap = "tailscale ssh latitude";
             nix-shell-python = "nix-shell -p python3 python3Packages.pip";
 
             # NixOS system shortcuts with automatic hostname detection
-            nix-apply = "cd ~/git/nixos && git pull && sudo ./hosts/nas01/apply.sh; cd -";
+            nix-apply = "cd ~/git/nixos && git pull && sudo ./hosts/nas01/apply.sh; cd -; source ~/.bashrc";
             nos-rebuild = "sudo nixos-rebuild switch --flake .";
             nos-test = "sudo nixos-rebuild test --flake .";
             nos-boot = "sudo nixos-rebuild boot --flake .";
