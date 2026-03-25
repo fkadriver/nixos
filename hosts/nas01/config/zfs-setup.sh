@@ -13,12 +13,17 @@
 #
 # Step 2: Fill in the DISK variables below, then run this script.
 
+
+# /dev/sdb: UUID="22fad4b1-2592-4407-b93d-03efd7a72291" UUID_SUB="9aba248d-4eb8-4892-86ff-c6062291c498" BLOCK_SIZE="4096" TYPE="btrfs"
+# /dev/sdc: UUID="22fad4b1-2592-4407-b93d-03efd7a72291" UUID_SUB="9bb326ef-f66c-4341-8eaa-f8a580d36ba9" BLOCK_SIZE="4096" TYPE="btrfs"
+# /dev/sde: UUID="22fad4b1-2592-4407-b93d-03efd7a72291" UUID_SUB="6f3e4a49-92c8-474d-8fb4-c8cf472a0c52" BLOCK_SIZE="4096" TYPE="btrfs"
+
 set -euo pipefail
 
 # TODO: Replace these with actual disk IDs from: ls /dev/disk/by-id/
-DISK1="/dev/disk/by-id/REPLACE_WITH_DISK1_ID"
-DISK2="/dev/disk/by-id/REPLACE_WITH_DISK2_ID"
-DISK3="/dev/disk/by-id/REPLACE_WITH_DISK3_ID"
+DISK1="/dev/disk/by-id/aba248d-4eb8-4892-86ff-c6062291c498"
+DISK2="/dev/disk/by-id/9bb326ef-f66c-4341-8eaa-f8a580d36ba9"
+DISK3="/dev/disk/by-id/6f3e4a49-92c8-474d-8fb4-c8cf472a0c52"
 
 POOL_NAME="pool"
 POOL_MOUNT="/pool"
