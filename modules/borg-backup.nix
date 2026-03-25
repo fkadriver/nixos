@@ -118,6 +118,7 @@ in
           else null;
       };
       environment = mkMerge [
+        { BORG_RELOCATED_REPO_ACCESS_IS_OK = "yes"; }
         (mkIf (cfg.sshKeyFile != null) {
           BORG_RSH = "ssh -i ${cfg.sshKeyFile} -o StrictHostKeyChecking=accept-new";
         })
