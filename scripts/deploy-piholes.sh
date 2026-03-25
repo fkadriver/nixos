@@ -123,11 +123,11 @@ deploy_pi() {
     echo ""
     log "━━━ Deploying ${name} (build: ${BUILD_HOST}) ━━━"
 
-    if echo "$SUDO_PASS" | nixos-rebuild switch \
+    if nixos-rebuild switch \
         --flake "${FLAKE_DIR}#${name}" \
         --target-host "$ssh_target" \
         --build-host "${BUILD_HOST}" \
-        --sudo --ask-sudo-password; then
+        --sudo; then
         ok "nixos-rebuild switch completed"
     else
         fail "nixos-rebuild switch failed for ${name}"
@@ -144,16 +144,12 @@ echo ""
 
 verify_build_host
 
-# Prompt once before any building begins
-read -rs -p "Sudo password for Pi-holes: " SUDO_PASS
-echo ""
-
 for pi in "${TARGET[@]}"; do
     deploy_pi "$pi" || {
         echo ""
         echo -e "${RED}Deployment failed on ${pi} — stopping.${NC}"
         echo "Fix the issue and re-run, or deploy individually:"
-        echo "  nixos-rebuild switch --flake .#${pi} --target-host scott@${pi} --build-host ${BUILD_HOST} --sudo --ask-sudo-password"
+        echo "  nixos-rebuild switch --flake .#${pi} --target-host scott@${pi} --build-host ${BUILD_HOST} --sudo"
         exit 1
     }
 done

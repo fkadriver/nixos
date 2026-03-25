@@ -11,6 +11,7 @@ let
       inputs.self.nixosModules.user-scott
       inputs.self.nixosModules.virtualbox
       inputs.self.nixosModules.pi-builder
+      inputs.self.nixosModules.distributed-builds
     ];
     config = {
       networking = {

@@ -12,6 +12,7 @@ let
       inputs.self.nixosModules.vscode-server
       inputs.self.nixosModules.user-scott
       inputs.self.nixosModules.pi-builder
+      inputs.self.nixosModules.distributed-builds
     ];
 
     config = {
