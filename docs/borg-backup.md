@@ -103,7 +103,7 @@ sudo env \
   BORG_RSH="ssh -i /home/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new" \
   BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" \
   borg init --encryption=repokey-blake2 --remote-path=/nix/var/nix/profiles/nas01/bin/borg \
-  ssh://scott@nas01.warthog-royal.ts.net/pool/borg/repos/$(hostname)
+  ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18t_3/borg/repos/$(hostname)
 ```
 
 `--remote-path=/nix/var/nix/profiles/nas01/bin/borg` is required because borg is installed via the
@@ -116,7 +116,7 @@ sudo env \
   BORG_RSH="ssh -i /home/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new" \
   BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" \
   borg key export --remote-path=/nix/var/nix/profiles/nas01/bin/borg \
-  ssh://scott@nas01.warthog-royal.ts.net/pool/borg/repos/$(hostname) \
+  ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18t_3/borg/repos/$(hostname) \
   ~/borg-key-$(hostname).txt
 
 sudo cat ~/borg-key-$(hostname).txt
@@ -160,7 +160,7 @@ The `borg-list`, `borg-info`, `borg-check`, and `borg-unlock` aliases automatica
 export BORG_RSH="ssh -i /home/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new"
 export BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase"
 export BORG_REMOTE_PATH=/nix/var/nix/profiles/nas01/bin/borg
-REPO="ssh://scott@nas01.warthog-royal.ts.net/pool/borg/repos/$(hostname)"
+REPO="ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18t_3/borg/repos/$(hostname)"
 
 # List archives
 sudo -E borg list "$REPO"
@@ -184,7 +184,7 @@ export BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase"
 
 sudo mkdir -p /mnt/borg
 sudo -E borg mount --remote-path=/nix/var/nix/profiles/nas01/bin/borg \
-  ssh://scott@nas01.warthog-royal.ts.net/pool/borg/repos/$(hostname) \
+  ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18t_3/borg/repos/$(hostname) \
   /mnt/borg
 
 ls /mnt/borg
@@ -225,7 +225,7 @@ borg-unlock
 ### Reset a corrupted repo on nas01
 
 ```bash
-ssh scott@nas01.warthog-royal.ts.net 'rm -rf /pool/borg/repos/<hostname>'
+ssh scott@nas01.warthog-royal.ts.net 'rm -rf /mnt/wd18t_3/borg/repos/<hostname>'
 # Then re-run Step 4 above
 ```
 
