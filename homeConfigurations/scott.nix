@@ -23,105 +23,86 @@ let
             "checkjobs"
           ];
           shellAliases = {
-            k = "kubectl";
-            urldecode = "python3 -c 'import sys, urllib.parse as ul; print(ul.unquote_plus(sys.stdin.read()))'";
-            urlencode = "python3 -c 'import sys, urllib.parse as ul; print(ul.quote_plus(sys.stdin.read()))'";
-
             # Basic
             wtf = "alias";
             clr = "clear";
+            urldecode = "python3 -c 'import sys, urllib.parse as ul; print(ul.unquote_plus(sys.stdin.read()))'";
+            urlencode = "python3 -c 'import sys, urllib.parse as ul; print(ul.quote_plus(sys.stdin.read()))'";
 
             # Docker one-liners
             cyberchef = "docker run -d -p 8080:8080 humangod/cyberchef";
 
-            # Tailscale SSH shortcuts
-            airbook = "tailscale ssh airbook";
-            nas01 = "tailscale ssh nas01";
-            log01 = "tailscale ssh sands-log01";
+            # Tailscale SSH to other hosts
+            airbook  = "tailscale ssh airbook";
+            latitude = "tailscale ssh latitude";
+            vm01     = "tailscale ssh vm01";
             pihole01 = "tailscale ssh pihole01";
             pihole02 = "tailscale ssh pihole02";
-slap = "tailscale ssh latitude";
-            vm01 = "tailscale ssh vm01";
+            log01    = "tailscale ssh sands-log01";
 
             # Tailscale troubleshooting
-            ts-status = "tailscale status";
-            ts-up = "sudo tailscale up";
-            ts-down = "sudo tailscale down";
+            ts-status  = "tailscale status";
+            ts-up      = "sudo tailscale up";
+            ts-down    = "sudo tailscale down";
             ts-netcheck = "tailscale netcheck";
-            ts-ip = "tailscale ip";
-            ts-peers = "tailscale status --peers";
-            ts-self = "tailscale status --self";
-            ts-debug = "tailscale debug";
+            ts-ip      = "tailscale ip";
+            ts-peers   = "tailscale status --peers";
+            ts-self    = "tailscale status --self";
+            ts-debug   = "tailscale debug";
 
             # Grep with color
             gpc = "grep --color=always";
 
             # Git shortcuts
-            g = "git";
-            gs = "git status";
-            ga = "git add";
+            g   = "git";
+            gs  = "git status";
+            ga  = "git add";
             gaa = "git add -A";
-            gc = "git commit";
+            gc  = "git commit";
             gcm = "git commit -m";
-            gp = "git push";
+            gp  = "git push";
             gpl = "git pull";
-            gd = "git diff";
+            gd  = "git diff";
             gdc = "git diff --cached";
-            gl = "git log --oneline --graph --decorate";
+            gl  = "git log --oneline --graph --decorate";
             gla = "git log --oneline --graph --decorate --all";
             gco = "git checkout";
-            gb = "git branch";
+            gb  = "git branch";
             gba = "git branch -a";
-            gf = "git fetch";
-            gr = "git restore";
+            gf  = "git fetch";
+            gr  = "git restore";
             grs = "git restore --staged";
 
-            # Nix shortcuts
-            nix-build-test = "nix flake check";
+            # Nix shortcuts (nas01 uses Nix for package management)
+            nix-apply  = "cd ~/git/nixos && git pull && sudo ./hosts/nas01/apply.sh; cd -; source ~/.bashrc";
             nix-update = "nix flake update";
             nix-search = "nix search nixpkgs";
-            nix-shell-python = "nix-shell -p python3 python3Packages.pip";
-
-            # NixOS system shortcuts with automatic hostname detection
-            nix-apply = "cd ~/git/nixos && git pull && sudo ./hosts/nas01/apply.sh; cd -; source ~/.bashrc";
-            nos-rebuild = "sudo nixos-rebuild switch --flake .";
-            nos-test = "sudo nixos-rebuild test --flake .";
-            nos-boot = "sudo nixos-rebuild boot --flake .";
-            nos-clean = "sudo nix-collect-garbage -d";
-            nos-optimize = "sudo nix-store --optimize";
-            nos-list-gens = "sudo nix-env --list-generations --profile /nix/var/nix/profiles/system";
 
             # Tmux shortcuts
-            t = "tmux attach-session -t default 2>/dev/null || tmux new-session -s default";
+            t   = "tmux attach-session -t default 2>/dev/null || tmux new-session -s default";
             tls = "tmux list-sessions";
-            tn = "tmux new-session -s";
-            ta = "tmux attach-session -t";
-            tk = "tmux kill-session -t";
+            tn  = "tmux new-session -s";
+            ta  = "tmux attach-session -t";
+            tk  = "tmux kill-session -t";
 
-            # Borg backup - server-side repo overview (run on nas01)
-            # borg-repos: show all repos and their last backup time (will prompt passphrase per repo)
+            # Borg server-side aliases (repos are local on nas01)
+            # borg-repos: overview of all repos with last backup time
             borg-repos  = ''echo "=== Borg Repos ===" && for repo in /mnt/wd18t_3/borg/repos/*/; do host=$(basename "$repo"); last=$(sudo /nix/var/nix/profiles/nas01/bin/borg list --last 1 --format "{time}" "$repo" 2>/dev/null); printf "%-20s %s\n" "$host" "''${last:-no archives}"; done'';
-            # borg-ls <host>: list archives for a repo  e.g. borg-ls latitude
+            # borg-ls <host>:     list archives    e.g. borg-ls latitude
             borg-ls     = "sudo /nix/var/nix/profiles/nas01/bin/borg list /mnt/wd18t_3/borg/repos/";
-            # borg-check <host>: verify repo integrity  e.g. borg-check latitude
+            # borg-check <host>:  verify integrity  e.g. borg-check vm01
             borg-check  = "sudo /nix/var/nix/profiles/nas01/bin/borg check /mnt/wd18t_3/borg/repos/";
-            # borg-unlock <host>: break stale lock      e.g. borg-unlock latitude
+            # borg-unlock <host>: break stale lock  e.g. borg-unlock latitude
             borg-unlock = "sudo /nix/var/nix/profiles/nas01/bin/borg break-lock /mnt/wd18t_3/borg/repos/";
-
-            # Borg backup - service management
-            borg-status = "sudo systemctl status borgbackup-job-system.service";
-            borg-logs   = "sudo journalctl -u borgbackup-job-system.service -n 50";
-            borg-timer  = "systemctl list-timers | grep borg";
-            borg-run    = "sudo systemctl start borgbackup-job-system.service";
 
             # Temperature monitoring
             temps = "echo '=== CPU Temps ===' && sensors 2>/dev/null || echo '(run: sudo sensors-detect)'; echo ''; echo '=== Drive Temps ===' && for d in /dev/sd?; do echo -n \"$d: \"; sudo hddtemp $d 2>/dev/null || sudo smartctl -A $d | grep -i 'temperature\\|194'; done";
 
             # Common utilities
-            ll = "ls -lah";
-            la = "ls -A";
-            l = "ls -CF";
-            ".." = "cd ..";
+            ll    = "ls -lah";
+            la    = "ls -A";
+            l     = "ls -CF";
+            ".."  = "cd ..";
             "..." = "cd ../..";
             "...." = "cd ../../..";
           };
