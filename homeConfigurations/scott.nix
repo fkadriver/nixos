@@ -88,12 +88,6 @@ let
             # Borg server-side aliases (repos are local on nas01)
             # borg-repos: overview of all repos with last backup time (no passphrase needed)
             borg-repos  = ''echo "=== Borg Repos ===" && for repo in /mnt/wd18t_3/borg/repos/*/; do host=$(basename "$repo"); last=$(stat -c "%y" "''${repo}"index.* 2>/dev/null | sort | tail -1 | cut -d'.' -f1); size=$(du -sh "''${repo}" 2>/dev/null | cut -f1); printf "%-20s %-8s %s\n" "$host" "''${size:--}" "''${last:-no backups}"; done'';
-            # borg-ls <host>:     list archives    e.g. borg-ls latitude
-            borg-ls     = "sudo /nix/var/nix/profiles/nas01/bin/borg list /mnt/wd18t_3/borg/repos/";
-            # borg-check <host>:  verify integrity  e.g. borg-check vm01
-            borg-check  = "sudo /nix/var/nix/profiles/nas01/bin/borg check /mnt/wd18t_3/borg/repos/";
-            # borg-unlock <host>: break stale lock  e.g. borg-unlock latitude
-            borg-unlock = "sudo /nix/var/nix/profiles/nas01/bin/borg break-lock /mnt/wd18t_3/borg/repos/";
 
             # Temperature monitoring
             temps = "echo '=== CPU Temps ===' && sensors 2>/dev/null || echo '(run: sudo sensors-detect)'; echo ''; echo '=== Drive Temps ===' && for d in /dev/sd?; do echo -n \"$d: \"; sudo hddtemp $d 2>/dev/null || sudo smartctl -A $d | grep -i 'temperature\\|194'; done";
@@ -108,6 +102,14 @@ let
           };
           initExtra = ''
             export PATH="$PATH:$HOME/bin:$HOME/.local/bin:$HOME/go/bin:/nix/var/nix/profiles/nas01/bin"
+
+            # Borg functions (need hostname arg since we're on the server)
+            # Usage: borg-ls latitude | borg-check vm01 | borg-unlock airbook-darwin
+            BORG_BIN=/nix/var/nix/profiles/nas01/bin/borg
+            BORG_REPOS=/mnt/wd18t_3/borg/repos
+            borg-ls()     { sudo "$BORG_BIN" list     "$BORG_REPOS/$1"; }
+            borg-check()  { sudo "$BORG_BIN" check    "$BORG_REPOS/$1"; }
+            borg-unlock() { sudo "$BORG_BIN" break-lock "$BORG_REPOS/$1"; }
           '';
         };
         direnv = {
