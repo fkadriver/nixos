@@ -86,8 +86,8 @@ let
             tk  = "tmux kill-session -t";
 
             # Borg server-side aliases (repos are local on nas01)
-            # borg-repos: overview of all repos with last backup time
-            borg-repos  = ''echo "=== Borg Repos ===" && for repo in /mnt/wd18t_3/borg/repos/*/; do host=$(basename "$repo"); last=$(sudo /nix/var/nix/profiles/nas01/bin/borg list --last 1 --format "{time}" "$repo" 2>/dev/null); printf "%-20s %s\n" "$host" "''${last:-no archives}"; done'';
+            # borg-repos: overview of all repos with last backup time (no passphrase needed)
+            borg-repos  = ''echo "=== Borg Repos ===" && for repo in /mnt/wd18t_3/borg/repos/*/; do host=$(basename "$repo"); last=$(stat -c "%y" "''${repo}"index.* 2>/dev/null | sort | tail -1 | cut -d'.' -f1); size=$(du -sh "''${repo}" 2>/dev/null | cut -f1); printf "%-20s %-8s %s\n" "$host" "''${size:--}" "''${last:-no backups}"; done'';
             # borg-ls <host>:     list archives    e.g. borg-ls latitude
             borg-ls     = "sudo /nix/var/nix/profiles/nas01/bin/borg list /mnt/wd18t_3/borg/repos/";
             # borg-check <host>:  verify integrity  e.g. borg-check vm01
