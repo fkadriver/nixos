@@ -4,13 +4,13 @@
 #
 # Clients connect as 'scott' via SSH using Bitwarden-managed keys.
 # No separate borg user or forced command needed — trusted home network behind Tailscale.
-# Repos are stored directly on the WD 18TB drive at /mnt/wd18t_3/borg.
+# Repos are stored on the WD 18TB drive at /mnt/wd18t_3/borg/repos.
 #
 # See docs/borg-backup.md for full setup and client initialization steps.
 
 set -euo pipefail
 
-BORG_REPOS_DIR="/mnt/wd18t_3/borg"
+BORG_REPOS_DIR="/mnt/wd18t_3/borg/repos"
 
 echo "=== Borg Server Setup ==="
 

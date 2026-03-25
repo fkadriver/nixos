@@ -79,7 +79,7 @@ See [zfs-cheatsheet.md](zfs-cheatsheet.md) for ZFS commands reference.
 sudo bash ~/git/nixos/hosts/nas01/config/borg-server-setup.sh
 ```
 
-Creates `/mnt/wd18t_3/borg/{latitude,vm01,airbook-darwin}` with correct ownership.
+Creates `/mnt/wd18t_3/borg/repos/{latitude,vm01,airbook-darwin}` with correct ownership.
 
 ### 6. Set up sops age key (one-time, for SSH key deployment)
 
@@ -220,9 +220,9 @@ nas01 is the **backup server**. Clients connect via SSH as `scott` using `id_ed2
 
 | Client | Repo path |
 |---|---|
-| latitude | `/mnt/wd18t_3/borg/latitude` |
-| vm01 | `/mnt/wd18t_3/borg/vm01` |
-| airbook-darwin | `/mnt/wd18t_3/borg/airbook-darwin` |
+| latitude | `/mnt/wd18t_3/borg/repos/latitude` |
+| vm01 | `/mnt/wd18t_3/borg/repos/vm01` |
+| airbook-darwin | `/mnt/wd18t_3/borg/repos/airbook-darwin` |
 
 ### Useful aliases (run on nas01)
 
@@ -234,7 +234,7 @@ borg-repos      # List all repos with last backup timestamp
 
 ```bash
 sudo env BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" \
-    borg list /mnt/wd18t_3/borg/latitude
+    borg list /mnt/wd18t_3/borg/repos/latitude
 ```
 
 See [borg-backup.md](borg-backup.md) for client-side setup and full alias reference.

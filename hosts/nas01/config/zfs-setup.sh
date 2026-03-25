@@ -76,7 +76,7 @@ echo "Creating datasets..."
 # Main data dataset
 zfs create "${POOL_NAME}/data"
 
-# Note: Borg repos are on the WD 18TB drive at /mnt/wd18t_3/borg, not on this ZFS pool.
+# Note: Borg repos are on the WD 18TB drive at /mnt/wd18t_3/borg/repos, not on this ZFS pool.
 
 # Optional: separate dataset per use case for independent snapshots
 # zfs create "${POOL_NAME}/media"
@@ -88,7 +88,7 @@ zfs list "${POOL_NAME}"
 echo ""
 echo "=== Next Steps ==="
 echo "1. Set permissions:  chown -R scott:scott /pool/data"
-echo "2. Create borg dirs: mkdir -p /mnt/wd18t_3/borg/{latitude,vm01,airbook-darwin}"
+echo "2. Create borg dirs: mkdir -p /mnt/wd18t_3/borg/repos/{latitude,vm01,airbook-darwin}"
 echo "3. Run:              ./borg-server-setup.sh"
 echo "4. Enable scrub:     systemctl enable zfs-scrub-weekly@${POOL_NAME}.timer"
 echo ""

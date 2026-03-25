@@ -10,7 +10,7 @@ let
     /usr/local/bin/bw get item "91db7811-ddf1-49aa-8a42-b3d60188a6e6" \
       | ${pkgs.jq}/bin/jq -r '.login.password'
   '';
-  borgRepo = "ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18t_3/borg/airbook-darwin";
+  borgRepo = "ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18t_3/borg/repos/airbook-darwin";
   borgEnv  = ''BORG_RSH="ssh -i $HOME/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new" BORG_PASSCOMMAND="${borgPassCmd}" BORG_REMOTE_PATH=/nix/var/nix/profiles/nas01/bin/borg'';
 in
 {
