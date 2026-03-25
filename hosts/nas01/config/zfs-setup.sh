@@ -76,10 +76,7 @@ echo "Creating datasets..."
 # Main data dataset
 zfs create "${POOL_NAME}/data"
 
-# Borg backup repositories
-zfs create "${POOL_NAME}/borg"
-# Disable compression for borg (already compressed internally)
-zfs set compression=off "${POOL_NAME}/borg"
+# Note: Borg repos are on the WD 18TB drive at /mnt/wd18t_3/borg, not on this ZFS pool.
 
 # Optional: separate dataset per use case for independent snapshots
 # zfs create "${POOL_NAME}/media"
