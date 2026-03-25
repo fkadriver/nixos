@@ -99,7 +99,7 @@ slap = "tailscale ssh latitude";
             tk = "tmux kill-session -t";
 
             # Borg backup - server-side repo overview (run on nas01)
-            borg-repos = ''echo "=== Borg Repos ===" && for repo in /pool/borg/repos/*/; do host=$(basename "$repo"); last=$(sudo env BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" borg list --last 1 --format "{time}" "$repo" 2>/dev/null); printf "%-20s %s\n" "$host" "${last:-no archives}"; done'';
+            borg-repos = ''echo "=== Borg Repos ===" && for repo in /pool/borg/repos/*/; do host=$(basename "$repo"); last=$(sudo env BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" borg list --last 1 --format "{time}" "$repo" 2>/dev/null); printf "%-20s %s\n" "$host" "''${last:-no archives}"; done'';
 
             # Borg backup - service management
             borg-status = "sudo systemctl status borgbackup-job-system.service";
