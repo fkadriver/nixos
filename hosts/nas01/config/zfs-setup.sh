@@ -21,9 +21,9 @@
 set -euo pipefail
 
 # TODO: Replace these with actual disk IDs from: ls /dev/disk/by-id/
-DISK1="/dev/disk/by-id/AA7C1DDA-EB03-4537-B7DA-29DD260F4271"
-DISK2="/dev/disk/by-id/27963B6D-B198-4A39-874E-2FC2A57904BB"
-DISK3="/dev/disk/by-id/99659651-D9B3-405D-AE82-46B1CC972FAC"
+DISK1="/dev/disk/by-id/ata-HGST_HDS724040ALE640_PK1301PAJ2480X"  # sdb
+DISK2="/dev/disk/by-id/ata-HGST_HDS724040ALE640_PK2331PAJEL1NT"  # sdc
+DISK3="/dev/disk/by-id/ata-HGST_HDS724040ALE640_PK1301PAJ44X6S"  # sdd
 
 POOL_NAME="pool"
 POOL_MOUNT="/pool"
