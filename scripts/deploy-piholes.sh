@@ -54,7 +54,10 @@ done
 
 # Auto-select build host if not specified
 if [[ -z "$BUILD_HOST" ]]; then
-    if ssh -o ConnectTimeout=3 -o BatchMode=yes scott@vm01 true 2>/dev/null; then
+    if [[ "$(hostname)" == "vm01" ]]; then
+        # Running on vm01 itself — build locally (nixos-rebuild --build-host localhost skips SSH)
+        BUILD_HOST="localhost"
+    elif ssh -o ConnectTimeout=3 -o BatchMode=yes scott@vm01 true 2>/dev/null; then
         BUILD_HOST="scott@vm01"
     elif ssh -o ConnectTimeout=3 -o BatchMode=yes localhost true 2>/dev/null; then
         BUILD_HOST="localhost"
@@ -69,6 +72,10 @@ fi
 
 verify_build_host() {
     log "Verifying build host: ${BUILD_HOST}"
+    if [[ "$BUILD_HOST" == "localhost" ]]; then
+        ok "Build host is local machine"
+        return 0
+    fi
     if ssh -o ConnectTimeout=5 -o BatchMode=yes "${BUILD_HOST}" true 2>/dev/null; then
         ok "Build host ${BUILD_HOST} reachable"
     else
