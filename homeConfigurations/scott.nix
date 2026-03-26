@@ -224,7 +224,7 @@ let
         zdr   = "zfs destroy -r";
 
         # Temperature monitoring
-        temps = "echo '=== CPU Temps ===' && sensors 2>/dev/null || echo '(run: sudo sensors-detect)'; echo ''; echo '=== Drive Temps ===' && for d in /dev/sd?; do echo -n \"$d: \"; sudo /nix/var/nix/profiles/nas01/bin/hddtemp $d 2>/dev/null || sudo /nix/var/nix/profiles/nas01/bin/smartctl -A $d | grep -i 'temperature\\|194'; done";
+        temps = "echo '=== CPU Temps ===' && sensors 2>/dev/null || echo '(run: sudo sensors-detect)'; echo ''; echo '=== Drive Temps ===' && for d in /dev/sd?; do echo -n \"$d: \"; sudo /nix/var/nix/profiles/nas01/bin/hddtemp -u C $d 2>/dev/null || sudo /nix/var/nix/profiles/nas01/bin/smartctl -A $d | grep -i 'temperature\\|194'; done";
       };
       programs.bash.initExtra = ''
         export PATH="$PATH:$HOME/bin:$HOME/.local/bin:$HOME/go/bin:/nix/var/nix/profiles/nas01/bin"
