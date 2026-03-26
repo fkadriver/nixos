@@ -205,6 +205,24 @@ let
         # Borg server overview (no passphrase needed — uses filesystem timestamps)
         borg-repos = ''echo "=== Borg Repos ===" && for repo in /mnt/wd18t_3/borg/repos/*/; do host=$(basename "$repo"); last=$(stat -c "%y" "''${repo}"index.* 2>/dev/null | sort | tail -1 | cut -d'.' -f1); size=$(du -sh "''${repo}" 2>/dev/null | cut -f1); printf "%-20s %-8s %s\n" "$host" "''${size:--}" "''${last:-no backups}"; done'';
 
+        # ZFS status
+        zs    = "zpool status";
+        zsv   = "zpool status -v";
+        zpl   = "zpool list";
+
+        # ZFS list
+        zl    = "zfs list";
+        zla   = "zfs list -t all";
+        zls   = "zfs list -t snapshot";
+        zll   = "zfs list -o name,used,avail,refer,mountpoint";
+
+        # ZFS create (compression=lz4 by default)
+        zc    = "zfs create -o compression=lz4";
+
+        # ZFS destroy
+        zd    = "zfs destroy";
+        zdr   = "zfs destroy -r";
+
         # Temperature monitoring
         temps = "echo '=== CPU Temps ===' && sensors 2>/dev/null || echo '(run: sudo sensors-detect)'; echo ''; echo '=== Drive Temps ===' && for d in /dev/sd?; do echo -n \"$d: \"; sudo hddtemp $d 2>/dev/null || sudo smartctl -A $d | grep -i 'temperature\\|194'; done";
       };
