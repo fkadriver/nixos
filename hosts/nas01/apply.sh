@@ -116,6 +116,15 @@ else
     echo "  Then add the public key to .sops.yaml and re-encrypt: sops updatekeys secrets/secrets.yaml"
 fi
 
+# Allow hddtemp and smartctl without password (needed for drive temps in btop and temps alias)
+echo "Configuring sudoers for drive temperature tools..."
+cat > /etc/sudoers.d/drive-temps << 'EOF'
+# Allow drive temperature tools without password prompt
+scott ALL=(ALL) NOPASSWD: /nix/var/nix/profiles/nas01/bin/hddtemp
+scott ALL=(ALL) NOPASSWD: /nix/var/nix/profiles/nas01/bin/smartctl
+EOF
+chmod 440 /etc/sudoers.d/drive-temps
+
 # Samba config
 echo "Installing Samba config..."
 mkdir -p /etc/samba /var/log/samba /run/samba
