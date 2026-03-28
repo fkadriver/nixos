@@ -84,6 +84,14 @@ let
         # Gaming (from daily-driver.nix)
         "heroic"           # Epic, GOG, Amazon Prime games launcher
 
+        # Office and productivity
+        "libreoffice"
+        "thunderbird"
+
+        # 2D CAD
+        "librecad"
+        "qcad"
+
         # Utilities
         "caffeine"         # Prevent Mac from sleeping (menubar app)
         "rustdesk"         # Remote desktop to latitude (via Tailscale)
