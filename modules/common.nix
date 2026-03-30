@@ -25,7 +25,7 @@
         git
 
         # Disk Tools
-        gptfdisk      # sgdisk — GPT partition manipulation
+        parted        # partition management (used by prepare-installer-usb.sh)
 
         # Network & Diagnostic Tools
         bind          # dig, nslookup
