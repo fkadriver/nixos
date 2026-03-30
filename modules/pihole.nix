@@ -236,8 +236,6 @@
             excludeClients = [ "^unifi$" "^unifi\\.lan$" ];
           };
         };
-        # pihole.toml is regenerated on each rebuild — block API config changes from the web UI
-        misc.readOnly = true;
       };
     };
 
@@ -255,44 +253,41 @@
       settings.PasswordAuthentication = false;
     };
 
-    # Fetch the Pi-hole web UI password hash from Bitwarden at boot.
-    # The "Pi-Hole" item's password field holds the BALLOON-SHA256 hash.
-    # FTLCONF_ env vars override the corresponding pihole.toml settings at runtime.
+    # Fetch the Pi-hole web password (plaintext) from Bitwarden at boot.
+    # The "Pi-Hole" item's password field holds the plaintext web UI password.
     services.bitwarden = {
       enable = true;
       secrets.pihole_pwhash = {
         name = "pihole_pwhash";
         itemId = "Pi-Hole";
         field = "password";
-        owner = config.services.pihole-ftl.user;
+        owner = "root";
         mode = "0400";
       };
     };
 
-    # Convert the raw hash from /run/bitwarden-secrets/ into an env-file for pihole-ftl.
-    systemd.services.pihole-pwhash-env = {
-      description = "Write Pi-hole password env file from Bitwarden secret";
+    # Set the Pi-hole web password before pihole-ftl starts.
+    # pihole-FTL --config hashes the plaintext using BALLOON-SHA256 before writing to pihole.toml.
+    systemd.services.pihole-set-password = {
+      description = "Set Pi-hole web password from Bitwarden secret";
       after    = [ "bitwarden-secrets-sync.service" ];
       requires = [ "bitwarden-secrets-sync.service" ];
-      wantedBy = [ "multi-user.target" ];
+      before   = [ "pihole-ftl.service" ];
+      wantedBy = [ "pihole-ftl.service" ];
       serviceConfig = {
         Type = "oneshot";
         RemainAfterExit = true;
-        ExecStart = pkgs.writeShellScript "pihole-pwhash-env" ''
-          printf 'FTLCONF_webserver_api_app_pwhash=%s\n' \
-            "$(< /run/bitwarden-secrets/pihole_pwhash)" \
-            > /run/pihole-ftl-env
-          chmod 0400 /run/pihole-ftl-env
-          chown ${config.services.pihole-ftl.user} /run/pihole-ftl-env
+        ExecStart = pkgs.writeShellScript "pihole-set-password" ''
+          ${pkgs.pihole-ftl}/bin/pihole-FTL \
+            --config webserver.api.app_pwhash \
+            "$(< /run/bitwarden-secrets/pihole_pwhash)"
         '';
       };
     };
 
-    # Feed the password hash to pihole-ftl without baking it into the nix store
     systemd.services.pihole-ftl = {
-      after    = [ "pihole-pwhash-env.service" ];
-      requires = [ "pihole-pwhash-env.service" ];
-      serviceConfig.EnvironmentFile = [ "/run/pihole-ftl-env" ];
+      after    = [ "pihole-set-password.service" ];
+      requires = [ "pihole-set-password.service" ];
     };
 
     # Expose Pi-hole web UI over Tailscale with HTTPS (tailnet-only, not public)
