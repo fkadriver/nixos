@@ -278,6 +278,9 @@
         Type = "oneshot";
         RemainAfterExit = true;
         ExecStart = pkgs.writeShellScript "pihole-set-password" ''
+          # Remove stale readOnly = true left by the previous NixOS config before
+          # pihole-ftl has a chance to rewrite pihole.toml on this boot.
+          ${pkgs.gnused}/bin/sed -i '/readOnly\s*=\s*true/d' /etc/pihole/pihole.toml 2>/dev/null || true
           ${pkgs.pihole-ftl}/bin/pihole-FTL \
             --config webserver.api.app_pwhash \
             "$(< /run/bitwarden-secrets/pihole_pwhash)"
