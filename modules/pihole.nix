@@ -282,7 +282,7 @@
           # pihole-ftl has a chance to rewrite pihole.toml on this boot.
           ${pkgs.gnused}/bin/sed -i '/readOnly\s*=\s*true/d' /etc/pihole/pihole.toml 2>/dev/null || true
           ${pkgs.pihole-ftl}/bin/pihole-FTL \
-            --config webserver.api.app_pwhash \
+            --config webserver.api.password \
             "$(< /run/bitwarden-secrets/pihole_pwhash)"
         '';
       };
