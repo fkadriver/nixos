@@ -25,8 +25,22 @@
     };
   };
 
-  # Filesystem configuration is managed by disko-config.nix
-  # No manual filesystem or swap configuration needed here
+  # Filesystems — LVM paths are deterministic from disko-config.nix (main_vg).
+  # Boot partition uses the NIXBOOT FAT label set by disko-config extraArgs.
+  fileSystems."/" = {
+    device = "/dev/mapper/main_vg-root";
+    fsType = "ext4";
+  };
+
+  fileSystems."/boot" = {
+    device = "/dev/disk/by-label/NIXBOOT";
+    fsType = "vfat";
+    options = [ "fmask=0077" "dmask=0077" ];
+  };
+
+  swapDevices = [
+    { device = "/dev/mapper/main_vg-swap"; }
+  ];
 
   hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
   hardware.enableRedistributableFirmware = true;

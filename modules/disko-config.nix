@@ -24,6 +24,7 @@
                 type = "filesystem";
                 format = "vfat";
                 mountpoint = "/boot";
+                extraArgs = [ "-n" "NIXBOOT" ];  # FAT label — allows by-label mount without knowing UUID
                 mountOptions = [ "defaults" "umask=0077" ];
               };
             };
