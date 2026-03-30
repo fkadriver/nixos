@@ -46,30 +46,22 @@ dd if="$ISO" of="$DEVICE" bs=4M status=progress
 echo "Flushing write cache to device (may take a minute)..."
 sync
 
-# The ISO embeds the GPT backup header inside the ISO data (not at the physical
-# end of the USB). sgdisk -e moves it to the actual end, freeing the space after
-# the ISO data for a new partition.
-echo "Relocating GPT backup header to end of device..."
-sgdisk -e "$DEVICE"
+# Compute the start of the data partition from the ISO size.
+# parted -f auto-fixes minor GPT inconsistencies (e.g. backup header inside
+# the ISO rather than at the end of the physical disk) without the "Invalid
+# partition data!" failures that sgdisk -e produces on hybrid ISO images.
+ISO_SIZE_MiB=$(( ($(stat -c %s "$ISO") + 1048575) / 1048576 ))
+PART_START_MiB=$(( ISO_SIZE_MiB + 1 ))
 
-echo "Creating 500MB NIXOS_DATA partition..."
-sgdisk \
-    --new=0:0:+500M \
-    --typecode=0:0700 \
-    --change-name=0:NIXOS_DATA \
-    "$DEVICE"
+echo "Creating 500MB NIXOS_DATA partition at ${PART_START_MiB}MiB..."
+parted -sf "$DEVICE" mkpart primary fat32 "${PART_START_MiB}MiB" "$((PART_START_MiB + 500))MiB"
 
 # Tell kernel about the new partition
 partprobe "$DEVICE" 2>/dev/null || true
 sleep 2
 
-# Resolve partition device path (handles both /dev/sdX3 and /dev/mmcblk0p3)
-PART_NUM=$(sgdisk --print "$DEVICE" | awk '/NIXOS_DATA/ {print $1}')
-if [[ "$DEVICE" =~ [0-9]$ ]]; then
-    PART="${DEVICE}p${PART_NUM}"
-else
-    PART="${DEVICE}${PART_NUM}"
-fi
+# Find the new partition: last name reported by lsblk for this device
+PART="/dev/$(lsblk -ln -o NAME "$DEVICE" | grep -v "^$(basename "$DEVICE")$" | tail -1)"
 
 echo "Formatting $PART as FAT32 (label: NIXOS_DATA)..."
 mkfs.fat -F32 -n NIXOS_DATA "$PART"
