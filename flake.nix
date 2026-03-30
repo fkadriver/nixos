@@ -75,6 +75,19 @@
         installer = import ./hosts/installer flakeContext;
       };
 
+      # Disko-only configurations used by the installer for disk partitioning.
+      # Kept separate from nixosConfigurations so low-RAM hosts (e.g. log01)
+      # don't need the disko Rust closure in their installed system.
+      diskoConfigurations = {
+        log01 = inputs.nixpkgs.lib.nixosSystem {
+          system = "x86_64-linux";
+          modules = [
+            inputs.disko.nixosModules.disko
+            nixosModules.disko-config
+          ];
+        };
+      };
+
       # macOS configurations using nix-darwin
       darwinConfigurations = {
         airbook-darwin = import ./hosts/airbook-darwin flakeContext;
