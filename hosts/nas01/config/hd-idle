@@ -1,0 +1,16 @@
+# hd-idle configuration for nas01
+# Installed to: /etc/default/hd-idle
+#
+# Drive layout (verify with: lsblk -o NAME,SIZE,MODEL,SERIAL):
+#   sda - Micron MTFDDAK256TBN (SSD, OS drive) - no spindown
+#   sdb - HGST HDS724040ALE640 (4TB, ZFS pool)
+#   sdc - HGST HDS724040ALE640 (4TB, ZFS pool)
+#   sde - HGST HDS724040ALE640 (4TB, ZFS pool)
+#   sdd - WDC WD180EDGZ-11BLDS0 (18TB, Borg backup)
+#
+# Spindown times:
+#   ZFS pool drives (sdb/sdc/sde): 30 min — active NAS storage
+#   Borg backup drive (sdd):       10 min — infrequently accessed
+
+START_HD_IDLE=true
+HD_IDLE_OPTS="-i 0 -a sdb -i 1800 -a sdc -i 1800 -a sde -i 1800 -a sdd -i 600"

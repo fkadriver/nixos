@@ -58,9 +58,11 @@ cat > /etc/profile.d/nas01-nix.sh << 'EOF'
 export PATH="/nix/var/nix/profiles/nas01/bin:$PATH"
 EOF
 
-# Increase inotify watch limit (required by Syncthing and Docker)
-echo "fs.inotify.max_user_watches=524288" > /etc/sysctl.d/99-inotify.conf
-sysctl -p /etc/sysctl.d/99-inotify.conf
+# Increase inotify limits (required by Syncthing, Docker, and systemd services)
+# max_user_watches: number of files that can be watched (default: 8192)
+# max_user_instances: number of inotify descriptors per user (default: 128 — systemd exhausts this)
+printf 'fs.inotify.max_user_watches=524288\nfs.inotify.max_user_instances=8192\n' > /etc/sysctl.d/99-inotify.conf
+sysctl --system
 
 # Add scott to borg group (needed to access borg repos)
 if getent group borg &>/dev/null; then
@@ -136,6 +138,10 @@ mkdir -p /var/lib/samba/private
 echo "Installing NFS exports..."
 install -m 644 "${NAS01_DIR}/config/exports" /etc/exports
 
+# hd-idle spindown config
+echo "Installing hd-idle config..."
+install -m 644 "${NAS01_DIR}/config/hd-idle" /etc/default/hd-idle
+
 # Systemd service files (Nix-installed smbd/nmbd/tailscaled)
 echo "Installing systemd services..."
 install -m 644 "${NAS01_DIR}/config/systemd/smbd.service" /etc/systemd/system/smbd.service
@@ -149,6 +155,11 @@ echo "=== apt prerequisites (run if not already installed) ==="
 echo "  # Kernel integration (must match Ubuntu kernel via DKMS — cannot use Nix equivalents):"
 echo "  sudo apt install nfs-kernel-server zfsutils-linux"
 echo ""
+echo "  # Drive spindown (hd-idle daemon — manages spindown timers for HDDs):"
+echo "  sudo apt install hd-idle"
+echo "  # Config deployed above to /etc/default/hd-idle"
+echo "  # Note: sdX assignments can shift on reboot — verify with: lsblk -o NAME,SIZE,MODEL,SERIAL"
+echo ""
 echo "  # Docker Engine (systemd service + docker group — use apt, not the Nix package):"
 echo "  sudo apt install docker.io"
 echo "  sudo usermod -aG docker scott"
@@ -158,6 +169,7 @@ echo "  sudo apt install curl git"
 echo "  # Note: tar is pre-installed on Ubuntu"
 echo ""
 echo "=== Enable services ==="
+echo "  sudo systemctl enable --now hd-idle"
 echo "  sudo systemctl enable --now smbd nmbd"
 echo "  sudo systemctl enable --now nfs-kernel-server"
 echo "  sudo exportfs -ra"
