@@ -42,7 +42,8 @@ echo "Unmounting partitions on $DEVICE..."
 umount "${DEVICE}"?* 2>/dev/null || umount "${DEVICE}"p?* 2>/dev/null || true
 
 echo "Writing ISO to $DEVICE..."
-dd if="$ISO" of="$DEVICE" bs=4M status=progress conv=fsync
+dd if="$ISO" of="$DEVICE" bs=4M status=progress
+echo "Flushing write cache to device (may take a minute)..."
 sync
 
 # The ISO embeds the GPT backup header inside the ISO data (not at the physical
