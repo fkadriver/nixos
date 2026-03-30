@@ -154,9 +154,23 @@ nixos-rebuild switch --flake .#newhostname \
   --use-remote-sudo
 ```
 
-#### Option C: Fresh Installation via Installer
+#### Option C: Fresh Installation via Installer ISO
 
-Use the installer ISO to perform a fresh installation with disko (see installer documentation).
+Build and write the installer, then boot the target machine from USB:
+
+```bash
+nix build .#nixosConfigurations.installer.config.system.build.isoImage
+sudo ./scripts/prepare-installer-usb.sh result/iso/nixos-*.iso /dev/sdX
+```
+
+The installer has SSH enabled with root login. Once the machine is on the network:
+
+```bash
+ssh root@<ip-address>   # password: nixos
+/etc/nixos-install-helper.sh
+```
+
+The install helper will partition the disk with disko, then pull and install the flake from GitHub. After it completes, reboot into the new system.
 
 ## Adding a New Host Configuration (Variant)
 
@@ -303,11 +317,16 @@ If your host uses the bitwarden module (included in `desktop-minimal` and laptop
 
 1. After first boot, the AGE key is automatically generated at `/var/lib/sops-nix/key.txt`
 
-2. View the public key to add to `.sops.yaml`:
+2. Get the public key to add to `.sops.yaml`. For headless hosts (no local console
+   access), retrieve it via SSH from your management machine:
+   ```bash
+   ssh scott@<hostname> 'sudo age-keygen -y /var/lib/sops-nix/key.txt'
+   ```
+   Or locally on the new host:
    ```bash
    sudo age-keygen -y /var/lib/sops-nix/key.txt
    ```
-   This outputs: `age1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
+   Either way outputs: `age1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
 
 3. Add the public key to `.sops.yaml` in the repository:
    ```yaml
