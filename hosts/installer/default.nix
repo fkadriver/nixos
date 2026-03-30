@@ -168,28 +168,6 @@ inputs.nixpkgs.lib.nixosSystem {
         mode = "0755";
       };
 
-      # Auto-mount the NIXOS_DATA FAT32 partition if present on the USB drive.
-      # This partition is created by scripts/prepare-installer-usb.sh and is
-      # used to transfer AGE public keys from newly installed hosts back to the
-      # management machine without needing network access.
-      systemd.services.mount-usb-data = {
-        description = "Mount NIXOS_DATA USB data partition";
-        wantedBy = [ "multi-user.target" ];
-        after = [ "local-fs.target" "systemd-udev-settle.service" ];
-        serviceConfig = {
-          Type = "oneshot";
-          RemainAfterExit = true;
-          ExecStart = pkgs.writeShellScript "mount-usb-data" ''
-            PART=$(${pkgs.util-linux}/bin/blkid -L NIXOS_DATA 2>/dev/null || true)
-            if [ -n "$PART" ]; then
-              mkdir -p /mnt/usb-data
-              ${pkgs.util-linux}/bin/mount "$PART" /mnt/usb-data
-              echo "NIXOS_DATA partition mounted at /mnt/usb-data"
-            fi
-          '';
-        };
-      };
-
       # Add welcome message with instructions
       services.getty.helpLine = ''
 
@@ -207,14 +185,9 @@ inputs.nixpkgs.lib.nixosSystem {
         The installer will dynamically discover available configurations from your flake.
         WiFi: Pre-configured for JEN_ACRES network
 
-        USB Data Partition (NIXOS_DATA):
-          If prepared with scripts/prepare-installer-usb.sh, the data
-          partition is mounted at /mnt/usb-data.
-          After first boot of a new host, plug in this USB and run:
-            sudo mount LABEL=NIXOS_DATA /mnt/usb-data
-            sudo age-keygen -y /var/lib/sops-nix/key.txt \
-              | sudo tee /mnt/usb-data/$(hostname)-age.pub
-            sudo umount /mnt/usb-data
+        After first boot of a new host, get the AGE key via SSH:
+          ssh scott@<hostname> 'sudo age-keygen -y /var/lib/sops-nix/key.txt'
+          Then add to .sops.yaml and run: sops updatekeys secrets/secrets.yaml
 
       '';
 

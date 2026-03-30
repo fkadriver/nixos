@@ -25,8 +25,7 @@
         git
 
         # Disk Tools
-        parted        # partition management (used by prepare-installer-usb.sh)
-        gptfdisk      # gdisk — GPT repair/recovery (used by prepare-installer-usb.sh)
+        parted        # partition management
 
         # Network & Diagnostic Tools
         bind          # dig, nslookup
