@@ -77,6 +77,8 @@ inputs.nixpkgs.lib.nixosSystem {
         # WiFi utilities
         networkmanager
         util-linux  # includes rfkill
+        # Pre-bundle disko so it doesn't need to be downloaded at runtime
+        inputs.disko.packages.x86_64-linux.disko
       ];
 
       # Add installation helper script
@@ -147,7 +149,7 @@ inputs.nixpkgs.lib.nixosSystem {
 
           echo ""
           echo "Partitioning disk with disko..."
-          sudo nix --experimental-features "nix-command flakes" run github:nix-community/disko -- \
+          sudo disko \
             --mode disko \
             --flake "$GIT_REPO#$CONFIG" \
             --arg device "\"$DEVICE\""
