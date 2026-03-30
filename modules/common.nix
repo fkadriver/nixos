@@ -24,6 +24,9 @@
         gh            # GitHub CLI
         git
 
+        # Disk Tools
+        gptfdisk      # sgdisk — GPT partition manipulation
+
         # Network & Diagnostic Tools
         bind          # dig, nslookup
         curl
