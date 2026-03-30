@@ -193,7 +193,7 @@ in
         freecad
         blender
         meshlab
-        sweet-home3d
+        sweethome3d.application
       ])
       ++ lib.optionals cfg.repairTools (with pkgs; [
         inkscape

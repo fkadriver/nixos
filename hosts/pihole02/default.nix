@@ -24,6 +24,9 @@ let
         blocking = { force4 = true; IPv4 = "192.168.10.11"; };
       };
 
+      # Headless managed device — no sudo password needed for wheel
+      security.sudo.wheelNeedsPassword = false;
+
       system = {
         stateVersion = "25.11";
         nixos.label = "pihole02";
