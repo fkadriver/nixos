@@ -79,13 +79,16 @@
       # Kept separate from nixosConfigurations so low-RAM hosts (e.g. log01)
       # don't need the disko Rust closure in their installed system.
       diskoConfigurations = {
-        log01 = inputs.nixpkgs.lib.nixosSystem {
+        # .config gives disko the evaluated attrset it needs (cfg.disko.devices).
+        # Passing the raw nixosSystem result fails because it has .config/.options
+        # at the top level, not .disko.
+        log01 = (inputs.nixpkgs.lib.nixosSystem {
           system = "x86_64-linux";
           modules = [
             inputs.disko.nixosModules.disko
             nixosModules.disko-config
           ];
-        };
+        }).config;
       };
 
       # macOS configurations using nix-darwin
