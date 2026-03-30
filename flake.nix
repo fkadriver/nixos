@@ -68,7 +68,8 @@
         latitude = import ./hosts/latitude flakeContext;
         latitude-minimal = import ./hosts/latitude/minimal.nix flakeContext;
         latitude-xfce = import ./hosts/latitude/xfce.nix flakeContext;
-vm01 = import ./hosts/vm01 flakeContext;
+        vm01 = import ./hosts/vm01 flakeContext;
+        log01 = import ./hosts/log01 flakeContext;
         pihole01 = import ./hosts/pihole01 flakeContext;
         pihole02 = import ./hosts/pihole02 flakeContext;
         installer = import ./hosts/installer flakeContext;

@@ -135,6 +135,7 @@ Each host has a base configuration in `hosts/<hostname>/default.nix` with option
 
 - **latitude** - Dell Latitude 7480 laptop (default: Borg backup + 3D printing)
 - **vm01** - Dell Latitude E7270 (Service Tag: 7NYTSF2, Immich server with external 1TB drive)
+- **log01** - Shuttle Zingbox GL014G128W10, 128GB SSD (syslog collector — rsyslog UDP/TCP 514)
 - **installer** - Bootable ISO with automated installation script
 
 **Current Hosts (macOS/nix-darwin):**

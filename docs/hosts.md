@@ -29,6 +29,18 @@ This document provides a brief overview of all host configurations in this repos
 
 **Note:** No desktop environment - access via SSH or Tailscale.
 
+### log01
+**Shuttle Zingbox GL014G128W10** - Syslog collector
+
+| | |
+|---|---|
+| Purpose | Centralized syslog server for all network devices |
+| Storage | 128GB SSD |
+| Key Features | rsyslog (UDP/TCP 514), Borg backup to nas01, Tailscale |
+| Log Path | `/var/log/remote/<hostname>/<program>.log` |
+
+**Note:** Headless server. Receives syslog from all network devices. No desktop environment. After first boot, get the age key with `sudo age-keygen -y /var/lib/sops-nix/key.txt`, add to `.sops.yaml`, then run `sops updatekeys secrets/secrets.yaml`.
+
 ### pihole01
 **Raspberry Pi 3B** - Primary Pi-hole DNS server
 
@@ -87,6 +99,7 @@ This document provides a brief overview of all host configurations in this repos
 | `latitude-kde` | Laptop | KDE | Full desktop variant |
 | `latitude-minimal` | Laptop | XFCE | Testing |
 | `vm01` | Server | None | Immich photo server |
+| `log01` | Server | None | Syslog collector |
 | `pihole01` | RPi 3B | None | Primary Pi-hole DNS |
 | `pihole02` | RPi 3B | None | Secondary Pi-hole DNS |
 | `installer` | ISO | N/A | Installation media |

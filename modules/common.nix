@@ -40,6 +40,9 @@
         btop
         lm_sensors    # CPU/board temp (sensors command)
         hddtemp       # Hard drive temperature
+
+        # Logging
+        rsyslog
       ];
     };
 
