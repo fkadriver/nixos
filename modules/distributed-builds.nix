@@ -5,14 +5,20 @@ let
 
   # Each machine's capabilities as a remote builder.
   # Both already have aarch64 binfmt emulation via pi-builder.nix.
+  #
+  # sshUser = "scott": Tailscale ACLs block root SSH; scott is a trusted-user
+  # in nix.settings so the nix daemon accepts builds from him.
+  # sshKey = id_ed25519_legacy: deployed to every host via bitwarden-scott.nix
+  # and already present in user-scott.nix openssh.authorizedKeys — no extra
+  # key setup needed.
   latitudeMachine = {
     hostName = "latitude";
     systems = [ "x86_64-linux" "aarch64-linux" ];
     maxJobs = 4;
     speedFactor = 2;  # faster CPU than vm01
     supportedFeatures = [ "nixos-test" "benchmark" "big-parallel" "kvm" ];
-    sshUser = "root";
-    sshKey = "/root/.ssh/id_ed25519_build";
+    sshUser = "scott";
+    sshKey = "/home/scott/.ssh/id_ed25519_legacy";
   };
 
   vm01Machine = {
@@ -21,8 +27,8 @@ let
     maxJobs = 2;
     speedFactor = 1;
     supportedFeatures = [ "nixos-test" "benchmark" "big-parallel" "kvm" ];
-    sshUser = "root";
-    sshKey = "/root/.ssh/id_ed25519_build";
+    sshUser = "scott";
+    sshKey = "/home/scott/.ssh/id_ed25519_legacy";
   };
 in {
   # Enable distributing derivations to remote build machines.
@@ -37,16 +43,14 @@ in {
     lib.optionals (hostname != "latitude") [ latitudeMachine ] ++
     lib.optionals (hostname != "vm01")     [ vm01Machine ];
 
-  # Root SSH config for cross-machine builds.
-  # Uses the same id_ed25519_build key that is already in each machine's
-  # root authorizedKeys (set up for --build-host localhost loopback).
+  # SSH config for cross-machine builds (applies system-wide, used by root/nix daemon).
   programs.ssh.extraConfig = lib.optionalString (hostname != "latitude") ''
     Host latitude
-      IdentityFile /root/.ssh/id_ed25519_build
+      IdentityFile /home/scott/.ssh/id_ed25519_legacy
       StrictHostKeyChecking no
   '' + lib.optionalString (hostname != "vm01") ''
     Host vm01
-      IdentityFile /root/.ssh/id_ed25519_build
+      IdentityFile /home/scott/.ssh/id_ed25519_legacy
       StrictHostKeyChecking no
   '';
 }
