@@ -71,6 +71,7 @@ inputs.nixpkgs.lib.nixosSystem {
         tmux
         htop
         parted
+        gptfdisk
         lvm2
         curl
         # WiFi utilities

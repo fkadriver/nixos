@@ -46,10 +46,13 @@ dd if="$ISO" of="$DEVICE" bs=4M status=progress
 echo "Flushing write cache to device (may take a minute)..."
 sync
 
-# Compute the start of the data partition from the ISO size.
-# parted -f auto-fixes minor GPT inconsistencies (e.g. backup header inside
-# the ISO rather than at the end of the physical disk) without the "Invalid
-# partition data!" failures that sgdisk -e produces on hybrid ISO images.
+# The ISO embeds the GPT backup header and sets LastUsableLBA to the ISO size,
+# not the physical end of the USB. gdisk expert mode "x → e" relocates the
+# backup GPT and updates LastUsableLBA to the actual disk end, which is
+# required before parted can create a partition in the free space.
+echo "Fixing GPT to reflect full device size..."
+printf "x\ne\nw\nY\n" | gdisk "$DEVICE"
+
 ISO_SIZE_MiB=$(( ($(stat -c %s "$ISO") + 1048575) / 1048576 ))
 PART_START_MiB=$(( ISO_SIZE_MiB + 1 ))
 
