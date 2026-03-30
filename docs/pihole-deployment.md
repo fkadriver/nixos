@@ -11,7 +11,9 @@ with limited secrets) and finalize (add the Pi's age key, deploy real secrets).
 - Both use sops-nix for secrets (Bitwarden credentials). The Pi's age key is generated
   on first boot and must be added to `.sops.yaml` before secrets can be decrypted.
 - The Pi-hole web UI password is fetched from Bitwarden at boot (the "Pi-Hole" item's
-  password field holds the BALLOON-SHA256 hash). No sops entry is needed for the hash.
+  password field holds the **plaintext** password). `pihole-set-password.service` calls
+  `pihole-FTL --config webserver.api.password` which hashes it with BALLOON-SHA256 and
+  writes the result to `pwhash` in `/etc/pihole/pihole.toml` before `pihole-ftl` starts.
 
 ---
 
@@ -261,25 +263,51 @@ you experience this on a Pi that hasn't been rebuilt yet.
 
 ### pihole-ftl fails to start
 
-Check the EnvironmentFile:
-
 ```bash
-sudo systemctl status pihole-ftl
-journalctl -u pihole-ftl -n 50
+sudo systemctl status pihole-ftl pihole-set-password bitwarden-secrets-sync
+journalctl -u pihole-ftl -u pihole-set-password -n 50
 
-# Is the sops secret decrypted?
-sudo find /run/secrets.d -type f
+# Is the Bitwarden secret available?
+sudo ls /run/bitwarden-secrets/
 ```
 
-If `/run/secrets.d` is empty, the Pi's age key isn't in `.sops.yaml` yet — repeat Phase 4.
+If `/run/bitwarden-secrets/` is empty, `bitwarden-secrets-sync` failed — check its
+journal. The Pi's age key may not be in `.sops.yaml` yet (repeat Phase 4).
 
-If the secrets exist in `/run/secrets.d/<n>/` but pihole-ftl hit its 5-restart limit
-before sops finished (common on first boot), reset and start manually:
+If `pihole-set-password` failed, check its journal for the error. Common causes:
+- `readOnly = true` left in `/etc/pihole/pihole.toml` from a previous config
+  (the service strips this automatically, but if it fails, remove it manually:
+  `sudo sed -i '/readOnly.*=.*true/d' /etc/pihole/pihole.toml`)
+- Bitwarden secret not yet available (service ordering issue — restart manually:
+  `sudo systemctl restart pihole-set-password pihole-ftl`)
+
+### Web UI shows no password prompt
+
+`pwhash` in `/etc/pihole/pihole.toml` is empty or invalid:
 
 ```bash
-sudo systemctl reset-failed pihole-ftl
-sudo systemctl start pihole-ftl
+sudo grep 'pwhash' /etc/pihole/pihole.toml
 ```
+
+If `pwhash = ""`, `pihole-set-password` didn't run or failed. Check its status and
+restart the service chain:
+
+```bash
+sudo systemctl restart pihole-set-password
+sudo systemctl restart pihole-ftl
+```
+
+**Key: use `webserver.api.password`, not `webserver.api.pwhash`**
+
+`pihole-FTL --config webserver.api.password "plaintext"` — accepts plaintext, hashes
+with BALLOON-SHA256 (`$BALLOON-SHA256$v=1$s=1024,t=32$...`), writes result to `pwhash`.
+
+`pihole-FTL --config webserver.api.pwhash "value"` — stores `value` raw (no hashing).
+Storing plaintext here causes all logins to fail silently with "password incorrect"
+because BALLOON(plaintext) ≠ plaintext.
+
+`webserver.api.app_pwhash` is a separate randomly-generated app password — unrelated
+to the main web UI login.
 
 ### SSH unreachable after flash
 
