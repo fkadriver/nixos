@@ -30,16 +30,24 @@ This document provides a brief overview of all host configurations in this repos
 **Note:** No desktop environment - access via SSH or Tailscale.
 
 ### log01
-**Shuttle Zingbox GL014G128W10** - Syslog collector
+**Shuttle Zingbox GL014G128W10** - Centralized syslog collector
 
 | | |
 |---|---|
-| Purpose | Centralized syslog server for all network devices |
+| Purpose | Centralized syslog server for all NixOS hosts and network devices |
 | Storage | 128GB SSD |
-| Key Features | rsyslog (UDP/TCP 514), Borg backup to nas01, Tailscale |
+| Key Features | rsyslog (UDP/TCP 514), auditd, Borg backup to nas01, Tailscale |
 | Log Path | `/var/log/remote/<hostname>/<program>.log` |
+| Retention | 30 days (daily logrotate with date suffix) |
+| Borg Paths | `/home`, `/var/log` (includes all remote logs) |
 
-**Note:** Headless server. Receives syslog from all network devices. No desktop environment. After first boot, get the age key with `sudo age-keygen -y /var/lib/sops-nix/key.txt`, add to `.sops.yaml`, then run `sops updatekeys secrets/secrets.yaml`.
+**Receiving syslog:** All NixOS hosts with `common.nix` forward to log01 via rsyslog TCP 514 with a disk-assisted queue (survives log01 downtime). Pi-hole hosts also forward FTL DNS query logs via `misc.syslog = true`. `logging.forwardToLog01` is set to `false` on log01 itself to prevent loops.
+
+**Note:** Headless server. No desktop environment. After first boot, get the age key with:
+```bash
+ssh scott@log01 'sudo age-keygen -y /var/lib/sops-nix/key.txt'
+```
+Then add to `.sops.yaml` and run `sops updatekeys secrets/secrets.yaml`.
 
 ### pihole01
 **Raspberry Pi 3B** - Primary Pi-hole DNS server
@@ -49,10 +57,10 @@ This document provides a brief overview of all host configurations in this repos
 | IP | 192.168.10.10 (static) |
 | Purpose | Network-wide ad blocking / DNS |
 | SoC | BCM2837 (ARM Cortex-A53, aarch64) |
-| Key Features | Pi-hole FTL, Hagezi blocklists, Tailscale, sops secrets |
+| Key Features | Pi-hole FTL, Hagezi blocklists, Tailscale, sops secrets, rsyslog → log01 |
 | Build | `nix build .#nixosConfigurations.pihole01.config.system.build.sdImage` |
 
-**Note:** Cross-compiled from x86_64. Uses `raspberry-pi-nix` modules. No borg backup.
+**Note:** Cross-compiled from x86_64. Uses `raspberry-pi-nix` modules. No borg backup. DNS query logs forwarded to log01 via rsyslog (FTL syslog enabled).
 
 ### pihole02
 **Raspberry Pi 3B** - Secondary Pi-hole DNS server
@@ -62,10 +70,10 @@ This document provides a brief overview of all host configurations in this repos
 | IP | 192.168.10.11 (static) |
 | Purpose | Redundant DNS / failover for pihole01 |
 | SoC | BCM2837 (ARM Cortex-A53, aarch64) |
-| Key Features | Pi-hole FTL, Hagezi blocklists, Tailscale, sops secrets |
+| Key Features | Pi-hole FTL, Hagezi blocklists, Tailscale, sops secrets, rsyslog → log01 |
 | Build | `nix build .#nixosConfigurations.pihole02.config.system.build.sdImage` |
 
-**Note:** Cross-compiled from x86_64. Uses `nixos-hardware` raspberry-pi-3 module. No borg backup.
+**Note:** Cross-compiled from x86_64. Uses `nixos-hardware` raspberry-pi-3 module. No borg backup. DNS query logs forwarded to log01 via rsyslog (FTL syslog enabled).
 
 ### installer
 **Bootable ISO** - Automated installation media

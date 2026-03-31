@@ -29,6 +29,9 @@ nix build .#nixosConfigurations.<hostname>.config.system.build.vm
 | `airbook` | MacBook Air 7,2 | XFCE | NixOS on Mac |
 | `airbook-kde` | MacBook Air 7,2 | KDE | NixOS on Mac |
 | `vm01` | Dell Latitude E7270 | Headless | Immich photo server |
+| `log01` | Shuttle Zingbox GL014G128W10 | Headless | Centralized syslog collector |
+| `pihole01` | Raspberry Pi 3B | Headless | Primary Pi-hole DNS |
+| `pihole02` | Raspberry Pi 3B | Headless | Secondary Pi-hole DNS |
 | `installer` | N/A | N/A | Bootable installation ISO |
 | `airbook-darwin` | MacBook Air 7,2 | macOS | nix-darwin |
 
@@ -44,6 +47,9 @@ See [docs/hosts.md](docs/hosts.md) for detailed host documentation.
 │   ├── airbook/          # MacBook Air 7,2 NixOS
 │   ├── airbook-darwin/   # MacBook Air 7,2 macOS
 │   ├── vm01/             # Immich server
+│   ├── log01/            # Centralized syslog collector
+│   ├── pihole01/         # Primary Pi-hole DNS (RPi 3B)
+│   ├── pihole02/         # Secondary Pi-hole DNS (RPi 3B)
 │   └── installer/        # Installation ISO
 ├── modules/               # Auto-discovered NixOS modules
 ├── secrets/               # Encrypted secrets (sops-nix)
@@ -142,6 +148,18 @@ sudo tailscale up
 ```bash
 sudo systemctl start borgbackup-job-system  # Manual backup
 sudo systemctl status borgbackup-job-system # Check status
+```
+
+### Centralized Logging (log01)
+
+All hosts (except log01 itself) forward syslog to `log01` via rsyslog TCP on port 514. Logs are stored at `/var/log/remote/<hostname>/<program>.log` with 30-day retention. Pi-hole DNS query logs (FTL) are included via `misc.syslog = true`.
+
+```bash
+# View logs from a specific host on log01
+tail -f /var/log/remote/<hostname>/pihole-FTL.log
+
+# Check rsyslog forwarding status on any host
+sudo systemctl status rsyslog
 ```
 
 ## Hardware Notes

@@ -6,7 +6,7 @@ This document provides a high-level overview of all available modules in this re
 
 | Module | Description |
 |--------|-------------|
-| `common.nix` | Server-safe base configuration with CLI tools, tmux, git, docker, direnv. Imports `tailscale.nix` and `shell-aliases.nix` |
+| `common.nix` | Server-safe base configuration with CLI tools, tmux, git, docker, direnv, auditd, rsyslog forwarding to log01, logrotate (7-day). Imports `tailscale.nix` and `shell-aliases.nix` |
 | `user-scott.nix` | User account configuration (wheel, networkmanager, docker groups) |
 | `shell-aliases.nix` | System-wide shell aliases (`nas01`, `slap`, `log01`, `gpc`, rebuild commands) |
 
@@ -24,7 +24,7 @@ This document provides a high-level overview of all available modules in this re
 
 | Module | Description |
 |--------|-------------|
-| `pihole.nix` | Pi-hole FTL + web UI, slim base config (replaces `common` for Pi hosts): tailscale, shell-aliases, git, vim, curl, wget, htop, tmux, starship. Manages sops secrets for the admin password hash. |
+| `pihole.nix` | Pi-hole FTL + web UI, slim base config (replaces `common` for Pi hosts): tailscale, shell-aliases, git, vim, curl, wget, htop, tmux, starship, rsyslog forwarding to log01. Manages sops secrets for the admin password hash. FTL DNS query logs sent to syslog via `misc.syslog = true`. |
 
 ## Networking Modules
 
@@ -113,6 +113,9 @@ Some modules provide custom options:
 - `my.fonts.printing3d` - 3D printing optimized fonts
 - `my.fonts.nerd` - Terminal fonts with Nerd Font glyphs
 - `my.fonts.viewer` - Font management tools
+
+### common.nix
+- `logging.forwardToLog01` (bool, default `true`) — enable rsyslog TCP forwarding to `log01.warthog-royal.ts.net:514`. Set to `false` on log01 itself to prevent loops.
 
 ### borg-backup.nix
 - Repository path, backup paths, exclusions
