@@ -21,7 +21,7 @@
         # Tailscale SSH shortcuts
         airbook = "tailscale ssh airbook";
         nas01 = "tailscale ssh nas01";
-        log01 = "tailscale ssh sands-log01";
+        log01 = "tailscale ssh log01";
         pihole01 = "tailscale ssh pihole01";
         pihole02 = "tailscale ssh pihole02";
 slap = "tailscale ssh latitude";
