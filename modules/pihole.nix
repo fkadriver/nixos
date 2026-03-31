@@ -195,6 +195,7 @@
     # Local DNS entries — shared across all Pi-hole instances
     networking.extraHosts = ''
       192.168.10.21 unifi
+      192.168.10.22 syslog-server
       192.168.1.2   sw01  # HP1920
       192.168.1.3   sw02  # TL-SG108E
       192.168.11.50 LBP162  # Canon LBP
