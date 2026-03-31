@@ -291,8 +291,10 @@ in
               SSH_DIR="${userHome}/.ssh"
               KEY_FILE="$SSH_DIR/${key.keyName}"
 
-              # Create .ssh directory if it doesn't exist
+              # Create .ssh directory if it doesn't exist, ensure scott owns it
               mkdir -p "$SSH_DIR"
+              chown ${key.user}:users "$SSH_DIR"
+              chmod 700 "$SSH_DIR"
 
               # Fetch the key from Bitwarden
               # Try .sshKey.privateKey first (for SSH Key type items), then fall back to .notes (for Secure Note items)
