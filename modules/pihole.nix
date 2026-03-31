@@ -171,6 +171,24 @@
     # resolved is enabled by tailscale.nix, so we force it off here.
     services.resolved = lib.mkForce { enable = false; };
 
+    # Forward syslog (including pihole-FTL DNS queries) to log01
+    services.rsyslogd = {
+      enable = true;
+      extraConfig = ''
+        # Forward all messages to log01 with disk-assisted queue for reliability
+        action(type="omfwd"
+          target="log01.warthog-royal.ts.net"
+          port="514"
+          protocol="tcp"
+          queue.type="LinkedList"
+          queue.filename="log01fwd"
+          queue.maxdiskspace="200m"
+          queue.saveonshutdown="on"
+          action.resumeRetryCount="-1"
+          action.resumeInterval="30")
+      '';
+    };
+
     # Use Pi-hole for local DNS with Quad9 as an out-of-band fallback during boot
     networking.nameservers = lib.mkDefault [ "127.0.0.1" "9.9.9.9" ];
 
@@ -206,6 +224,8 @@
       ];
 
       settings = {
+        misc.syslog = true;   # Send FTL log messages (including DNS queries) to syslog
+
         dns = {
           upstreams = [ "9.9.9.9" "149.112.112.112" ];
           dnssec = true;

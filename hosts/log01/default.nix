@@ -11,10 +11,13 @@ let
     ];
 
     config = {
+      # Do not forward logs back to log01 (this IS log01)
+      logging.forwardToLog01 = false;
+
       networking = {
         hostName = "log01";
         networkmanager.enable = true;
-        firewall = {
+        firewall = {  
           allowedTCPPorts = [ 514 ];
           allowedUDPPorts = [ 514 ];
         };
@@ -53,9 +56,10 @@ let
         '';
       };
 
-      # Ensure remote log directory exists with correct permissions
+      # Ensure remote log directory and root SSH dir exist with correct permissions
       systemd.tmpfiles.rules = [
         "d /var/log/remote 0750 root root -"
+        "d /root/.ssh      0700 root root -"
       ];
 
       # Borg backup to nas01
@@ -63,9 +67,22 @@ let
       services.borg-backup = {
         enable = true;
         repository = "ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18t_3/borg/repos/log01";
-        paths = [ "/home" "/var/log/remote" ];
+        paths = [ "/home" "/var/log" ];
         encryption.passphraseFile = "/run/bitwarden-secrets/borg_passphrase";
         sshKeyFile = "/home/scott/.ssh/id_ed25519_legacy";
+      };
+
+      # Logrotate — 1 month retention for remote syslog collection
+      services.logrotate.settings.remote-logs = {
+        files = "/var/log/remote/*/*.log";
+        frequency = "daily";
+        rotate = 30;
+        compress = true;
+        dateext = true;
+        missingok = true;
+        notifempty = true;
+        sharedscripts = true;
+        postrotate = "systemctl kill -s HUP rsyslog.service 2>/dev/null || true";
       };
 
       system = {

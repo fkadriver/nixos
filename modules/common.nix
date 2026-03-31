@@ -4,6 +4,15 @@
     inputs.self.nixosModules.tailscale
     inputs.self.nixosModules.shell-aliases
   ];
+
+  options = {
+    logging.forwardToLog01 = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Forward syslog to log01 collector via rsyslog TCP";
+    };
+  };
+
   config = {
     # Core system packages (server-safe, no GUI dependencies)
     environment = {
@@ -238,6 +247,14 @@
       timeZone = "America/Chicago";
     };
 
+    # System-wide SSH known hosts — written to /etc/ssh/ssh_known_hosts
+    # so all users (including root) can connect without prompts on fresh installs.
+    programs.ssh.knownHosts = {
+      "github.com".publicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GkZD";
+      "github.com-ecdsa".extraHostNames = [ "github.com" ];
+      "github.com-ecdsa".publicKey = "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=";
+    };
+
     # Docker virtualization
     virtualisation.docker.enable = true;
 
@@ -251,5 +268,57 @@
       ${pkgs.iproute2}/bin/ip rule add to 192.168.0.0/20 priority 100 table main 2>/dev/null || true
       ${pkgs.iproute2}/bin/ip rule add to 192.168.16.0/20 priority 101 table main 2>/dev/null || true
     '';
+
+    # Kernel audit — security event logging
+    security.auditd.enable = true;
+    security.audit.rules = [
+      # Identity and credential files
+      "-w /etc/passwd -p wa -k identity"
+      "-w /etc/shadow -p wa -k identity"
+      "-w /etc/group -p wa -k identity"
+      "-w /etc/gshadow -p wa -k identity"
+      # Sudoers
+      "-w /etc/sudoers -p wa -k sudoers"
+      "-w /etc/sudoers.d/ -p wa -k sudoers"
+      # Login tracking
+      "-w /var/log/lastlog -p wa -k logins"
+      "-w /var/run/faillock/ -p wa -k logins"
+      # SSH configuration
+      "-w /etc/ssh/sshd_config -p wa -k sshd"
+      # Time changes
+      "-a always,exit -F arch=b64 -S adjtimex,settimeofday,clock_settime -k time-change"
+      "-a always,exit -F arch=b32 -S adjtimex,settimeofday,clock_settime -k time-change"
+      # Kernel module loading/unloading
+      "-a always,exit -F arch=b64 -S init_module,delete_module -k modules"
+    ];
+
+    # rsyslog — forward all messages to log01 via TCP (disk-assisted queue for reliability)
+    services.rsyslogd = lib.mkIf config.logging.forwardToLog01 {
+      enable = true;
+      extraConfig = ''
+        # Forward all messages to log01 with disk-assisted queue for reliability
+        action(type="omfwd"
+          target="log01.warthog-royal.ts.net"
+          port="514"
+          protocol="tcp"
+          queue.type="LinkedList"
+          queue.filename="log01fwd"
+          queue.maxdiskspace="500m"
+          queue.saveonshutdown="on"
+          action.resumeRetryCount="-1"
+          action.resumeInterval="30")
+      '';
+    };
+
+    # Logrotate — daily rotation, 1 week retention, compressed with date suffix
+    services.logrotate.settings.local-logs = {
+      files = "/var/log/*.log";
+      frequency = "daily";
+      rotate = 7;
+      compress = true;
+      dateext = true;
+      missingok = true;
+      notifempty = true;
+    };
   };
 }
