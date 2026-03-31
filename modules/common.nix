@@ -247,12 +247,6 @@
       timeZone = "America/Chicago";
     };
 
-    # System-wide SSH known hosts — written to /etc/ssh/ssh_known_hosts
-    # so all users (including root) can connect without prompts on fresh installs.
-    programs.ssh.knownHosts = {
-      "github.com".publicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GkZD";
-    };
-
     # Docker virtualization
     virtualisation.docker.enable = true;
 
