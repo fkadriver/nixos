@@ -127,6 +127,11 @@ scott ALL=(ALL) NOPASSWD: /nix/var/nix/profiles/nas01/bin/smartctl
 EOF
 chmod 440 /etc/sudoers.d/drive-temps
 
+# rsyslog forwarding to log01
+echo "Installing rsyslog forwarding config..."
+install -m 644 "${NAS01_DIR}/config/rsyslog-log01.conf" /etc/rsyslog.d/50-log01-forward.conf
+systemctl restart rsyslog
+
 # Samba config
 echo "Installing Samba config..."
 mkdir -p /etc/samba /var/log/samba /run/samba
