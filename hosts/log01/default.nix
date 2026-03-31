@@ -8,11 +8,16 @@ let
       inputs.self.nixosModules.bitwarden-scott
       inputs.self.nixosModules.borg-backup
       inputs.self.nixosModules.user-scott
+      inputs.home-manager.nixosModules.home-manager
+      (inputs.self.homeConfigurations.scott).nixosModule
     ];
 
     config = {
       # Do not forward logs back to log01 (this IS log01)
       logging.forwardToLog01 = false;
+
+      home-manager.useGlobalPkgs = true;
+      home-manager.useUserPackages = true;
 
       networking = {
         hostName = "log01";
