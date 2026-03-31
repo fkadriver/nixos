@@ -42,6 +42,16 @@ let
       services.rsyslogd = {
         enable = true;
         extraConfig = ''
+          # Set default ownership/permissions for all created files and directories
+          global(
+            fileOwner="root"
+            fileGroup="adm"
+            fileCreateMode="0640"
+            dirOwner="root"
+            dirGroup="adm"
+            dirCreateMode="0750"
+          )
+
           # Load input modules for remote syslog reception
           module(load="imudp")
           module(load="imtcp")
