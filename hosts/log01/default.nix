@@ -63,7 +63,7 @@ let
 
       # Ensure remote log directory and root SSH dir exist with correct permissions
       systemd.tmpfiles.rules = [
-        "d /var/log/remote 0750 root root -"
+        "d /var/log/remote 0750 root adm -"
         "d /root/.ssh      0700 root root -"
       ];
 

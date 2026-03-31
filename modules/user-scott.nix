@@ -13,6 +13,7 @@
             "wheel"
             "video"    # For backlight control
             "plugdev"  # For iPhone/iOS device access
+            "adm"      # Read system logs (/var/log/remote on log01)
           ];
           hashedPassword = "$y$j9T$PwV0AT33FffSLHl9QH6Uf.$bVwBG9Vy5wH9k0QW7V4fawCa68eCtpCpAOKals3vOF0";
           isNormalUser = true;
