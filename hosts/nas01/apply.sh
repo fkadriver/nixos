@@ -129,7 +129,12 @@ chmod 440 /etc/sudoers.d/drive-temps
 
 # rsyslog forwarding to log01
 echo "Installing rsyslog forwarding config..."
+if ! dpkg -l rsyslog &>/dev/null; then
+    echo "  rsyslog not found — installing..."
+    apt-get install -y rsyslog
+fi
 install -m 644 "${NAS01_DIR}/config/rsyslog-log01.conf" /etc/rsyslog.d/50-log01-forward.conf
+systemctl enable --now rsyslog
 systemctl restart rsyslog
 
 # Samba config
