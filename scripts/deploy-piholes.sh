@@ -55,7 +55,7 @@ done
 # Auto-select build host if not specified
 if [[ -z "$BUILD_HOST" ]]; then
     if [[ "$(hostname)" == "vm01" ]]; then
-        # Running on vm01 itself — build locally (nixos-rebuild --build-host localhost skips SSH)
+        # Running on vm01 itself — build locally (omit --build-host to avoid SSH to localhost)
         BUILD_HOST="localhost"
     elif ssh -o ConnectTimeout=3 -o BatchMode=yes scott@vm01 true 2>/dev/null; then
         BUILD_HOST="scott@vm01"
@@ -130,10 +130,13 @@ deploy_pi() {
     echo ""
     log "━━━ Deploying ${name} (build: ${BUILD_HOST}) ━━━"
 
+    local build_args=()
+    [[ "$BUILD_HOST" != "localhost" ]] && build_args=(--build-host "${BUILD_HOST}")
+
     if nixos-rebuild switch \
         --flake "${FLAKE_DIR}#${name}" \
         --target-host "$ssh_target" \
-        --build-host "${BUILD_HOST}" \
+        "${build_args[@]}" \
         --sudo; then
         ok "nixos-rebuild switch completed"
     else
@@ -156,7 +159,11 @@ for pi in "${TARGET[@]}"; do
         echo ""
         echo -e "${RED}Deployment failed on ${pi} — stopping.${NC}"
         echo "Fix the issue and re-run, or deploy individually:"
-        echo "  nixos-rebuild switch --flake .#${pi} --target-host scott@${pi} --build-host ${BUILD_HOST} --sudo"
+        if [[ "$BUILD_HOST" != "localhost" ]]; then
+            echo "  nixos-rebuild switch --flake .#${pi} --target-host scott@${pi} --build-host ${BUILD_HOST} --sudo"
+        else
+            echo "  nixos-rebuild switch --flake .#${pi} --target-host scott@${pi} --sudo"
+        fi
         exit 1
     }
 done
