@@ -137,7 +137,8 @@ deploy_pi() {
         --flake "${FLAKE_DIR}#${name}" \
         --target-host "$ssh_target" \
         "${build_args[@]}" \
-        --sudo; then
+        --sudo \
+        --print-build-logs; then
         ok "nixos-rebuild switch completed"
     else
         fail "nixos-rebuild switch failed for ${name}"
