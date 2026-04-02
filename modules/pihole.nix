@@ -12,6 +12,13 @@
     # skip native module compilation; bitwarden-cli falls back to pure-JS msgpackr.
     nixpkgs.overlays = [
       (final: prev: {
+        # rsyslog's configure checks for libgcrypt via pkg-config, which is unavailable
+        # in the x86_64→aarch64 cross environment. The piholes only do plain TCP
+        # forwarding to log01 and don't need TLS/gcrypt features.
+        rsyslog = prev.rsyslog.overrideAttrs (old: {
+          configureFlags = (old.configureFlags or []) ++ [ "--disable-libgcrypt" ];
+        });
+
         bitwarden-cli = prev.bitwarden-cli.overrideAttrs (old: {
           # npmConfigHook is a postPatch hook that runs:
           #   npm ci --ignore-scripts   (creates node_modules)
