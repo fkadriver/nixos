@@ -45,9 +45,6 @@ let
       gh
       gnumake
 
-      # Networking
-      tailscale
-
       # Backup
       borgbackup
     ];
@@ -93,6 +90,7 @@ let
         "qcad"
 
         # Utilities
+        "tailscale"        # VPN with tray icon (replaces nix-darwin service)
         "caffeine"         # Prevent Mac from sleeping (menubar app)
         "rustdesk"         # Remote desktop to latitude (via Tailscale)
         "sweet-home3d"     # Interior design and home planning
@@ -324,11 +322,13 @@ let
         };
       };
 
+    # Enable SSH server (Remote Login)
+    system.activationScripts.remoteLogin.text = ''
+      /usr/sbin/systemsetup -setremotelogin on > /dev/null 2>&1 || true
+    '';
+
     # Services
     services = {
-      # Tailscale VPN
-      tailscale.enable = true;
-
       # Syncthing file synchronization
       # Note: Syncthing is installed via Homebrew brew above
       # The GUI will be available at http://127.0.0.1:8384
