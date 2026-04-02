@@ -139,7 +139,7 @@ deploy_pi() {
         "${build_args[@]}" \
         --sudo \
         --print-build-logs \
-        --option distribute-builds false; then
+        --option builders ''; then
         ok "nixos-rebuild switch completed"
     else
         fail "nixos-rebuild switch failed for ${name}"
