@@ -24,7 +24,7 @@
         log01 = "tailscale ssh log01";
         pihole01 = "tailscale ssh pihole01";
         pihole02 = "tailscale ssh pihole02";
-slap = "tailscale ssh latitude";
+        slap = "tailscale ssh latitude";
         vm01 = "tailscale ssh vm01";
 
         # Tailscale troubleshooting
