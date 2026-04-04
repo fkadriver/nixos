@@ -90,7 +90,7 @@ let
         "qcad"
 
         # Utilities
-        "tailscale"        # VPN with tray icon (replaces nix-darwin service)
+        "tailscale-app"    # VPN with tray icon (replaces nix-darwin service; renamed from tailscale)
         "caffeine"         # Prevent Mac from sleeping (menubar app)
         "rustdesk"         # Remote desktop to latitude (via Tailscale)
         "sweet-home3d"     # Interior design and home planning
