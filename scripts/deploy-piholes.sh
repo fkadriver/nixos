@@ -23,6 +23,14 @@ NC='\033[0m'
 
 FLAKE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+# Must match pihole.lockedKernelVersion in each host's default.nix.
+# Update both together when intentionally upgrading the kernel.
+# pihole01 = Pi 4B (raspberry-pi-nix kernel)
+# pihole02 = Pi 3B (nixos-hardware kernel)
+declare -A LOCKED_KERNEL_VERSIONS
+LOCKED_KERNEL_VERSIONS[pihole01]="6.6.51"
+LOCKED_KERNEL_VERSIONS[pihole02]="6.12.47-stable_20250916"
+
 declare -A PI_DNS
 PI_DNS[pihole01]="192.168.10.10"
 PI_DNS[pihole02]="192.168.10.11"
@@ -84,6 +92,32 @@ verify_build_host() {
     fi
 }
 
+check_kernel_version() {
+    local name=$1
+    log "Checking kernel version for ${name}..."
+    local version
+    version=$(nix eval --raw --option builders '' \
+        "${FLAKE_DIR}#nixosConfigurations.${name}.config.boot.kernelPackages.kernel.version" \
+        2>/dev/null) || { warn "Could not evaluate kernel version (non-fatal)"; return 0; }
+
+    local locked="${LOCKED_KERNEL_VERSIONS[$name]}"
+    if [[ "$version" == "$locked" ]]; then
+        ok "Kernel ${version} matches locked version"
+    else
+        echo ""
+        warn "━━━ KERNEL VERSION CHANGE DETECTED ━━━"
+        warn "  Host:     ${name}"
+        warn "  Locked:   ${locked}"
+        warn "  Current:  ${version}"
+        warn "A full kernel recompile will be required (~2 hours on vm01)."
+        warn "Update LOCKED_KERNEL_VERSIONS in this script and"
+        warn "pihole.lockedKernelVersion in hosts/${name}/default.nix when ready."
+        echo ""
+        read -rp "  Proceed with recompile? [y/N] " confirm
+        [[ "${confirm,,}" == "y" ]] || { fail "Aborted."; return 1; }
+    fi
+}
+
 verify_pi() {
     local name=$1
     local dns_ip=${PI_DNS[$name]}
@@ -129,6 +163,8 @@ deploy_pi() {
 
     echo ""
     log "━━━ Deploying ${name} (build: ${BUILD_HOST}) ━━━"
+
+    check_kernel_version "$name" || return 1
 
     local build_args=()
     [[ "$BUILD_HOST" != "localhost" ]] && build_args=(--build-host "${BUILD_HOST}")

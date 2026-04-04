@@ -6,7 +6,26 @@
     inputs.self.nixosModules.tailscale
   ];
 
+  options.pihole.lockedKernelVersion = lib.mkOption {
+    type = lib.types.str;
+    description = ''
+      Expected kernel version for this Pi. Set per-host in hosts/pihole*/default.nix.
+      The build fails if the actual kernel drifts from this value (e.g. after
+      nix flake update), forcing a deliberate acknowledgement before a 2-hour
+      recompile is triggered. Update alongside LOCKED_KERNEL_VERSIONS in
+      scripts/deploy-piholes.sh.
+    '';
+  };
+
   config = {
+
+    assertions = [{
+      assertion = config.boot.kernelPackages.kernel.version == config.pihole.lockedKernelVersion;
+      message = "Pi kernel changed to ${config.boot.kernelPackages.kernel.version} "
+              + "(locked: ${config.pihole.lockedKernelVersion}). Update "
+              + "pihole.lockedKernelVersion in the host config and "
+              + "LOCKED_KERNEL_VERSIONS in scripts/deploy-piholes.sh if intentional.";
+    }];
     # bitwarden-cli 2025.12.1 fails to build on aarch64 because msgpackr-extract's
     # native module (node-gyp) hits a Python/str-vs-int type error. Override it to
     # skip native module compilation; bitwarden-cli falls back to pure-JS msgpackr.

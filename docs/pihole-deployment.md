@@ -198,8 +198,29 @@ From latitude or vm01:
 ./scripts/deploy-piholes.sh
 ```
 
-The script auto-detects the available build host (vm01 first, then localhost) and
-deploys pihole01 then pihole02 sequentially.
+The script:
+- Auto-detects the available build host (vm01 first, then localhost)
+- **Checks the kernel version** before building — warns and prompts if the kernel
+  has changed from the locked version (a full kernel recompile takes ~2 hours)
+- Deploys pihole01 then pihole02 sequentially
+- Creates a GC root after each deploy so the compiled kernel is not garbage collected
+
+### Kernel version locking
+
+Each Pi uses a different kernel (Pi 4B via raspberry-pi-nix, Pi 3B via nixos-hardware).
+The locked versions are declared in two places that must be kept in sync:
+
+| Location | pihole01 | pihole02 |
+|---|---|---|
+| `hosts/pihole01/default.nix` | `pihole.lockedKernelVersion = "6.6.51"` | — |
+| `hosts/pihole02/default.nix` | — | `pihole.lockedKernelVersion = "6.12.47-stable_20250916"` |
+| `scripts/deploy-piholes.sh` | `LOCKED_KERNEL_VERSIONS[pihole01]` | `LOCKED_KERNEL_VERSIONS[pihole02]` |
+
+The NixOS build will **fail with a clear message** if the actual kernel drifts from the
+locked value (e.g. after `nix flake update`). To intentionally upgrade:
+1. Update `pihole.lockedKernelVersion` in the host's `default.nix`
+2. Update `LOCKED_KERNEL_VERSIONS` in `scripts/deploy-piholes.sh`
+3. Run the deploy script — it will prompt for confirmation before the long recompile
 
 ### Manual deploy
 
@@ -207,8 +228,13 @@ deploys pihole01 then pihole02 sequentially.
 sudo nixos-rebuild switch --flake .#pihole02 \
   --target-host scott@pihole02 \
   --build-host localhost \
-  --sudo
+  --sudo \
+  --print-build-logs \
+  --option builders ''
 ```
+
+> **Note:** `--option builders ''` disables distributed builds. Without it, latitude
+> and vm01 deadlock by farming derivations to each other in a cycle.
 
 ### Pre-seeding vm01's nix store (avoids recompilation)
 

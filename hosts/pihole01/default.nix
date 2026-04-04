@@ -27,6 +27,10 @@ let
       # Headless managed device — no sudo password needed for wheel
       security.sudo.wheelNeedsPassword = false;
 
+      # Kernel version lock — Pi 4B (raspberry-pi-nix kernel)
+      # Update alongside LOCKED_KERNEL_VERSIONS in scripts/deploy-piholes.sh
+      pihole.lockedKernelVersion = "6.6.51";
+
       system = {
         stateVersion = "25.11";
         nixos.label = "pihole01";
