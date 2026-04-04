@@ -47,7 +47,7 @@ let
       '';
 
       # RustDesk remote desktop - Tailscale-only access from airbook
-      environment.systemPackages = [ pkgs.rustdesk ];
+      environment.systemPackages = [ pkgs.rustdesk pkgs.geany ];
 
       # Only allow RustDesk ports on the Tailscale interface
       networking.firewall.interfaces."tailscale0".allowedTCPPortRanges = [

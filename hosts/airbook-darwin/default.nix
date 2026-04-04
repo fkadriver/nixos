@@ -89,6 +89,9 @@ let
         "librecad"
         "qcad"
 
+        # Text editor
+        "geany"
+
         # Utilities
         "tailscale-app"    # VPN with tray icon (replaces nix-darwin service; renamed from tailscale)
         "caffeine"         # Prevent Mac from sleeping (menubar app)
