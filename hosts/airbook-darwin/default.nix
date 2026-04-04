@@ -60,6 +60,7 @@ let
       brews = [
         "syncthing"
         "bitwarden-cli"  # nix version requires xcodebuild, use homebrew instead
+        "duti"           # Set default file type associations on macOS
       ];
       casks = [
         "bitwarden"
@@ -88,6 +89,9 @@ let
         # 2D CAD
         "librecad"
         "qcad"
+
+        # Text editor
+        "geany"
 
         # Utilities
         "tailscale-app"    # VPN with tray icon (replaces nix-darwin service; renamed from tailscale)
