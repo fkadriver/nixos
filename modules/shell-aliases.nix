@@ -25,6 +25,7 @@
         pihole01 = "tailscale ssh pihole01";
         pihole02 = "tailscale ssh pihole02";
         slap = "tailscale ssh latitude";
+        latitude = "tailscale ssh latitude";
         vm01 = "tailscale ssh vm01";
 
         # Tailscale troubleshooting
@@ -96,6 +97,13 @@
 
         # Temperature monitoring
         temps = "echo '=== CPU Temps ===' && sensors 2>/dev/null || echo '(run: sudo sensors-detect)'; echo ''; echo '=== Drive Temps ===' && for d in /dev/sd?; do echo -n \"$d: \"; sudo hddtemp -u C $d 2>/dev/null || sudo smartctl -A $d | grep -i 'temperature\\|194'; done";
+
+        # Kubernetes
+        k = "kubectl";
+
+        # URL encoding/decoding
+        urldecode = "python3 -c 'import sys, urllib.parse as ul; print(ul.unquote_plus(sys.stdin.read()))'";
+        urlencode = "python3 -c 'import sys, urllib.parse as ul; print(ul.quote_plus(sys.stdin.read()))'";
 
         # Common utilities
         ll = "ls -lah";

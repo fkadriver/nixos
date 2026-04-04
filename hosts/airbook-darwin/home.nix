@@ -86,8 +86,9 @@ in
 
         # Tailscale SSH shortcuts
         nas01 = "tailscale ssh nas01";
-        log01 = "tailscale ssh sands-log01";
-        pi-hole = "tailscale ssh pi-hole";
+        log01 = "tailscale ssh log01";
+        pihole01 = "tailscale ssh pihole01";
+        pihole02 = "tailscale ssh pihole02";
         slap = "tailscale ssh latitude";
         latitude = "tailscale ssh latitude";
         vm01 = "tailscale ssh vm01";
@@ -193,8 +194,9 @@ in
 
         # Tailscale SSH shortcuts
         nas01 = "tailscale ssh nas01";
-        log01 = "tailscale ssh sands-log01";
-        pi-hole = "tailscale ssh pi-hole";
+        log01 = "tailscale ssh log01";
+        pihole01 = "tailscale ssh pihole01";
+        pihole02 = "tailscale ssh pihole02";
         slap = "tailscale ssh latitude";
         latitude = "tailscale ssh latitude";
         vm01 = "tailscale ssh vm01";
