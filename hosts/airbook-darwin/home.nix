@@ -36,6 +36,14 @@ in
       fi
     '';
 
+    # Set Geany as default for .txt and .conf files via duti
+    activation.geanyDefaultEditor = lib.hm.dag.entryAfter ["writeBoundary"] ''
+      if command -v duti >/dev/null 2>&1; then
+        duti -s org.geany.Geany .txt all
+        duti -s org.geany.Geany .conf all
+      fi
+    '';
+
     # User packages (in addition to system packages)
     packages = with pkgs; [
       # Development

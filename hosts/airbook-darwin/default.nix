@@ -60,6 +60,7 @@ let
       brews = [
         "syncthing"
         "bitwarden-cli"  # nix version requires xcodebuild, use homebrew instead
+        "duti"           # Set default file type associations on macOS
       ];
       casks = [
         "bitwarden"
