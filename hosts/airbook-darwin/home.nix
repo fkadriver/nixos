@@ -36,40 +36,6 @@ in
       fi
     '';
 
-    # iTerm2 Dracula color theme (auto-loaded as a Dynamic Profile)
-    "Library/Application Support/iTerm2/DynamicProfiles/dracula.json".text = builtins.toJSON {
-      Profiles = [
-        {
-          Name = "Dracula";
-          Guid = "dracula-iterm2-profile";
-          "Background Color"         = { "Red Component" = 0.1569; "Green Component" = 0.1647; "Blue Component" = 0.2118; "Alpha Component" = 1; };
-          "Foreground Color"         = { "Red Component" = 0.9725; "Green Component" = 0.9725; "Blue Component" = 0.9490; "Alpha Component" = 1; };
-          "Cursor Color"             = { "Red Component" = 0.9725; "Green Component" = 0.9725; "Blue Component" = 0.9490; "Alpha Component" = 1; };
-          "Cursor Text Color"        = { "Red Component" = 0.1569; "Green Component" = 0.1647; "Blue Component" = 0.2118; "Alpha Component" = 1; };
-          "Selection Color"          = { "Red Component" = 0.2667; "Green Component" = 0.2784; "Blue Component" = 0.3529; "Alpha Component" = 1; };
-          "Selected Text Color"      = { "Red Component" = 0.9725; "Green Component" = 0.9725; "Blue Component" = 0.9490; "Alpha Component" = 1; };
-          # ANSI normal
-          "Ansi 0 Color"  = { "Red Component" = 0.1294; "Green Component" = 0.1333; "Blue Component" = 0.1725; "Alpha Component" = 1; }; # #21222C
-          "Ansi 1 Color"  = { "Red Component" = 1.0000; "Green Component" = 0.3333; "Blue Component" = 0.3333; "Alpha Component" = 1; }; # #FF5555
-          "Ansi 2 Color"  = { "Red Component" = 0.3137; "Green Component" = 0.9804; "Blue Component" = 0.4824; "Alpha Component" = 1; }; # #50FA7B
-          "Ansi 3 Color"  = { "Red Component" = 0.9451; "Green Component" = 0.9804; "Blue Component" = 0.5490; "Alpha Component" = 1; }; # #F1FA8C
-          "Ansi 4 Color"  = { "Red Component" = 0.7412; "Green Component" = 0.5765; "Blue Component" = 0.9765; "Alpha Component" = 1; }; # #BD93F9
-          "Ansi 5 Color"  = { "Red Component" = 1.0000; "Green Component" = 0.4745; "Blue Component" = 0.7765; "Alpha Component" = 1; }; # #FF79C6
-          "Ansi 6 Color"  = { "Red Component" = 0.5451; "Green Component" = 0.9137; "Blue Component" = 0.9922; "Alpha Component" = 1; }; # #8BE9FD
-          "Ansi 7 Color"  = { "Red Component" = 0.9725; "Green Component" = 0.9725; "Blue Component" = 0.9490; "Alpha Component" = 1; }; # #F8F8F2
-          # ANSI bright
-          "Ansi 8 Color"  = { "Red Component" = 0.3843; "Green Component" = 0.4471; "Blue Component" = 0.6431; "Alpha Component" = 1; }; # #6272A4
-          "Ansi 9 Color"  = { "Red Component" = 1.0000; "Green Component" = 0.4314; "Blue Component" = 0.4314; "Alpha Component" = 1; }; # #FF6E6E
-          "Ansi 10 Color" = { "Red Component" = 0.4118; "Green Component" = 1.0000; "Blue Component" = 0.5804; "Alpha Component" = 1; }; # #69FF94
-          "Ansi 11 Color" = { "Red Component" = 1.0000; "Green Component" = 1.0000; "Blue Component" = 0.6471; "Alpha Component" = 1; }; # #FFFFA5
-          "Ansi 12 Color" = { "Red Component" = 0.8392; "Green Component" = 0.6745; "Blue Component" = 1.0000; "Alpha Component" = 1; }; # #D6ACFF
-          "Ansi 13 Color" = { "Red Component" = 1.0000; "Green Component" = 0.5725; "Blue Component" = 0.8745; "Alpha Component" = 1; }; # #FF92DF
-          "Ansi 14 Color" = { "Red Component" = 0.6431; "Green Component" = 1.0000; "Blue Component" = 1.0000; "Alpha Component" = 1; }; # #A4FFFF
-          "Ansi 15 Color" = { "Red Component" = 1.0000; "Green Component" = 1.0000; "Blue Component" = 1.0000; "Alpha Component" = 1; }; # #FFFFFF
-        }
-      ];
-    };
-
     # Set Geany as default for .txt and .conf files via duti
     activation.geanyDefaultEditor = lib.hm.dag.entryAfter ["writeBoundary"] ''
       if command -v duti >/dev/null 2>&1; then
@@ -102,6 +68,40 @@ in
       junicode
       inter
       source-sans
+    ];
+  };
+
+  # iTerm2 Dracula color theme (auto-loaded as a Dynamic Profile)
+  home.file."Library/Application Support/iTerm2/DynamicProfiles/dracula.json".text = builtins.toJSON {
+    Profiles = [
+      {
+        Name = "Dracula";
+        Guid = "dracula-iterm2-profile";
+        "Background Color"         = { "Red Component" = 0.1569; "Green Component" = 0.1647; "Blue Component" = 0.2118; "Alpha Component" = 1; };
+        "Foreground Color"         = { "Red Component" = 0.9725; "Green Component" = 0.9725; "Blue Component" = 0.9490; "Alpha Component" = 1; };
+        "Cursor Color"             = { "Red Component" = 0.9725; "Green Component" = 0.9725; "Blue Component" = 0.9490; "Alpha Component" = 1; };
+        "Cursor Text Color"        = { "Red Component" = 0.1569; "Green Component" = 0.1647; "Blue Component" = 0.2118; "Alpha Component" = 1; };
+        "Selection Color"          = { "Red Component" = 0.2667; "Green Component" = 0.2784; "Blue Component" = 0.3529; "Alpha Component" = 1; };
+        "Selected Text Color"      = { "Red Component" = 0.9725; "Green Component" = 0.9725; "Blue Component" = 0.9490; "Alpha Component" = 1; };
+        # ANSI normal
+        "Ansi 0 Color"  = { "Red Component" = 0.1294; "Green Component" = 0.1333; "Blue Component" = 0.1725; "Alpha Component" = 1; }; # #21222C
+        "Ansi 1 Color"  = { "Red Component" = 1.0000; "Green Component" = 0.3333; "Blue Component" = 0.3333; "Alpha Component" = 1; }; # #FF5555
+        "Ansi 2 Color"  = { "Red Component" = 0.3137; "Green Component" = 0.9804; "Blue Component" = 0.4824; "Alpha Component" = 1; }; # #50FA7B
+        "Ansi 3 Color"  = { "Red Component" = 0.9451; "Green Component" = 0.9804; "Blue Component" = 0.5490; "Alpha Component" = 1; }; # #F1FA8C
+        "Ansi 4 Color"  = { "Red Component" = 0.7412; "Green Component" = 0.5765; "Blue Component" = 0.9765; "Alpha Component" = 1; }; # #BD93F9
+        "Ansi 5 Color"  = { "Red Component" = 1.0000; "Green Component" = 0.4745; "Blue Component" = 0.7765; "Alpha Component" = 1; }; # #FF79C6
+        "Ansi 6 Color"  = { "Red Component" = 0.5451; "Green Component" = 0.9137; "Blue Component" = 0.9922; "Alpha Component" = 1; }; # #8BE9FD
+        "Ansi 7 Color"  = { "Red Component" = 0.9725; "Green Component" = 0.9725; "Blue Component" = 0.9490; "Alpha Component" = 1; }; # #F8F8F2
+        # ANSI bright
+        "Ansi 8 Color"  = { "Red Component" = 0.3843; "Green Component" = 0.4471; "Blue Component" = 0.6431; "Alpha Component" = 1; }; # #6272A4
+        "Ansi 9 Color"  = { "Red Component" = 1.0000; "Green Component" = 0.4314; "Blue Component" = 0.4314; "Alpha Component" = 1; }; # #FF6E6E
+        "Ansi 10 Color" = { "Red Component" = 0.4118; "Green Component" = 1.0000; "Blue Component" = 0.5804; "Alpha Component" = 1; }; # #69FF94
+        "Ansi 11 Color" = { "Red Component" = 1.0000; "Green Component" = 1.0000; "Blue Component" = 0.6471; "Alpha Component" = 1; }; # #FFFFA5
+        "Ansi 12 Color" = { "Red Component" = 0.8392; "Green Component" = 0.6745; "Blue Component" = 1.0000; "Alpha Component" = 1; }; # #D6ACFF
+        "Ansi 13 Color" = { "Red Component" = 1.0000; "Green Component" = 0.5725; "Blue Component" = 0.8745; "Alpha Component" = 1; }; # #FF92DF
+        "Ansi 14 Color" = { "Red Component" = 0.6431; "Green Component" = 1.0000; "Blue Component" = 1.0000; "Alpha Component" = 1; }; # #A4FFFF
+        "Ansi 15 Color" = { "Red Component" = 1.0000; "Green Component" = 1.0000; "Blue Component" = 1.0000; "Alpha Component" = 1; }; # #FFFFFF
+      }
     ];
   };
 
