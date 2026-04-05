@@ -185,13 +185,13 @@ deploy_pi() {
     # Keep a GC root on the build machine so the Pi kernel isn't garbage collected.
     # Without this, 'nix.gc.automatic' (every 30d) would remove the compiled kernel
     # and force a full recompile on the next deploy.
-    local gcroot="/nix/var/nix/gcroots/pihole-deploy-${name}"
-    local toplevel
-    toplevel=$(nix build --no-link --print-out-paths \
-        --option builders '' \
-        "${FLAKE_DIR}#nixosConfigurations.${name}.config.system.build.toplevel" 2>/dev/null)
-    if [[ -n "$toplevel" ]]; then
-        sudo ln -sfn "$toplevel" "$gcroot"
+    # Use ~/.local/share/nix/gcroots/ (user-writable, respected by nix GC) to avoid
+    # needing sudo (latitude requires a sudo password; background deploys would hang).
+    local gcroot="${HOME}/.local/share/nix/gcroots/pihole-deploy-${name}"
+    mkdir -p "$(dirname "$gcroot")"
+    if nix build --option builders '' \
+        --out-link "$gcroot" \
+        "${FLAKE_DIR}#nixosConfigurations.${name}.config.system.build.toplevel" 2>/dev/null; then
         ok "GC root updated: ${gcroot}"
     else
         warn "Could not create GC root for ${name} (non-fatal)"

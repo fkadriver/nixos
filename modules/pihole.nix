@@ -197,11 +197,27 @@
     # resolved is enabled by tailscale.nix, so we force it off here.
     services.resolved = lib.mkForce { enable = false; };
 
-    # Forward syslog (including pihole-FTL DNS queries) to log01
+    # Forward syslog and pihole DNS query logs to log01.
+    # pihole-FTL logs DNS queries to /var/log/pihole/pihole.log (not syslog), so
+    # imfile tails that file and injects entries into rsyslog's pipeline for forwarding.
     services.rsyslogd = {
       enable = true;
       extraConfig = ''
-        # Forward all messages to log01 with disk-assisted queue for reliability
+        # Tail pihole DNS query log and inject into rsyslog pipeline.
+        # freshStartTail: on first run (no state file) start from the END of
+        # the file so we don't replay potentially gigabytes of history.
+        # After that, the state file tracks our position across rsyslog restarts.
+        module(load="imfile" Mode="inotify")
+        input(type="imfile"
+          File="/var/log/pihole/pihole.log"
+          Tag="pihole-dns"
+          Facility="local3"
+          Severity="info"
+          PersistStateInterval="1"
+          StateFile="pihole-dns-state"
+          freshStartTail="on")
+
+        # Forward all messages (syslog + pihole DNS queries) to log01
         action(type="omfwd"
           target="log01.warthog-royal.ts.net"
           port="514"
@@ -251,7 +267,14 @@
       ];
 
       settings = {
-        misc.syslog = true;   # Send FTL log messages (including DNS queries) to syslog
+        # misc.syslog sends FTL's own process logs to syslog (startup, errors, etc.)
+        # DNS query logs go to files.log.dnsmasq (/var/log/pihole/pihole.log) — not syslog.
+        # rsyslogd tails that file via imfile and forwards queries to log01.
+        misc.syslog = true;
+        # Allow pihole-set-password to write pwhash via pihole-FTL --config.
+        # The NixOS pihole-ftl module defaults misc.readOnly = true (preventing all
+        # config writes), which silently blocks pwhash from being set.
+        misc.readOnly = false;
 
         dns = {
           upstreams = [ "9.9.9.9" "149.112.112.112" ];
@@ -315,6 +338,10 @@
 
     # Set the Pi-hole web password before pihole-ftl starts.
     # pihole-FTL --config hashes the plaintext using BALLOON-SHA256 before writing to pihole.toml.
+    # RemainAfterExit must be absent (false) so this service re-runs on every pihole-ftl
+    # restart. With RemainAfterExit = true, systemd sees the service as "active" and skips
+    # re-running it even after pihole-ftl is restarted (e.g. after nixos-rebuild switch),
+    # causing the pwhash to be lost because pihole.toml is regenerated from Nix on rebuild.
     systemd.services.pihole-set-password = {
       description = "Set Pi-hole web password from Bitwarden secret";
       after    = [ "bitwarden-secrets-sync.service" ];
@@ -323,11 +350,7 @@
       wantedBy = [ "pihole-ftl.service" ];
       serviceConfig = {
         Type = "oneshot";
-        RemainAfterExit = true;
         ExecStart = pkgs.writeShellScript "pihole-set-password" ''
-          # Remove stale readOnly = true left by the previous NixOS config before
-          # pihole-ftl has a chance to rewrite pihole.toml on this boot.
-          ${pkgs.gnused}/bin/sed -i '/readOnly\s*=\s*true/d' /etc/pihole/pihole.toml 2>/dev/null || true
           ${pkgs.pihole-ftl}/bin/pihole-FTL \
             --config webserver.api.password \
             "$(< /run/bitwarden-secrets/pihole_pwhash)"
@@ -338,6 +361,20 @@
     systemd.services.pihole-ftl = {
       after    = [ "pihole-set-password.service" ];
       requires = [ "pihole-set-password.service" ];
+    };
+
+    # Rotate pihole's DNS query log daily — it grows quickly (1 DNS entry per line)
+    # and is not rotated by the upstream pihole-ftl NixOS module.
+    # After rotation, send SIGHUP to rsyslog so imfile re-opens the new file.
+    services.logrotate.settings.pihole-dns = {
+      files = "/var/log/pihole/pihole.log";
+      frequency = "daily";
+      rotate = 7;
+      compress = true;
+      dateext = true;
+      missingok = true;
+      notifempty = true;
+      postrotate = "systemctl kill -s HUP syslog.service 2>/dev/null || true";
     };
 
     # Expose Pi-hole web UI over Tailscale with HTTPS (tailnet-only, not public)

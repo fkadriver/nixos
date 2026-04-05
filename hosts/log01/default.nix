@@ -42,16 +42,6 @@ let
       services.rsyslogd = {
         enable = true;
         extraConfig = ''
-          # Set default ownership/permissions for all created files and directories
-          global(
-            fileOwner="root"
-            fileGroup="adm"
-            fileCreateMode="0640"
-            dirOwner="root"
-            dirGroup="adm"
-            dirCreateMode="0750"
-          )
-
           # Load input modules for remote syslog reception
           module(load="imudp")
           module(load="imtcp")
@@ -63,9 +53,19 @@ let
           template(name="RemoteHost" type="string"
             string="/var/log/remote/%HOSTNAME%/%PROGRAMNAME%.log")
 
-          # Route remote messages to per-host directories
+          # Route remote messages to per-host directories.
+          # Permissions are set explicitly here — global() is not used because
+          # it must appear before all other config statements, but extraConfig
+          # is appended after the NixOS-generated base config.
           if $fromhost-ip != "127.0.0.1" then {
-            action(type="omfile" dynaFile="RemoteHost")
+            action(type="omfile"
+              dynaFile="RemoteHost"
+              fileCreateMode="0640"
+              fileOwner="root"
+              fileGroup="adm"
+              dirCreateMode="0750"
+              dirOwner="root"
+              dirGroup="adm")
             stop
           }
         '';
