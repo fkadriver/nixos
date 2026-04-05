@@ -238,7 +238,7 @@
     networking.extraHosts = ''
       192.168.10.21 unifi
       192.168.10.22 syslog-server
-      192.168.1.2   sw01  # HP1920
+      192.168.1.2   aruba2530  # HPE Aruba 2530-24G PoE+ (SW01)
       192.168.1.3   sw02  # TL-SG108E
       192.168.11.50 LBP162  # Canon LBP
       192.168.11.51 Ender3V3KE   # Creality Ender-3 KEv3
