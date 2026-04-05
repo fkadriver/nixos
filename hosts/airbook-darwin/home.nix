@@ -351,13 +351,14 @@ in
     vscode = {
       enable = true;
       package = pkgs.vscode;
-      # Extensions are installed via VS Code marketplace and synced via GitHub Settings Sync
-      # Recommended extensions to install manually:
+      extensions = with pkgs.vscode-extensions; [
+        dracula-theme.theme-dracula
+      ];
+      # Remaining extensions installed via VS Code marketplace and synced via GitHub Settings Sync:
       # - jnoortheen.nix-ide           # Nix language support
       # - ms-python.python             # Python support
       # - ms-python.vscode-pylance     # Python IntelliSense
       # - eamodio.gitlens             # Git lens
-      # - github.github-vscode-theme  # GitHub theme
       # - esbenp.prettier-vscode      # Prettier formatter
       # - anthropic.claude-code       # Claude Code AI assistant
     };
