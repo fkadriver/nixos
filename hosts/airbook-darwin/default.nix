@@ -82,6 +82,9 @@ let
         # Gaming (from daily-driver.nix)
         "heroic"           # Epic, GOG, Amazon Prime games launcher
 
+        # Video transcoding
+        "handbrake"
+
         # Office and productivity
         "libreoffice"
         "thunderbird"

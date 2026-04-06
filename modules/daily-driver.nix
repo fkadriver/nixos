@@ -66,6 +66,7 @@
       claude-code
 
       shotwell
+      handbrake  # Video transcoding
 
       libreoffice
       thunderbird
