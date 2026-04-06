@@ -19,11 +19,7 @@
     # Extensions are managed via VS Code Settings Sync (GitHub account)
     # This allows installing any marketplace extension without Nix store limitations
     environment.systemPackages = with pkgs; [
-      (vscode-with-extensions.override {
-        vscodeExtensions = [
-          vscode-extensions.dracula-theme.theme-dracula
-        ];
-      })
+      vscode              # Plain VS Code - extensions installed via marketplace
       libsecret
       gnome-keyring
       seahorse            # GUI for managing keyrings

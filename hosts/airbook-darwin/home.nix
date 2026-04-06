@@ -351,16 +351,7 @@ in
     vscode = {
       enable = true;
       package = pkgs.vscode;
-      extensions = with pkgs.vscode-extensions; [
-        dracula-theme.theme-dracula
-      ];
-      # Remaining extensions installed via VS Code marketplace and synced via GitHub Settings Sync:
-      # - jnoortheen.nix-ide           # Nix language support
-      # - ms-python.python             # Python support
-      # - ms-python.vscode-pylance     # Python IntelliSense
-      # - eamodio.gitlens             # Git lens
-      # - esbenp.prettier-vscode      # Prettier formatter
-      # - anthropic.claude-code       # Claude Code AI assistant
+      # Extensions installed via VS Code marketplace and synced via GitHub Settings Sync
     };
 
     starship = {
