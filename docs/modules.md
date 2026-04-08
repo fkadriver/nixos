@@ -24,7 +24,7 @@ This document provides a high-level overview of all available modules in this re
 
 | Module | Description |
 |--------|-------------|
-| `pihole.nix` | Pi-hole FTL + web UI, slim base config (replaces `common` for Pi hosts): tailscale, shell-aliases, git, vim, curl, wget, htop, tmux, starship, rsyslog forwarding to log01. Manages sops secrets for the admin password hash. FTL DNS query logs sent to syslog via `misc.syslog = true`. |
+| `pihole.nix` | Pi-hole FTL + web UI, slim base config (replaces `common` for Pi hosts): tailscale, shell-aliases, git, vim, curl, wget, htop, tmux, starship, rsyslog forwarding to log01. Manages sops secrets for the admin password hash. DNS query logs (`/var/log/pihole/pihole.log`) are tailed in real time via rsyslog `imfile` (inotify mode) and streamed to log01 via TCP. FTL process logs (startup, errors) are sent to syslog via `misc.syslog = true`. |
 
 ## Networking Modules
 

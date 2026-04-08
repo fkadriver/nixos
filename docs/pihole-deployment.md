@@ -342,6 +342,43 @@ to the main web UI login.
   subnet (or have a route to `192.168.10.0/24`)
 - Try connecting a monitor — the console will show the boot log and any errors
 
+### rsyslog DNS logs not streaming in real time
+
+DNS query logs (`/var/log/pihole/pihole.log`) are forwarded to log01 in real time via
+rsyslog `imfile` in `inotify` mode — new entries are picked up immediately as Pi-hole
+writes them.
+
+To verify forwarding is active on a pihole:
+
+```bash
+sudo journalctl -u syslog -n 50
+```
+
+Look for `suspended` or `connection refused` warnings — these indicate log01 is
+unreachable and messages are queueing locally (disk queue in `/var/spool/rsyslog/`).
+When connectivity restores, queued messages flush automatically.
+
+To watch live DNS queries arriving on log01:
+
+```bash
+tail -f /var/log/remote/pihole01/pihole-dns.log
+```
+
+### rsyslog warning: "parameter 'statefile' deprecated"
+
+If you see this in the pihole journal:
+
+```
+error during parsing file .../syslog.conf: parameter 'statefile' deprecated but accepted
+```
+
+The `StateFile` parameter was removed from the imfile input in rsyslog v8.2512+. In
+inotify mode, rsyslog manages file position state automatically. The fix is to remove
+`StateFile` and `PersistStateInterval` from the imfile input in `modules/pihole.nix`
+(already done as of commit b23e641).
+
+---
+
 ### Cross-compilation fails on new package
 
 Some packages fail to cross-compile for aarch64 due to nixpkgs bugs. Add them
