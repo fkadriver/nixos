@@ -285,13 +285,15 @@
           blocking.mode = "IP";
           # Conditional forwarding — forward reverse lookups for each VLAN
           # to the corresponding gateway so Pi-hole resolves local hostnames.
+          # Dnsmasq listens on port 5353 (port 53 is taken by Unbound on OPNsense).
+          # Append #5353 so Pi-hole sends PTR queries to the right port.
           revServers = [
-            "true,192.168.1.0/24,192.168.1.1"
-            "true,192.168.10.0/24,192.168.10.1"
-            "true,192.168.11.0/24,192.168.11.1"
-            "true,192.168.20.0/24,192.168.20.1"
-            "true,192.168.21.0/24,192.168.21.1"
-            "true,192.168.30.0/24,192.168.30.1"
+            "true,192.168.1.0/24,192.168.1.1#5353"
+            "true,192.168.10.0/24,192.168.10.1#5353"
+            "true,192.168.11.0/24,192.168.11.1#5353"
+            "true,192.168.20.0/24,192.168.20.1#5353"
+            "true,192.168.21.0/24,192.168.21.1#5353"
+            "true,192.168.30.0/24,192.168.30.1#5353"
           ];
           specialDomains = {
             # Block iCloud Private Relay to prevent Apple devices bypassing Pi-hole
