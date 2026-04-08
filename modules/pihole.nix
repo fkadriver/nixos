@@ -213,8 +213,6 @@
           Tag="pihole-dns"
           Facility="local3"
           Severity="info"
-          PersistStateInterval="1"
-          StateFile="pihole-dns-state"
           freshStartTail="on")
 
         # Forward all messages (syslog + pihole DNS queries) to log01
