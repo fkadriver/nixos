@@ -158,6 +158,7 @@ install -m 644 "${NAS01_DIR}/config/systemd/smbd.service" /etc/systemd/system/sm
 install -m 644 "${NAS01_DIR}/config/systemd/nmbd.service" /etc/systemd/system/nmbd.service
 install -m 644 "${NAS01_DIR}/config/systemd/tailscaled.service" /etc/systemd/system/tailscaled.service
 install -m 644 "${NAS01_DIR}/config/systemd/syncthing.service" /etc/systemd/system/syncthing.service
+install -m 644 "${NAS01_DIR}/config/systemd/hddtemp.service" /etc/systemd/system/hddtemp.service
 systemctl daemon-reload
 
 echo ""
@@ -180,7 +181,8 @@ echo "  # Note: tar is pre-installed on Ubuntu"
 echo ""
 echo "=== Enable services ==="
 echo "  sudo systemctl enable --now hd-idle"
-echo "  sudo systemctl enable --now smbd nmbd"
+echo "  sudo systemctl enable --now hddtemp
+  sudo systemctl enable --now smbd nmbd"
 echo "  sudo systemctl enable --now nfs-kernel-server"
 echo "  sudo exportfs -ra"
 echo "  sudo systemctl enable --now tailscaled"

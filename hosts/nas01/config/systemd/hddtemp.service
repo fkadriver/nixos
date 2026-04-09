@@ -1,0 +1,15 @@
+# Systemd service for hddtemp daemon (provides disk temps to btop via port 7634)
+# Install to: /etc/systemd/system/hddtemp.service
+# Then: sudo systemctl daemon-reload && sudo systemctl enable --now hddtemp
+
+[Unit]
+Description=Hard drive temperature daemon (Nix)
+After=multi-user.target
+
+[Service]
+# Monitor all SATA drives; btop connects to port 7634
+ExecStart=/nix/var/nix/profiles/nas01/bin/hddtemp --daemon --foreground --numeric --port=7634 /dev/sd?
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
