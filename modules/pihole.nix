@@ -229,8 +229,8 @@
       '';
     };
 
-    # Use Pi-hole for local DNS with Quad9 as an out-of-band fallback during boot
-    networking.nameservers = lib.mkDefault [ "127.0.0.1" "9.9.9.9" ];
+    # Use Pi-hole for local DNS with Cloudflare malware-blocking as out-of-band fallback during boot
+    networking.nameservers = lib.mkDefault [ "127.0.0.1" "1.1.1.2" ];
 
     # Local DNS entries — shared across all Pi-hole instances
     networking.extraHosts = ''
@@ -275,7 +275,16 @@
         misc.readOnly = false;
 
         dns = {
-          upstreams = [ "9.9.9.9" "149.112.112.112" ];
+          # Primary: Cloudflare malware-blocking DoH (1.1.1.2/1.0.0.2)
+          # The pipe-delimited IPs are bootstrap hints so FTL can reach the DoH
+          # endpoint without a prior DNS lookup.
+          # Tertiary: Google plain DNS as fallback.
+          upstreams = [
+            "https://security.cloudflare-dns.com/dns-query|1.1.1.2,1.0.0.2"
+            "8.8.8.8"
+          ];
+          # DoH providers validate DNSSEC on their end; FTL-level DNSSEC validation
+          # is left enabled — Cloudflare malware DoH supports DNSSEC passthrough.
           dnssec = true;
           # Serve all interfaces so LAN clients can use Pi-hole for DNS
           listeningMode = "ALL";
