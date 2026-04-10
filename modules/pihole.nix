@@ -78,6 +78,7 @@
     environment.systemPackages = with pkgs; [
       age     # encryption tool for SOPS
       sops    # secret operations
+      bind    # dig, nslookup
       vim
       git
       curl
