@@ -45,7 +45,7 @@ let
       '';
 
       # Fallback DNS if both piholes are unreachable (build host must resolve to deploy piholes)
-      services.resolved.fallbackDns = [ "1.1.1.3" ];
+      services.resolved.settings.Resolve.FallbackDNS = [ "1.1.1.3" ];
 
       networking = {
         hostName = "vm01";
