@@ -174,8 +174,7 @@ deploy_pi() {
         --target-host "$ssh_target" \
         "${build_args[@]}" \
         --sudo \
-        --print-build-logs \
-        --option builders ''; then
+        --print-build-logs; then
         ok "nixos-rebuild switch completed"
     else
         fail "nixos-rebuild switch failed for ${name}"
