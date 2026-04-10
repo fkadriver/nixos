@@ -29,7 +29,7 @@ let
     TEXT="$1"
     if [ -z "$TEXT" ]; then
       TEXT="Scott ♥ Steph"
-    fi
+    fi  
 
     WORKDIR="$HOME/.cache/font-test-plate"
     mkdir -p "$WORKDIR"
@@ -194,6 +194,8 @@ in
         blender
         meshlab
         sweethome3d.application
+        solvespace
+        f3d
       ])
       ++ lib.optionals cfg.repairTools (with pkgs; [
         inkscape
