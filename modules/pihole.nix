@@ -277,16 +277,11 @@
         misc.readOnly = false;
 
         dns = {
-          # Primary: Cloudflare malware-blocking DoH (1.1.1.2/1.0.0.2)
-          # The pipe-delimited IPs are bootstrap hints so FTL can reach the DoH
-          # endpoint without a prior DNS lookup.
-          # Tertiary: Google plain DNS as fallback.
-          upstreams = [
-            "https://security.cloudflare-dns.com/dns-query|1.1.1.2,1.0.0.2"
-            "8.8.8.8"
-          ];
-          # DoH providers validate DNSSEC on their end; FTL-level DNSSEC validation
-          # is left enabled — Cloudflare malware DoH supports DNSSEC passthrough.
+          # Cloudflare malware-blocking DNS (primary/secondary) + Google fallback.
+          # Note: DoH (https://security.cloudflare-dns.com/dns-query) is NOT used
+          # here — dnsmasq's DoH bootstrap syntax is incompatible with the pihole
+          # upstream format and causes dnsmasq to fail on startup.
+          upstreams = [ "1.1.1.2" "1.0.0.2" "8.8.8.8" ];
           dnssec = true;
           # Serve all interfaces so LAN clients can use Pi-hole for DNS
           listeningMode = "ALL";
