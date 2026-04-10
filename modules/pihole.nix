@@ -76,9 +76,10 @@
     ];
     # Slim package set — only what's needed for Pi-hole operation and git
     environment.systemPackages = with pkgs; [
-      age     # encryption tool for SOPS
-      sops    # secret operations
-      bind    # dig, nslookup
+      age        # encryption tool for SOPS
+      sops       # secret operations
+      bind       # dig, nslookup
+      pihole-ftl # pihole-FTL CLI (service module doesn't add binary to PATH)
       vim
       git
       curl
