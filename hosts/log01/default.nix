@@ -39,6 +39,7 @@ let
 
       # rsyslog: receive syslog from network devices on UDP/TCP 514
       # Logs stored at /var/log/remote/<hostname>/<program>.log
+      # All logs (local + remote) forwarded to Splunk over TCP with disk queue
       services.rsyslogd = {
         enable = true;
         extraConfig = ''
@@ -52,6 +53,19 @@ let
           # Per-host log file template
           template(name="RemoteHost" type="string"
             string="/var/log/remote/%HOSTNAME%/%PROGRAMNAME%.log")
+
+          # Forward ALL messages (log01 local + all remote devices) to Splunk.
+          # Must appear before the stop below so remote messages are also captured.
+          action(type="omfwd"
+            target="splunk.warthog-royal.ts.net"
+            port="5514"
+            protocol="tcp"
+            queue.type="LinkedList"
+            queue.filename="splunkfwd"
+            queue.maxdiskspace="500m"
+            queue.saveonshutdown="on"
+            action.resumeRetryCount="-1"
+            action.resumeInterval="30")
 
           # Route remote messages to per-host directories.
           # Permissions are set explicitly here — global() is not used because
