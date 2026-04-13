@@ -89,6 +89,35 @@ let
         };
       };
 
+      # Deploy GitHub SSH key and config for the immich service user.
+      # The key is fetched from Bitwarden into scott's ~/.ssh during the
+      # bitwarden-ssh-keys activation step; we copy it here afterwards.
+      system.activationScripts.immichSshGithub = lib.stringAfter [ "bitwarden-ssh-keys" "users" ] ''
+        SSH_DIR=/opt/immich/.ssh
+        SRC_KEY=/home/scott/.ssh/id_ed25519_github
+
+        if [ -f "$SRC_KEY" ]; then
+          mkdir -p "$SSH_DIR"
+          chmod 700 "$SSH_DIR"
+          chown immich:immich "$SSH_DIR"
+
+          cp "$SRC_KEY" "$SSH_DIR/id_ed25519_github"
+          chmod 600 "$SSH_DIR/id_ed25519_github"
+          chown immich:immich "$SSH_DIR/id_ed25519_github"
+
+          cat > "$SSH_DIR/config" << 'EOF'
+Host github.com
+  User git
+  IdentityFile ~/.ssh/id_ed25519_github
+  IdentitiesOnly yes
+EOF
+          chmod 600 "$SSH_DIR/config"
+          chown immich:immich "$SSH_DIR/config"
+        else
+          echo "Warning: $SRC_KEY not found — immich GitHub SSH key not installed" >&2
+        fi
+      '';
+
       # Disable starship for immich user
       system.activationScripts.immichBashrc = ''
         mkdir -p /opt/immich
