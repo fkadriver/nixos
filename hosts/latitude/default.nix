@@ -47,7 +47,17 @@ let
       '';
 
       # RustDesk remote desktop - Tailscale-only access from airbook
-      environment.systemPackages = [ pkgs.rustdesk pkgs.geany ];
+      # VMware Workstation for SANS ICS310 RELICS VM (VMware .vmx format)
+      # git-lfs for GRFICSv3 OT lab (large Docker image assets)
+      environment.systemPackages = [
+        pkgs.rustdesk
+        pkgs.geany
+        pkgs.vmware-workstation
+        pkgs.git-lfs
+      ];
+
+      # VMware kernel modules required for VMware Workstation
+      virtualisation.vmware.host.enable = true;
 
       # Default text editor for .txt and .conf files
       xdg.mime.defaultApplications = {
