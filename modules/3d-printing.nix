@@ -4,6 +4,10 @@
 let
   cfg = config.my.printing;
 
+  # FreeCAD 1.1.0 is available in nixpkgs 25.11 but not yet in nixpkgs-unstable
+  pkgs2511 = inputs.nixpkgs-2511.legacyPackages.${pkgs.system};
+  freecad = pkgs2511.freecad;
+
   # Some font package names can vary across nixpkgs revisions. Only include those that exist.
   fontPkgs =
     (if pkgs ? "eb-garamond" then [ pkgs."eb-garamond" ] else []) ++
@@ -186,11 +190,11 @@ in
 
     # Core modeling / slicing
     environment.systemPackages =
+      [ freecad ] ++  # FreeCAD 1.1.0 from nixpkgs 25.11
       (with pkgs; [
         openscad
         orca-slicer
         prusa-slicer
-        freecad
         blender
         meshlab
         sweethome3d.application

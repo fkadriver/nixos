@@ -2,6 +2,7 @@
   description = "Scott's NixOS Configurations";
   inputs = {
     nixpkgs.url = "flake:nixpkgs/nixpkgs-unstable";
+    nixpkgs-2511.url = "github:NixOS/nixpkgs/nixos-25.11";
     home-manager.url = "flake:home-manager";
     nixos-hardware.url = "flake:nixos-hardware";
     disko = {
