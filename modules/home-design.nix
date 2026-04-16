@@ -1,6 +1,8 @@
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }:
 let
+  pkgs2511 = inputs.nixpkgs-2511.legacyPackages.${pkgs.system};
+
   # Sweet Home 3D plugins
   # Note: Plugins must be manually downloaded and placed in ~/.local/share/Sweet Home 3D/plugins/
   # This creates a helper script to manage plugin installation
@@ -102,7 +104,7 @@ in
       # Alternative/Complementary tools
       librecad              # 2D CAD for precise measurements and technical drawings
       qcad                  # Professional 2D CAD (more features than LibreCAD)
-      freecad               # 3D parametric CAD (also useful for 3D printing)
+      pkgs2511.freecad      # 3D parametric CAD 1.1.0 (from nixpkgs 25.11)
 
       # FreeCAD is excellent for deck design because:
       # - Parametric design (easy to adjust dimensions)
