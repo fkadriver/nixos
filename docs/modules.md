@@ -69,8 +69,8 @@ This document provides a high-level overview of all available modules in this re
 
 | Module | Description |
 |--------|-------------|
-| `3d-printing.nix` | OpenSCAD, PrusaSlicer, FreeCAD, Blender, MeshLab with optional font test generators |
-| `home-design.nix` | Sweet Home 3D, LibreCAD, QCAD for home remodeling/deck planning |
+| `3d-printing.nix` | OrcaSlicer, PrusaSlicer, FreeCAD 1.1.0 (nixpkgs 25.11), OpenSCAD, Blender, MeshLab, SolveSpace, f3d, Sweet Home 3D with optional font test generators |
+| `home-design.nix` | Sweet Home 3D for interior design and floor plans, with plugin installer helper |
 | `font.nix` | Modular font management (documents, craft, printing3d, nerd, viewer) |
 
 ## Disk & System

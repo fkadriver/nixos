@@ -117,7 +117,8 @@ The flake automatically discovers all `.nix` files in `./modules/` and exposes t
 - `borg-backup.nix` - Encrypted backups to remote servers
 - `disko-config.nix` - Automated disk partitioning (1GB boot + LVM)
 - `wireless.nix` - WiFi auto-connect for JEN_ACRES network
-- `3d-printing.nix` - Orca Slicer, PrusaSlicer, FreeCAD, Blender
+- `3d-printing.nix` - OrcaSlicer, PrusaSlicer, FreeCAD 1.1.0 (nixpkgs 25.11), OpenSCAD, Blender, MeshLab, SolveSpace, f3d, Sweet Home 3D
+- `home-design.nix` - Sweet Home 3D for interior design and floor plans (with plugin installer)
 - `vscode.nix` - VSCode with gnome-keyring integration
 - `syncthing.nix` - File synchronization service
 - `tailscale.nix` - VPN with firewall configuration

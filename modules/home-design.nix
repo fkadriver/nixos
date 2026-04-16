@@ -99,12 +99,6 @@ in
       # Sweet Home 3D plugin installer helper
       installPluginsScript
 
-      # Alternative/Complementary tools
-      librecad              # 2D CAD for precise measurements and technical drawings
-      qcad                  # Professional 2D CAD (more features than LibreCAD)
-      # Blender (if not already installed via 3d-printing module)
-      # Can be used for photorealistic renders of your deck design
-      blender
     ];
 
     # Sweet Home 3D Plugins Installation:
@@ -129,7 +123,5 @@ in
     # - Furniture (.sh3f): ~/.eteks/sweethome3d/furniture/
     # - Download staging: ~/Downloads/sweethome3d-plugins/
 
-    # LibreCAD configuration
-    # Patterns and templates stored in: ~/.local/share/LibreCAD/
   };
 }
