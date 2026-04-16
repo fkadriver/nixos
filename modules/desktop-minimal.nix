@@ -61,6 +61,7 @@
       kdePackages.okular           # PDF viewer
       kdePackages.spectacle        # Screenshot tool
       kdePackages.ark              # Archive manager
+      kdePackages.filelight        # Disk usage visualizer
 
       # Essential utilities
       firefox

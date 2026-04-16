@@ -42,6 +42,7 @@
       kdePackages.ark
       kdePackages.kcalc
       kdePackages.spectacle
+      kdePackages.filelight
 
       # KDE core
       kdePackages.dolphin
