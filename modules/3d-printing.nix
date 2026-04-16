@@ -5,7 +5,7 @@ let
   cfg = config.my.printing;
 
   # FreeCAD 1.1.0 is available in nixpkgs 25.11 but not yet in nixpkgs-unstable
-  pkgs2511 = inputs.nixpkgs-2511.legacyPackages.${pkgs.system};
+  pkgs2511 = inputs.nixpkgs-2511.legacyPackages.${pkgs.stdenv.hostPlatform.system};
   freecad = pkgs2511.freecad;
 
   # Some font package names can vary across nixpkgs revisions. Only include those that exist.
