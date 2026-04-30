@@ -73,6 +73,11 @@
 
       borgbackup
       unzip
+      usbimager  # Write .img/.iso files to USB drives
+
+      # 2D CAD
+      librecad
+      qcad
 
       # Backlight control (for screen and keyboard backlighting)
       brightnessctl
