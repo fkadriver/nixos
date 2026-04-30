@@ -43,7 +43,8 @@
       kdePackages.kcalc
       kdePackages.spectacle
       kdePackages.filelight
-      kdePackages.isoimagewriter  # Write .img/.iso files to USB drives
+      kdePackages.isoimagewriter   # Write .img/.iso files to USB drives
+      kdePackages.partitionmanager # Disk partitioning and formatting
 
       # KDE core
       kdePackages.dolphin

@@ -74,6 +74,7 @@
       borgbackup
       unzip
       usbimager  # Write .img/.iso files to USB drives
+      gparted    # Disk partitioning and formatting
 
       # 2D CAD
       librecad
