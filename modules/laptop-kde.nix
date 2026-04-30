@@ -43,6 +43,8 @@
       kdePackages.kcalc
       kdePackages.spectacle
       kdePackages.filelight
+      kdePackages.isoimagewriter  # Write .img/.iso files to USB drives
+      usbimager                   # Minimal GUI for writing .img files to USB
 
       # KDE core
       kdePackages.dolphin

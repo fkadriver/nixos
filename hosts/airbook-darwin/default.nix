@@ -47,6 +47,9 @@ let
 
       # Backup
       borgbackup
+
+      # USB image writing
+      usbimager
     ];
 
     # Homebrew for GUI apps and casks
