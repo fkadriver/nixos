@@ -85,7 +85,7 @@ let
         "heroic"           # Epic, GOG, Amazon Prime games launcher
 
         # Video transcoding
-        "handbrake"
+        "handbrake-app"
 
         # Office and productivity
         "libreoffice"
