@@ -45,13 +45,10 @@
       vscode-fhs  # VSCode with FHS environment for AI tools
 
       # System libraries for photoAlbumOrganizer and computer vision
-      cmake                        # Required for dlib compilation
       gcc                          # Compiler for native extensions
-      pkg-config                   # Build configuration tool
-      openblas                     # Linear algebra library
-      lapack                       # Linear algebra package
       opencv                       # Computer vision library
-      dlib                         # Machine learning library for face recognition
+      # Optional: uncomment to compile dlib (face encoding/identity matching)
+      # cmake pkg-config openblas lapack dlib
 
       # KDE essentials
       kdePackages.dolphin          # File manager
@@ -83,6 +80,18 @@
       Categories=Utility;
       X-GNOME-Autostart-enabled=true
     '';
+
+    # Dynamic linking for Python venv C extensions (numpy, opencv, mediapipe, etc.)
+    programs.nix-ld = {
+      enable = true;
+      libraries = with pkgs; [
+        stdenv.cc.cc.lib  # libstdc++
+        zlib
+        glib
+        libGL             # OpenCV / mediapipe
+        xorg.libxcb       # OpenCV display support
+      ];
+    };
 
     # Enable CUDA support for NVIDIA GPUs (if present)
     # Users can uncomment these if they have NVIDIA hardware:
