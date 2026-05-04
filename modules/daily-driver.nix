@@ -94,7 +94,7 @@
         util-linux systemd attr acl libsodium
         libxml2 glib dbus
         libGL          # OpenCV / mediapipe / GPU ML backends
-        xorg.libxcb    # OpenCV display support
+        libxcb         # OpenCV display support
       ];
     };
     my.printing = {

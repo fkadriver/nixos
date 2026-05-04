@@ -11,7 +11,7 @@
   environment.systemPackages = with pkgs; [
     arandr          # GUI for configuring displays (generates xrandr commands)
     autorandr       # Automatic display configuration
-    xorg.xrandr     # CLI display configuration
+    xrandr          # CLI display configuration
   ];
 
   # Laptop docking configuration with custom lid switch handler

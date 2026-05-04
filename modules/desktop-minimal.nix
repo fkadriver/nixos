@@ -89,7 +89,7 @@
         zlib
         glib
         libGL             # OpenCV / mediapipe
-        xorg.libxcb       # OpenCV display support
+        libxcb            # OpenCV display support
       ];
     };
 

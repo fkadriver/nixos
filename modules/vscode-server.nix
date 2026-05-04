@@ -40,7 +40,7 @@
         xorg.libXext
         xorg.libXfixes
         xorg.libXrandr
-        xorg.libxcb
+        libxcb
         dbus
         expat
         libxkbcommon

@@ -6,7 +6,7 @@
     environment.systemPackages = with pkgs; [
       heroic
       lutris
-      wineWowPackages.stable
+      wineWow64Packages.stable
       winetricks
     ];
   };
