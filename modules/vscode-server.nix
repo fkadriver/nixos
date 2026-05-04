@@ -45,6 +45,7 @@
         expat
         libxkbcommon
         alsa-lib
+        libGL          # OpenCV / mediapipe / GPU ML backends
       ];
     };
 
