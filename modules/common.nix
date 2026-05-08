@@ -61,6 +61,13 @@
     # Allow unfree packages
     nixpkgs.config.allowUnfree = true;
 
+    # Skip openldap's flaky sync-replication test (test017) when building from source
+    nixpkgs.overlays = [
+      (final: prev: {
+        openldap = prev.openldap.overrideAttrs (_: { doCheck = false; });
+      })
+    ];
+
     # Localization
     i18n = {
       defaultLocale = "en_US.UTF-8";
