@@ -44,7 +44,8 @@ in
         ++ (if pkgs ? "eb-garamond" then [ pkgs."eb-garamond" ] else [])
         ++ (if pkgs ? "libre-baskerville" then [ pkgs."libre-baskerville" ] else [])
         ++ (if pkgs ? "oldstandard" then [ pkgs."oldstandard" ] else [])
-        ++ (if pkgs ? "junicode" then [ pkgs."junicode" ] else []);
+        ++ (if pkgs ? "junicode" then [ pkgs."junicode" ] else [])
+        ++ (if pkgs ? "symbola" then [ pkgs."symbola" ] else []);
 
       # Fonts optimized for 3D printing: bold strokes, simple contours, reliable extrusion
       printing3dFonts = with pkgs; [

@@ -50,6 +50,17 @@ let
 
     ];
 
+    # Craft / decorative fonts (matches craftFonts in font.nix)
+    fonts.packages =
+      (if pkgs ? "great-vibes"        then [ pkgs."great-vibes" ]        else [])
+      ++ (if pkgs ? "allura"          then [ pkgs."allura" ]              else [])
+      ++ (if pkgs ? "parisienne"      then [ pkgs."parisienne" ]          else [])
+      ++ (if pkgs ? "eb-garamond"     then [ pkgs."eb-garamond" ]         else [])
+      ++ (if pkgs ? "libre-baskerville" then [ pkgs."libre-baskerville" ] else [])
+      ++ (if pkgs ? "oldstandard"     then [ pkgs."oldstandard" ]         else [])
+      ++ (if pkgs ? "junicode"        then [ pkgs."junicode" ]            else [])
+      ++ (if pkgs ? "symbola"         then [ pkgs."symbola" ]             else []);
+
     # Homebrew for GUI apps and casks
     homebrew = {
       enable = true;
