@@ -22,6 +22,43 @@ in
 
   config = lib.mkIf cfg.enable (
     let
+      # Script fonts not yet packaged in nixpkgs — fetch individually from Google Fonts
+      great-vibes = pkgs.stdenvNoCC.mkDerivation {
+        name = "great-vibes";
+        src = pkgs.fetchurl {
+          url = "https://github.com/google/fonts/raw/main/ofl/greatvibes/GreatVibes-Regular.ttf";
+          sha256 = "059dk3wnfi5kr7q97jpszmdrm3q9x09z7v1i4mbm26vg3019hl4d";
+        };
+        dontUnpack = true;
+        installPhase = ''
+          install -Dm644 $src $out/share/fonts/truetype/GreatVibes-Regular.ttf
+        '';
+      };
+
+      allura = pkgs.stdenvNoCC.mkDerivation {
+        name = "allura";
+        src = pkgs.fetchurl {
+          url = "https://github.com/google/fonts/raw/main/ofl/allura/Allura-Regular.ttf";
+          sha256 = "1ijcq6x62iiwnbi74ywkpx1ljca0iyhqx2zzqkgw0cjqa4p2n54w";
+        };
+        dontUnpack = true;
+        installPhase = ''
+          install -Dm644 $src $out/share/fonts/truetype/Allura-Regular.ttf
+        '';
+      };
+
+      parisienne = pkgs.stdenvNoCC.mkDerivation {
+        name = "parisienne";
+        src = pkgs.fetchurl {
+          url = "https://github.com/google/fonts/raw/main/ofl/parisienne/Parisienne-Regular.ttf";
+          sha256 = "0mydmb3lxjn1qp4ydncq1jpl7yjbs5bzbrcp0xqbq81f09zy37mw";
+        };
+        dontUnpack = true;
+        installPhase = ''
+          install -Dm644 $src $out/share/fonts/truetype/Parisienne-Regular.ttf
+        '';
+      };
+
       documentFonts =
         (with pkgs; [
           dejavu_fonts
@@ -38,9 +75,7 @@ in
             else []);
 
       craftFonts =
-        (if pkgs ? "great-vibes" then [ pkgs."great-vibes" ] else [])
-        ++ (if pkgs ? "allura" then [ pkgs."allura" ] else [])
-        ++ (if pkgs ? "parisienne" then [ pkgs."parisienne" ] else [])
+        [ great-vibes allura parisienne ]
         ++ (if pkgs ? "eb-garamond" then [ pkgs."eb-garamond" ] else [])
         ++ (if pkgs ? "libre-baskerville" then [ pkgs."libre-baskerville" ] else [])
         ++ (if pkgs ? "oldstandard" then [ pkgs."oldstandard" ] else [])
