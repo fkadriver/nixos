@@ -52,6 +52,7 @@ let
       environment.systemPackages = [
         pkgs.rustdesk
         pkgs.geany
+        pkgs.gimp
         pkgs.vmware-workstation
         pkgs.git-lfs
       ];
