@@ -37,8 +37,8 @@ in
       nymphette = pkgs.stdenvNoCC.mkDerivation {
         name = "nymphette";
         src = pkgs.fetchurl {
-          url = "https://www.fontsquirrel.com/fonts/download/nymphette";
-          hash = "sha256-JtHgP1tt2GvfUpqU4f3cyi6tfmjea28OqA0v0Puzuck=";
+          url = "https://dl.dafont.com/dl/?f=nymphette";
+          hash = "sha256-6x6iUDri15wApxs39c83aFFGGvn0dXhVrkm/NpqngM8=";
         };
         nativeBuildInputs = [ pkgs.unzip ];
         unpackPhase = "unzip $src";
