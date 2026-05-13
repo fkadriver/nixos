@@ -3,6 +3,13 @@ let
   system = "x86_64-darwin";  # MacBook Air 7,2 is Intel
   pkgs = inputs.nixpkgs.legacyPackages.${system};
 
+  bosl2 = pkgs.fetchFromGitHub {
+    owner = "BelfrySCAD";
+    repo = "BOSL2";
+    rev = "881947c32a28fa68049b518dcc1e73202bfc2c7c";
+    hash = "sha256-0qy9WX7lhiVoY5Jv5pdXHOMXf6QfnrEJ5XHzv5B2Skk=";
+  };
+
   darwinModule = { config, lib, pkgs, ... }: {
     # Nix configuration
     nix = {
@@ -44,6 +51,8 @@ let
       # Development
       gh
       gnumake
+      python3
+      claude-code
 
       # Backup
       borgbackup
@@ -317,6 +326,17 @@ let
         };
       };
     };
+
+    # Install BOSL2 library to OpenSCAD user libraries directory
+    system.activationScripts.openscadBosl2.text = ''
+      OPENSCAD_LIB="/Users/scott/Library/Application Support/OpenSCAD/libraries"
+      mkdir -p "$OPENSCAD_LIB"
+      if [ ! -L "$OPENSCAD_LIB/BOSL2" ]; then
+        rm -rf "$OPENSCAD_LIB/BOSL2"
+        ln -sfn ${bosl2} "$OPENSCAD_LIB/BOSL2"
+        chown -h scott:staff "$OPENSCAD_LIB/BOSL2" 2>/dev/null || true
+      fi
+    '';
 
     # Fix ownership of sops-created directories (sops runs as root and creates parent dirs as root)
     system.activationScripts.fixSopsOwnership.text = ''

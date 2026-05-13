@@ -24,7 +24,7 @@ secrets/*.backup
 .*.sw?
 .vscode/
 .idea/
-.claude/
+.claude/settings.local.json
 
 # OS files
 .DS_Store

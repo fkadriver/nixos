@@ -27,6 +27,13 @@ let
     done
   '';
 
+  bosl2 = pkgs.fetchFromGitHub {
+    owner = "BelfrySCAD";
+    repo = "BOSL2";
+    rev = "881947c32a28fa68049b518dcc1e73202bfc2c7c";
+    hash = "sha256-0qy9WX7lhiVoY5Jv5pdXHOMXf6QfnrEJ5XHzv5B2Skk=";
+  };
+
   generatePlateScript = pkgs.writeShellScriptBin "generate-font-plate" ''
     set -euo pipefail
 
@@ -216,6 +223,19 @@ in
 
     # Stable path for FreeCAD Draft→ShapeString font browsing
     environment.etc."freecad/fonts".source = lib.mkIf cfg.fonts.enable freecadFontDir;
+
+    # Install BOSL2 library to OpenSCAD user libraries directory
+    system.activationScripts.openscadBosl2 = {
+      text = ''
+        OPENSCAD_LIB="/home/scott/.local/share/OpenSCAD/libraries"
+        mkdir -p "$OPENSCAD_LIB"
+        if [ ! -L "$OPENSCAD_LIB/BOSL2" ]; then
+          rm -rf "$OPENSCAD_LIB/BOSL2"
+          ln -sfn ${bosl2} "$OPENSCAD_LIB/BOSL2"
+          chown -h scott:users "$OPENSCAD_LIB/BOSL2" 2>/dev/null || true
+        fi
+      '';
+    };
 
     # Symlink orca-settings repo as OrcaSlicer user config (runs after each rebuild).
     # No-op if the repo hasn't been cloned yet.

@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sqlite3 \"/home/scott/git/nixos/PIHole Backup/etc/pihole/gravity.db\" \".tables\")"
+    ]
+  }
+}
