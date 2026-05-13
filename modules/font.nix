@@ -38,7 +38,7 @@ in
         name = "nymphette";
         src = pkgs.fetchurl {
           url = "https://www.fontsquirrel.com/fonts/download/nymphette";
-          sha256 = "1mr05s0zhnqbgq6jljwnbj3zygnv33lj5aq5rrapvxw78bzjzlyr";
+          hash = "sha256-JtHgP1tt2GvfUpqU4f3cyi6tfmjea28OqA0v0Puzuck=";
         };
         nativeBuildInputs = [ pkgs.unzip ];
         unpackPhase = "unzip $src";
