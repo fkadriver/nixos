@@ -110,7 +110,7 @@ let
         #   installPhase = ''install -Dm644 "Nymphette.ttf" "$out/share/fonts/truetype/Nymphette.ttf"'';
         # };
       in
-        [ great-vibes allura parisienne fleur-de-lis-font nymphette ]
+        [ great-vibes allura parisienne fleur-de-lis-font ]
         ++ (if pkgs ? "eb-garamond"       then [ pkgs."eb-garamond" ]       else [])
         ++ (if pkgs ? "libre-baskerville" then [ pkgs."libre-baskerville" ] else [])
         ++ (if pkgs ? "oldstandard"       then [ pkgs."oldstandard" ]       else [])
