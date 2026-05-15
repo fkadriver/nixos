@@ -2,6 +2,7 @@
 
   # Pi 4B board selection for raspberry-pi-nix (bcm2711 = Pi 4)
   raspberry-pi-nix.board = "bcm2711";
+  raspberry-pi-nix.kernel-version = "v6_6_78";
 
   # SD card image settings (managed by raspberry-pi-nix sd-image module)
   sdImage.compressImage = false;

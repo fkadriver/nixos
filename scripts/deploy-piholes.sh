@@ -28,7 +28,7 @@ FLAKE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # pihole01 = Pi 4B (raspberry-pi-nix kernel)
 # pihole02 = Pi 3B (nixos-hardware kernel)
 declare -A LOCKED_KERNEL_VERSIONS
-LOCKED_KERNEL_VERSIONS[pihole01]="6.6.51"
+LOCKED_KERNEL_VERSIONS[pihole01]="6.6.78"
 LOCKED_KERNEL_VERSIONS[pihole02]="6.12.47-stable_20250916"
 
 declare -A PI_DNS

@@ -29,7 +29,7 @@ let
 
       # Kernel version lock — Pi 4B (raspberry-pi-nix kernel)
       # Update alongside LOCKED_KERNEL_VERSIONS in scripts/deploy-piholes.sh
-      pihole.lockedKernelVersion = "6.6.51";
+      pihole.lockedKernelVersion = "6.6.78";
 
       system = {
         stateVersion = "25.11";
