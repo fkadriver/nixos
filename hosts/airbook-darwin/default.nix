@@ -99,16 +99,16 @@ let
           unpackPhase = "unzip $src";
           installPhase = ''install -Dm644 "Fleur de Lis.ttf" "$out/share/fonts/truetype/FleurDeLis.ttf"'';
         };
-        nymphette = pkgs.stdenvNoCC.mkDerivation {
-          name = "nymphette";
-          src = pkgs.fetchurl {
-            url = "https://www.fontsquirrel.com/fonts/download/nymphette";
-            sha256 = "1mr05s0zhnqbgq6jljwnbj3zygnv33lj5aq5rrapvxw78bzjzlyr";
-          };
-          nativeBuildInputs = [ pkgs.unzip ];
-          unpackPhase = "unzip $src";
-          installPhase = ''install -Dm644 "Nymphette.ttf" "$out/share/fonts/truetype/Nymphette.ttf"'';
-        };
+        # nymphette = pkgs.stdenvNoCC.mkDerivation {
+        #   name = "nymphette";
+        #   src = pkgs.fetchurl {
+        #     url = "https://www.fontsquirrel.com/fonts/download/nymphette";
+        #     sha256 = "1mr05s0zhnqbgq6jljwnbj3zygnv33lj5aq5rrapvxw78bzjzlyr";
+        #   };
+        #   nativeBuildInputs = [ pkgs.unzip ];
+        #   unpackPhase = "unzip $src";
+        #   installPhase = ''install -Dm644 "Nymphette.ttf" "$out/share/fonts/truetype/Nymphette.ttf"'';
+        # };
       in
         [ great-vibes allura parisienne fleur-de-lis-font nymphette ]
         ++ (if pkgs ? "eb-garamond"       then [ pkgs."eb-garamond" ]       else [])
