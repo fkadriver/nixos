@@ -173,6 +173,35 @@
     # (ZFS compilation on aarch64 via QEMU was the longest part of the initial build).
     boot.supportedFilesystems = lib.mkForce [ "ext4" "vfat" ];
 
+    # The default NixOS module list includes x86-only modules (tpm-crb, tpm-tis,
+    # SATA controllers, AHCI, NVMe, etc.) that don't exist in the RPi kernel.
+    # raspberry-pi-nix's modules-shrunk build runs modprobe against the RPi kernel
+    # and fails fatally on any listed module that isn't present.
+    # lib.mkForce replaces all lower-priority definitions with this RPi-correct list.
+    boot.initrd.availableKernelModules = lib.mkForce [
+      "autofs"
+      "ext2"
+      "ext4"
+      "hid_apple"
+      "hid_cherry"
+      "hid_corsair"
+      "hid_generic"
+      "hid_lenovo"
+      "hid_logitech_dj"
+      "hid_logitech_hidpp"
+      "hid_microsoft"
+      "hid_roccat"
+      "mmc_block"
+      "pcie_brcmstb"
+      "reset-raspberrypi"
+      "sd_mod"
+      "usbhid"
+      "usb_storage"
+      "vc4"
+      "xhci_hcd"
+      "xhci_pci"
+    ];
+
     # Headless server — no audio hardware or use case
     hardware.bluetooth.enable = false;
 
