@@ -167,6 +167,21 @@
     # and copies over SSH; paths aren't signed with a trusted key)
     nix.settings.require-sigs = false;
 
+    # ── Headless server — strip everything a Pi-hole doesn't need ────────────
+    # Disabling documentation is the biggest build-time win: it eliminates the
+    # documentation-highlighter and nixos-manual-html derivations, which are
+    # heavy and get offloaded to the build host over SSH (prone to hangs).
+    documentation = {
+      enable     = false;
+      nixos.enable = false;
+      man.enable   = false;
+      info.enable  = false;
+      doc.enable   = false;
+    };
+
+    # fontconfig generates cache/config even with no fonts installed.
+    fonts.fontconfig.enable = false;
+
     # ── Minimal kernel footprint ──────────────────────────────────────────────
     # Restrict supported filesystems to what the Pi actually uses.
     # This is the biggest win: prevents ZFS kernel module from being built/included
