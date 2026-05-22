@@ -169,15 +169,15 @@ deploy_pi() {
     local build_args=()
     [[ "$BUILD_HOST" != "localhost" ]] && build_args=(--build-host "${BUILD_HOST}")
 
-    if nixos-rebuild switch \
+    if nixos-rebuild boot \
         --flake "${FLAKE_DIR}#${name}" \
         --target-host "$ssh_target" \
         "${build_args[@]}" \
         --sudo \
         --print-build-logs; then
-        ok "nixos-rebuild switch completed"
+        ok "nixos-rebuild boot completed"
     else
-        fail "nixos-rebuild switch failed for ${name}"
+        fail "nixos-rebuild boot failed for ${name}"
         return 1
     fi
 
@@ -196,6 +196,26 @@ deploy_pi() {
         warn "Could not create GC root for ${name} (non-fatal)"
     fi
 
+    log "Rebooting ${name}..."
+    ssh "$ssh_target" "sudo reboot" 2>/dev/null || true
+
+    # Wait for SSH to drop (reboot hasn't fully started yet)
+    sleep 10
+
+    # Poll until SSH comes back
+    local waited=10
+    local max_wait=120
+    while ! ssh -o ConnectTimeout=3 -o BatchMode=yes "$ssh_target" true 2>/dev/null; do
+        if [[ $waited -ge $max_wait ]]; then
+            fail "${name} did not come back within ${max_wait}s"
+            return 1
+        fi
+        warn "Waiting for ${name} to come back... (${waited}s)"
+        sleep 5
+        waited=$((waited + 5))
+    done
+    ok "${name} is back online"
+
     verify_pi "$name"
 }
 
@@ -212,9 +232,9 @@ for pi in "${TARGET[@]}"; do
         echo -e "${RED}Deployment failed on ${pi} — stopping.${NC}"
         echo "Fix the issue and re-run, or deploy individually:"
         if [[ "$BUILD_HOST" != "localhost" ]]; then
-            echo "  nixos-rebuild switch --flake .#${pi} --target-host scott@${pi} --build-host ${BUILD_HOST} --sudo"
+            echo "  nixos-rebuild boot --flake .#${pi} --target-host scott@${pi} --build-host ${BUILD_HOST} --sudo"
         else
-            echo "  nixos-rebuild switch --flake .#${pi} --target-host scott@${pi} --sudo"
+            echo "  nixos-rebuild boot --flake .#${pi} --target-host scott@${pi} --sudo"
         fi
         exit 1
     }
