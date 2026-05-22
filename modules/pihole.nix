@@ -182,6 +182,10 @@
     # fontconfig generates cache/config even with no fonts installed.
     fonts.fontconfig.enable = false;
 
+    # nixpkgs switched to a systemd-based stage-1 init which fails to mount
+    # root on the Pi 4B. Keep the bash stage-1 that worked in prior builds.
+    boot.initrd.systemd.enable = false;
+
     # ── Minimal kernel footprint ──────────────────────────────────────────────
     # Restrict supported filesystems to what the Pi actually uses.
     # This is the biggest win: prevents ZFS kernel module from being built/included
