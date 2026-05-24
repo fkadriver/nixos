@@ -8,7 +8,10 @@
       "Bash(git -C /Users/scott/git/nixos diff)",
       "Bash(git -C /Users/scott/git/nixos log --oneline -5)",
       "Bash(git -C /Users/scott/git/nixos add hosts/airbook-darwin/home.nix modules/3d-printing.nix modules/shell-aliases.nix .claude/settings.json)",
-      "Bash(git -C /Users/scott/git/nixos commit -m ' *)"
+      "Bash(git -C /Users/scott/git/nixos commit -m ' *)",
+      "Bash(git -C /Users/scott/git/nixos push)",
+      "Bash(git -C /Users/scott/git/nixos diff .claude/settings.json)",
+      "Bash(git -C /Users/scott/git/nixos add .claude/settings.json)"
     ]
   }
 }
