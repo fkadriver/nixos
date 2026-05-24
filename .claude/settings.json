@@ -1,7 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "Bash(sqlite3 \"/home/scott/git/nixos/PIHole Backup/etc/pihole/gravity.db\" \".tables\")"
+      "Bash(sqlite3 \"/home/scott/git/nixos/PIHole Backup/etc/pihole/gravity.db\" \".tables\")",
+      "Bash(nix search *)",
+      "Bash(nix eval *)",
+      "Bash(git -C /Users/scott/git/nixos status)",
+      "Bash(git -C /Users/scott/git/nixos diff)",
+      "Bash(git -C /Users/scott/git/nixos log --oneline -5)",
+      "Bash(git -C /Users/scott/git/nixos add hosts/airbook-darwin/home.nix modules/3d-printing.nix modules/shell-aliases.nix .claude/settings.json)",
+      "Bash(git -C /Users/scott/git/nixos commit -m ' *)"
     ]
   }
 }

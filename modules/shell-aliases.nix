@@ -68,7 +68,7 @@
         nix-shell-python = "nix-shell -p python3 python3Packages.pip";
 
         # NixOS system shortcuts with automatic hostname detection
-        nix-rebuild = "cd ~/git/nixos && GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=accept-new' git pull && sudo nixos-rebuild switch --flake ~/git/nixos#$(hostname); cd -; source ~/.bashrc";
+        nix-rebuild = "_d=$PWD; [ \"$_d\" != \"$HOME/git/nixos\" ] && cd ~/git/nixos; GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=accept-new' git pull && sudo nixos-rebuild switch --flake ~/git/nixos#$(hostname); [ \"$_d\" != \"$HOME/git/nixos\" ] && cd -; unset _d; source ~/.bashrc";
         nos-rebuild = "sudo nixos-rebuild switch --flake .";
         nos-test = "sudo nixos-rebuild test --flake .";
         nos-boot = "sudo nixos-rebuild boot --flake .";
