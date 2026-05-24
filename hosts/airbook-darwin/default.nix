@@ -140,7 +140,7 @@ let
         "visual-studio-code"
 
         # 3D printing and modeling (from 3d-printing.nix)
-        "openscad"
+        "openscad@snapshot"
         "orcaslicer"
         "prusaslicer"
         "freecad"
