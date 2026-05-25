@@ -173,6 +173,7 @@ deploy_pi() {
         --flake "${FLAKE_DIR}#${name}" \
         --target-host "$ssh_target" \
         "${build_args[@]}" \
+        --option builders '' \
         --sudo \
         --print-build-logs; then
         ok "nixos-rebuild boot completed"
