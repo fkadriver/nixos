@@ -11,7 +11,7 @@ keys:
   # Pi-hole servers — add age keys after first boot:
   #   sudo age-keygen -y /var/lib/sops-nix/key.txt
   # Then uncomment, paste the key, and run: sops updatekeys secrets/secrets.yaml
-  - &pihole01 age19ft6s3u8ry2gzf2nyudgujfk0pgmlpl2hhxev4vnujt30xsgrv7qggg5nu
+  - &pihole01 age12gfycy96l3vyh5wkxun53va7ca7vxg2eyhuljhh59cp28wc523ksa09kxu
   - &pihole02 age128d7atw3fargh4akm42yyz7l0avfcvjam8yt5nlzxdnwmtmytgjqcenm8x
 
   # log01 (Shuttle Zingbox GL014G128W10)
