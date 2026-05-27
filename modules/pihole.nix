@@ -26,9 +26,12 @@
               + "pihole.lockedKernelVersion in the host config and "
               + "LOCKED_KERNEL_VERSIONS in scripts/deploy-piholes.sh if intentional.";
     }];
-    # bitwarden-cli 2025.12.1 fails to build on aarch64 because msgpackr-extract's
-    # native module (node-gyp) hits a Python/str-vs-int type error. Override it to
-    # skip native module compilation; bitwarden-cli falls back to pure-JS msgpackr.
+    # bitwarden-cli 2026.4.x has a regression on aarch64 where BW_SESSION and
+    # --session are silently ignored (vault always reports locked after unlock).
+    # Pin to 2026.3.0 which is the last known-working version.
+    # Also: 2025.12.x fails to build on aarch64 due to msgpackr-extract node-gyp
+    # hitting a Python-3.12-incompatible comparison; the npm-rebuild workaround
+    # below still applies to 2026.3.0.
     nixpkgs.overlays = [
       (final: prev: {
         # rsyslog's configure checks for libgcrypt via pkg-config, which is unavailable
@@ -38,39 +41,90 @@
           configureFlags = (old.configureFlags or []) ++ [ "--disable-libgcrypt" ];
         });
 
-        bitwarden-cli = prev.bitwarden-cli.overrideAttrs (old: {
-          # npmConfigHook is a postPatch hook that runs:
-          #   npm ci --ignore-scripts   (creates node_modules)
-          #   npm rebuild               (FAILS: msgpackr-extract binding.gyp has
-          #                             a Python-3.12-incompatible >= comparison)
-          #
-          # Define a bash 'npm' function in postPatch (which runs before
-          # postPatchHooks). Bash functions shadow external commands in the same
-          # shell, so when npmConfigHook calls 'npm rebuild', our function fires
-          # first — it replaces msgpackr-extract's binding.gyp with an empty
-          # no-op target so node-gyp succeeds without building native code.
-          # msgpackr transparently falls back to pure JS.
-          postPatch = (old.postPatch or "") + ''
-            npm() {
-              if [[ "''${1-}" == rebuild ]]; then
-                local dir="$PWD/node_modules/msgpackr-extract"
-                if [[ -d "$dir" ]]; then
-                  # Remove binding.gyp and strip gypfile from package.json so
-                  # npm rebuild doesn't invoke node-gyp for this module at all.
-                  # Use node (guaranteed present) to edit the JSON safely.
-                  rm -f "$dir/binding.gyp"
-                  node -e "
-                    var fs = require('fs'), f = '$dir/package.json';
-                    var p = JSON.parse(fs.readFileSync(f, 'utf8'));
-                    delete p.gypfile;
-                    if (p.scripts) delete p.scripts.install;
-                    fs.writeFileSync(f, JSON.stringify(p));
-                  " 2>/dev/null || true
-                fi
-              fi
-              command npm "$@"
-            }
+        # buildNpmPackage pre-fetches deps as a fixed-output derivation keyed on
+        # npmDepsHash; overrideAttrs can't change it. Rebuild the derivation from
+        # scratch using the 2026.3.0 source (last version where BW_SESSION works
+        # on aarch64 — 2026.4.x silently ignores the session token).
+        bitwarden-cli = prev.buildNpmPackage (finalAttrs: {
+          pname = "bitwarden-cli";
+          version = "2026.3.0";
+
+          src = prev.fetchFromGitHub {
+            owner = "bitwarden";
+            repo = "clients";
+            tag = "cli-v${finalAttrs.version}";
+            hash = "sha256-ecaCHk04N9h0RP8gK0o+MLgYS6Linsqi7AaC86hwQ3U=";
+          };
+
+          postPatch = ''
+            rm -r bitwarden_license
+            substituteInPlace package-lock.json \
+              --replace-fail \
+              $'    "apps/desktop/node_modules/@napi-rs/cli": {\n      "version": "3.2.0",\n      "resolved": "https://registry.npmjs.org/@napi-rs/cli/-/cli-3.2.0.tgz",\n      "integrity": "sha512-heyXt/9OBPv/WrTFW2+PxIMzH6MCeqP9ZsvOg0LN6pLngBnszcxFsdhCAh5I6sddzQsvru53zj59GUzvmpWk8Q==",' \
+              $'    "apps/desktop/node_modules/@napi-rs/cli": {\n      "version": "3.5.1",\n      "resolved": "https://registry.npmjs.org/@napi-rs/cli/-/cli-3.5.1.tgz",\n      "integrity": "sha512-XBfLQRDcB3qhu6bazdMJsecWW55kR85l5/k0af9BIBELXQSsCFU0fzug7PX8eQp6vVdm7W/U3z6uP5WmITB2Gw==",'
           '';
+
+          nodejs = prev.nodejs_22;
+          npmDepsFetcherVersion = 2;
+          npmDepsHash = "sha256-JVRwU5MUQ8YzhCW7ODiyVqbgq7/PxgMV9dlw7i32MfI=";
+
+          nativeBuildInputs = prev.lib.optionals prev.stdenv.hostPlatform.isDarwin [
+            prev.perl
+            prev.xcbuild.xcrun
+          ];
+
+          makeCacheWritable = true;
+
+          env = {
+            ELECTRON_SKIP_BINARY_DOWNLOAD = "1";
+            npm_config_build_from_source = "true";
+          };
+
+          npmBuildScript = "build:oss:prod";
+          npmWorkspace = "apps/cli";
+          npmFlags = [ "--legacy-peer-deps" ];
+          npmRebuildFlags = [ "--ignore-scripts" ];
+
+          postConfigure = ''
+            shopt -s globstar
+            rm -r node_modules/**/prebuilds
+            shopt -u globstar
+
+            # Strip msgpackr-extract native binding so node-gyp doesn't fail
+            # under cross-compilation (Python 3.12 incompatibility in binding.gyp).
+            local dir="node_modules/msgpackr-extract"
+            if [[ -d "$dir" ]]; then
+              rm -f "$dir/binding.gyp"
+              node -e "
+                var fs = require('fs'), f = '$dir/package.json';
+                var p = JSON.parse(fs.readFileSync(f, 'utf8'));
+                delete p.gypfile;
+                if (p.scripts) delete p.scripts.install;
+                fs.writeFileSync(f, JSON.stringify(p));
+              " 2>/dev/null || true
+            fi
+
+            npm rebuild --verbose
+          '';
+
+          postBuild = ''
+            shopt -s globstar
+            rm -r node_modules/**/{*.target.mk,binding.Makefile,config.gypi,Makefile,Release/.deps} 2>/dev/null || true
+            shopt -u globstar
+          '';
+
+          postInstall = ''
+            rm -rf $out/lib/node_modules/@bitwarden/clients/node_modules/{@bitwarden,.bin}
+          '' + prev.lib.optionalString (prev.stdenv.buildPlatform.canExecute prev.stdenv.hostPlatform) ''
+            installShellCompletion --cmd bw --zsh <($out/bin/bw completion --shell zsh)
+          '';
+
+          meta = {
+            description = "Secure and free password manager for all of your devices";
+            homepage = "https://bitwarden.com";
+            license = prev.lib.licenses.gpl3Only;
+            mainProgram = "bw";
+          };
         });
       })
     ];
@@ -399,12 +453,18 @@
     systemd.services.pihole-set-password = {
       description = "Set Pi-hole web password from Bitwarden secret";
       after    = [ "bitwarden-secrets-sync.service" ];
-      requires = [ "bitwarden-secrets-sync.service" ];
+      wants    = [ "bitwarden-secrets-sync.service" ];
       before   = [ "pihole-ftl.service" ];
       wantedBy = [ "pihole-ftl.service" ];
       serviceConfig = {
         Type = "oneshot";
+        # Skip gracefully if bitwarden-secrets-sync didn't produce the secret file.
+        # pihole-ftl will still start; password can be set once bw sync recovers.
         ExecStart = pkgs.writeShellScript "pihole-set-password" ''
+          if [ ! -f /run/bitwarden-secrets/pihole_pwhash ]; then
+            echo "pihole_pwhash not available yet — skipping password set" >&2
+            exit 0
+          fi
           ${pkgs.pihole-ftl}/bin/pihole-FTL \
             --config webserver.api.password \
             "$(< /run/bitwarden-secrets/pihole_pwhash)"
@@ -413,8 +473,8 @@
     };
 
     systemd.services.pihole-ftl = {
-      after    = [ "pihole-set-password.service" ];
-      requires = [ "pihole-set-password.service" ];
+      after = [ "pihole-set-password.service" ];
+      wants = [ "pihole-set-password.service" ];
     };
 
     # Rotate pihole's DNS query log daily — it grows quickly (1 DNS entry per line)

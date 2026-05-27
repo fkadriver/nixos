@@ -7,15 +7,16 @@ let
   cfg = config.services.bitwarden;
 
   # Helper script to fetch a secret from Bitwarden
-  # Expects BW_SESSION to be already set in environment
+  # Args: ITEM_ID FIELD SESSION_TOKEN
   fetchItemField = pkgs.writeShellScript "bw-fetch-field" ''
     set -euo pipefail
 
     ITEM_ID="$1"
     FIELD="$2"  # "password", "notes", "username", or custom field name
+    SESSION="$3"
 
-    # Fetch the full item
-    ITEM_JSON=$(${pkgs.bitwarden-cli}/bin/bw get item "$ITEM_ID")
+    # Fetch the full item (pass session explicitly — BW_SESSION env var is broken in bw 2026.4.x)
+    ITEM_JSON=$(${pkgs.bitwarden-cli}/bin/bw get item "$ITEM_ID" --session "$SESSION")
 
     # Extract the field
     case "$FIELD" in
@@ -51,7 +52,6 @@ let
 
     export BW_CLIENTID=$(cat "$CLIENT_ID_FILE")
     export BW_CLIENTSECRET=$(cat "$CLIENT_SECRET_FILE")
-    export BW_PASSWORD=$(cat "$MASTER_PASSWORD_FILE")
 
     # Ensure secrets directory exists
     mkdir -p "$SECRETS_DIR"
@@ -61,18 +61,23 @@ let
     echo "Authenticating to Bitwarden..."
     ${pkgs.bitwarden-cli}/bin/bw login --apikey --quiet 2>/dev/null || true
 
-    # Unlock vault using master password from environment
-    export BW_SESSION=$(${pkgs.bitwarden-cli}/bin/bw unlock --passwordenv BW_PASSWORD --raw)
+    # Unset BW_SESSION before unlock: if it was previously set, bw sets it to
+    # the string "undefined" internally before overwriting, which corrupts the
+    # auto-unlock key write (getSessionKey returns null, silently skips storage).
+    unset BW_SESSION
+
+    # Unlock vault using master password file
+    export BW_SESSION=$(${pkgs.bitwarden-cli}/bin/bw unlock --passwordfile "$MASTER_PASSWORD_FILE" --raw)
 
     # Sync vault
     echo "Syncing Bitwarden vault..."
-    ${pkgs.bitwarden-cli}/bin/bw sync || {
+    ${pkgs.bitwarden-cli}/bin/bw sync --session "$BW_SESSION" || {
       echo "Warning: bw sync failed, using cached data" >&2
     }
 
     ${concatMapStringsSep "\n" (secret: ''
       echo "Fetching: ${secret.name} from ${secret.itemId}..."
-      SECRET_VALUE=$(${fetchItemField} "${secret.itemId}" "${secret.field}")
+      SECRET_VALUE=$(${fetchItemField} "${secret.itemId}" "${secret.field}" "$BW_SESSION")
 
       if [ -z "$SECRET_VALUE" ] || [ "$SECRET_VALUE" = "null" ]; then
         echo "Error: Failed to fetch secret ${secret.name}" >&2
@@ -275,11 +280,11 @@ in
           # Login with API key
           ${pkgs.bitwarden-cli}/bin/bw login --apikey --quiet 2>/dev/null || true
 
-          # Unlock vault using master password from environment
-          export BW_SESSION=$(${pkgs.bitwarden-cli}/bin/bw unlock --passwordenv BW_PASSWORD --raw)
+          unset BW_SESSION
+          export BW_SESSION=$(${pkgs.bitwarden-cli}/bin/bw unlock --passwordfile "$MASTER_PASSWORD_FILE" --raw)
 
           # Sync vault first
-          ${pkgs.bitwarden-cli}/bin/bw sync 2>/dev/null || true
+          ${pkgs.bitwarden-cli}/bin/bw sync --session "$BW_SESSION" 2>/dev/null || true
 
           ${concatMapStringsSep "\n" (name:
             let
@@ -298,7 +303,7 @@ in
 
               # Fetch the key from Bitwarden
               # Try .sshKey.privateKey first (for SSH Key type items), then fall back to .notes (for Secure Note items)
-              KEY_CONTENT=$(${pkgs.bitwarden-cli}/bin/bw get item "${key.itemId}" | ${pkgs.jq}/bin/jq -r '.sshKey.privateKey // .notes // empty' || echo "")
+              KEY_CONTENT=$(${pkgs.bitwarden-cli}/bin/bw get item "${key.itemId}" --session "$BW_SESSION" | ${pkgs.jq}/bin/jq -r '.sshKey.privateKey // .notes // empty' || echo "")
 
               if [ -z "$KEY_CONTENT" ] || [ "$KEY_CONTENT" = "null" ]; then
                 echo "    Warning: Failed to fetch SSH key ${key.keyName} from Bitwarden" >&2
