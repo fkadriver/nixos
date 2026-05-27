@@ -38,9 +38,11 @@ let
   installScript = pkgs.writeShellScript "wazuh-install" ''
     set -euo pipefail
 
+    # tar needs compression helpers in PATH (gzip/xz/zstd depending on .deb version)
+    export PATH="${pkgs.gzip}/bin:${pkgs.xz}/bin:${pkgs.zstd}/bin:${pkgs.coreutils}/bin:$PATH"
+
     # Extract the .deb manually — avoids dpkg post-install script PATH issues on NixOS.
     # A .deb is an ar archive containing control.tar.* and data.tar.*.
-    # We only need data.tar (the actual files).
     WORK=$(mktemp -d)
     trap "rm -rf $WORK" EXIT
 
@@ -60,8 +62,7 @@ let
       --exclude='./usr/lib/systemd' \
       --exclude='./etc/init.d'
 
-    # Write the manager address into ossec.conf
-    # The .deb ships a template; we patch the <address> field
+    # Patch manager address into the shipped ossec.conf template
     ${pkgs.gnused}/bin/sed -i \
       's|<address>.*</address>|<address>${cfg.manager}</address>|' \
       /var/ossec/etc/ossec.conf
