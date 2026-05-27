@@ -41,6 +41,12 @@
         field = "password";
         mode = "0400";
       };
+      wazuh_agent_enrollment_password = {
+        name = "wazuh_agent_enrollment_password";
+        itemId = "TODO-add-bitwarden-item-id";             # BW_Name: Wazuh Agent Enrollment
+        field = "password";
+        mode = "0400";
+      };
     };
   };
 }

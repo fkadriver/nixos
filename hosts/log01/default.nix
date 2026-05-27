@@ -7,6 +7,7 @@ let
       inputs.self.nixosModules.bitwarden
       inputs.self.nixosModules.bitwarden-scott
       inputs.self.nixosModules.borg-backup
+      inputs.self.nixosModules.wazuh-agent
       inputs.self.nixosModules.user-scott
       inputs.home-manager.nixosModules.home-manager
       (inputs.self.homeConfigurations.scott).nixosModule
@@ -15,6 +16,12 @@ let
     config = {
       # Do not forward logs back to log01 (this IS log01)
       logging.forwardToLog01 = false;
+
+      services.wazuh-agent = {
+        enable = true;
+        manager = "wazuh.warthog-royal.ts.net";
+        enrollmentPasswordFile = "/run/bitwarden-secrets/wazuh_agent_enrollment_password";
+      };
 
       home-manager.useGlobalPkgs = true;
       home-manager.useUserPackages = true;
