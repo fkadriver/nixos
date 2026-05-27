@@ -1,10 +1,10 @@
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }:
 
-# Wazuh agent is not in nixpkgs. The official .deb is installed via dpkg
-# inside a buildFHSEnv wrapper so Wazuh's glibc-linked binaries find their
-# expected paths (/lib/x86_64-linux-gnu, /usr/lib, etc.) on NixOS.
-# State lives in /var/ossec (Wazuh's standard prefix).
+# Wazuh agent is not in nixpkgs. We extract the official .deb directly
+# (ar + tar, no dpkg) to avoid NixOS PATH/FHS issues with dpkg post-install
+# scripts. The FHS env is only needed at runtime so Wazuh's glibc-linked
+# binaries resolve /lib/x86_64-linux-gnu etc.
 
 with lib;
 
@@ -18,11 +18,13 @@ let
     hash = "sha256-eNIpMtZVaXT2e9SIQ0FgloHcYy6nRNvXJV1wSl/V1w0=";
   };
 
-  # FHS environment that provides the glibc paths Wazuh's binaries expect.
-  # dpkg is run inside it so post-install scripts also resolve correctly.
+  # FHS env for runtime — Wazuh binaries are glibc-linked and expect
+  # /lib/x86_64-linux-gnu, /usr/lib, etc.
   wazuhFHS = pkgs.buildFHSEnv {
     name = "wazuh-fhs";
     targetPkgs = p: with p; [
+      bash
+      coreutils
       glibc
       gcc.cc.lib   # libstdc++, libgcc_s
       zlib
@@ -30,16 +32,41 @@ let
       curl
       libcap
     ];
-    # Make /var/ossec writable through to the real host path
     extraBwrapArgs = [ "--bind" "/var/ossec" "/var/ossec" ];
   };
 
   installScript = pkgs.writeShellScript "wazuh-install" ''
     set -euo pipefail
+
+    # Extract the .deb manually — avoids dpkg post-install script PATH issues on NixOS.
+    # A .deb is an ar archive containing control.tar.* and data.tar.*.
+    # We only need data.tar (the actual files).
+    WORK=$(mktemp -d)
+    trap "rm -rf $WORK" EXIT
+
+    ${pkgs.binutils}/bin/ar x --output="$WORK" ${wazuhDeb}
+
+    # data.tar may be .xz, .gz, or .zst depending on deb version
+    DATA=$(ls "$WORK"/data.tar.* 2>/dev/null | head -1)
+    if [ -z "$DATA" ]; then
+      echo "ERROR: no data.tar.* found in .deb" >&2
+      exit 1
+    fi
+
     mkdir -p /var/ossec
-    # Set manager address before dpkg so the post-install script picks it up
-    export WAZUH_MANAGER="${cfg.manager}"
-    ${wazuhFHS}/bin/wazuh-fhs -- ${pkgs.dpkg}/bin/dpkg -i ${wazuhDeb}
+    ${pkgs.gnutar}/bin/tar -xf "$DATA" -C / \
+      --strip-components=0 \
+      --no-same-owner \
+      --exclude='./usr/lib/systemd' \
+      --exclude='./etc/init.d'
+
+    # Write the manager address into ossec.conf
+    # The .deb ships a template; we patch the <address> field
+    ${pkgs.gnused}/bin/sed -i \
+      's|<address>.*</address>|<address>${cfg.manager}</address>|' \
+      /var/ossec/etc/ossec.conf
+
+    echo "Wazuh agent installed successfully."
   '';
 
   enrollScript = pkgs.writeShellScript "wazuh-enroll" ''
@@ -71,9 +98,16 @@ in
   };
 
   config = mkIf cfg.enable {
-    environment.systemPackages = [ pkgs.dpkg ];
+    # wazuh user/group expected by the agent binaries
+    users.users.wazuh = {
+      isSystemUser = true;
+      group = "wazuh";
+      home = "/var/ossec";
+      description = "Wazuh agent service user";
+    };
+    users.groups.wazuh = {};
 
-    # Install the .deb once — skipped if already done
+    # Install the .deb contents once — guard on wazuh-agentd binary
     systemd.services.wazuh-agent-install = {
       description = "Install Wazuh agent from official .deb";
       wantedBy = [ "multi-user.target" ];
