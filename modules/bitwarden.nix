@@ -6,34 +6,101 @@ with lib;
 let
   cfg = config.services.bitwarden;
 
-  # Helper script to fetch a secret from Bitwarden
-  # Args: ITEM_ID FIELD SESSION_TOKEN
-  fetchItemField = pkgs.writeShellScript "bw-fetch-field" ''
+  # Shared helper: start bw serve, run a script via its REST API, then shut it down.
+  # bw 2026.x broke cross-process session tokens; the serve API keeps state in one process.
+  # Usage: bwServeHelper CLIENT_ID_FILE CLIENT_SECRET_FILE MASTER_PASSWORD_FILE INNER_SCRIPT
+  bwServeHelper = pkgs.writeShellScript "bw-serve-helper" ''
     set -euo pipefail
 
-    ITEM_ID="$1"
-    FIELD="$2"  # "password", "notes", "username", or custom field name
-    SESSION="$3"
+    BW=${pkgs.bitwarden-cli}/bin/bw
+    CURL=${pkgs.curl}/bin/curl
+    JQ=${pkgs.jq}/bin/jq
 
-    # Fetch the full item (pass session explicitly — BW_SESSION env var is broken in bw 2026.4.x)
-    ITEM_JSON=$(${pkgs.bitwarden-cli}/bin/bw get item "$ITEM_ID" --session "$SESSION")
+    CLIENT_ID_FILE="$1"
+    CLIENT_SECRET_FILE="$2"
+    MASTER_PASSWORD_FILE="$3"
+    INNER_SCRIPT="$4"
 
-    # Extract the field
-    case "$FIELD" in
-      password)
-        echo "$ITEM_JSON" | ${pkgs.jq}/bin/jq -r '.login.password // empty'
-        ;;
-      notes)
-        echo "$ITEM_JSON" | ${pkgs.jq}/bin/jq -r '.notes // empty'
-        ;;
-      username)
-        echo "$ITEM_JSON" | ${pkgs.jq}/bin/jq -r '.login.username // empty'
-        ;;
-      *)
-        # Try to extract as a custom field
-        echo "$ITEM_JSON" | ${pkgs.jq}/bin/jq -r --arg fieldname "$FIELD" '.fields[]? | select(.name == $fieldname) | .value // empty'
-        ;;
-    esac
+    export BW_CLIENTID=$(cat "$CLIENT_ID_FILE")
+    export BW_CLIENTSECRET=$(cat "$CLIENT_SECRET_FILE")
+    MASTER_PASSWORD=$(cat "$MASTER_PASSWORD_FILE")
+
+    # Login (idempotent — already-logged-in is not an error)
+    $BW login --apikey 2>/dev/null || true
+
+    # Find a free port
+    BW_PORT=$(${pkgs.python3}/bin/python3 -c 'import socket; s=socket.socket(); s.bind(("",0)); print(s.getsockname()[1]); s.close()')
+
+    # Start bw serve in background
+    $BW serve --port "$BW_PORT" --hostname 127.0.0.1 &
+    BW_PID=$!
+    trap "kill $BW_PID 2>/dev/null || true" EXIT
+
+    # Wait for server to be ready (up to 10s)
+    for i in $(seq 1 20); do
+      if $CURL -sf "http://127.0.0.1:$BW_PORT/status" >/dev/null 2>&1; then
+        break
+      fi
+      sleep 0.5
+    done
+
+    # Unlock via REST API
+    UNLOCK_RESP=$($CURL -sf -X POST "http://127.0.0.1:$BW_PORT/unlock" \
+      -H "Content-Type: application/json" \
+      -d "{\"password\":$(echo -n "$MASTER_PASSWORD" | $JQ -Rs .)}" 2>&1)
+    UNLOCK_SUCCESS=$(echo "$UNLOCK_RESP" | $JQ -r '.success // false')
+    if [ "$UNLOCK_SUCCESS" != "true" ]; then
+      echo "Error: Failed to unlock vault: $UNLOCK_RESP" >&2
+      exit 1
+    fi
+
+    # Sync via REST API
+    $CURL -sf -X POST "http://127.0.0.1:$BW_PORT/sync" >/dev/null 2>&1 || true
+
+    # Run the inner script with BW_PORT in the environment
+    export BW_PORT
+    "$INNER_SCRIPT"
+  '';
+
+  # Inner script for the systemd secrets sync service
+  syncInnerScript = pkgs.writeShellScript "bw-sync-inner" ''
+    set -euo pipefail
+    CURL=${pkgs.curl}/bin/curl
+    JQ=${pkgs.jq}/bin/jq
+    SECRETS_DIR="/run/bitwarden-secrets"
+
+    ${concatMapStringsSep "\n" (secret:
+      let
+        itemId = secret.itemId;
+        field = secret.field;
+        name = secret.name;
+        mode = secret.mode;
+      in ''
+        echo "Fetching: ${name} from ${itemId}..."
+        ITEM_JSON=$($CURL -sf "http://127.0.0.1:$BW_PORT/object/item/${itemId}" 2>&1)
+        DATA=$(echo "$ITEM_JSON" | $JQ -r '.data // empty')
+        if [ -z "$DATA" ] || [ "$DATA" = "null" ]; then
+          echo "Error: Failed to fetch item ${itemId}: $ITEM_JSON" >&2
+          exit 1
+        fi
+        SECRET_VALUE=$(echo "$DATA" | $JQ -r ${escapeShellArg (
+          if field == "password" then "(.login.password // (.fields[]? | select(.name == \"password\") | .value) // empty)"
+          else if field == "notes" then ".notes // empty"
+          else if field == "username" then ".login.username // empty"
+          else "(.fields[]? | select(.name == \"${field}\") | .value) // empty"
+          )})
+        if [ -z "$SECRET_VALUE" ] || [ "$SECRET_VALUE" = "null" ]; then
+          echo "Error: Failed to extract field ${field} from ${name}" >&2
+          exit 1
+        fi
+        echo "$SECRET_VALUE" > "$SECRETS_DIR/${name}"
+        chmod ${mode} "$SECRETS_DIR/${name}"
+        ${optionalString (secret.owner != null) "chown ${secret.owner} \"$SECRETS_DIR/${name}\""}
+        echo "  ✓ ${name}"
+      ''
+    ) (attrValues cfg.secrets)}
+
+    echo "Bitwarden secrets sync completed successfully."
   '';
 
   # Systemd service to sync secrets from Bitwarden
@@ -50,51 +117,43 @@ let
       exit 1
     fi
 
-    export BW_CLIENTID=$(cat "$CLIENT_ID_FILE")
-    export BW_CLIENTSECRET=$(cat "$CLIENT_SECRET_FILE")
-
-    # Ensure secrets directory exists
     mkdir -p "$SECRETS_DIR"
     chmod 700 "$SECRETS_DIR"
 
-    # Login with API key
-    echo "Authenticating to Bitwarden..."
-    ${pkgs.bitwarden-cli}/bin/bw login --apikey --quiet 2>/dev/null || true
+    ${bwServeHelper} "$CLIENT_ID_FILE" "$CLIENT_SECRET_FILE" "$MASTER_PASSWORD_FILE" ${syncInnerScript}
+  '';
 
-    # Unset BW_SESSION before unlock: if it was previously set, bw sets it to
-    # the string "undefined" internally before overwriting, which corrupts the
-    # auto-unlock key write (getSessionKey returns null, silently skips storage).
-    unset BW_SESSION
+  # Inner script for the activation script SSH key installation
+  sshKeysInnerScript = pkgs.writeShellScript "bw-ssh-keys-inner" ''
+    set -euo pipefail
+    CURL=${pkgs.curl}/bin/curl
+    JQ=${pkgs.jq}/bin/jq
 
-    # Unlock vault using master password file
-    export BW_SESSION=$(${pkgs.bitwarden-cli}/bin/bw unlock --passwordfile "$MASTER_PASSWORD_FILE" --raw)
+    ${concatMapStringsSep "\n" (name:
+      let
+        key = cfg.sshKeys.${name};
+        userHome = config.users.users.${key.user}.home;
+      in ''
+        echo "  Fetching SSH key: ${key.keyName} for ${key.user}..."
+        SSH_DIR="${userHome}/.ssh"
+        KEY_FILE="$SSH_DIR/${key.keyName}"
+        mkdir -p "$SSH_DIR"
+        chown ${key.user}:users "$SSH_DIR"
+        chmod 700 "$SSH_DIR"
 
-    # Sync vault
-    echo "Syncing Bitwarden vault..."
-    ${pkgs.bitwarden-cli}/bin/bw sync --session "$BW_SESSION" || {
-      echo "Warning: bw sync failed, using cached data" >&2
-    }
+        ITEM_JSON=$($CURL -sf "http://127.0.0.1:$BW_PORT/object/item/${key.itemId}" 2>&1)
+        KEY_CONTENT=$(echo "$ITEM_JSON" | $JQ -r '.data | (.sshKey.privateKey // .notes // empty)')
 
-    ${concatMapStringsSep "\n" (secret: ''
-      echo "Fetching: ${secret.name} from ${secret.itemId}..."
-      SECRET_VALUE=$(${fetchItemField} "${secret.itemId}" "${secret.field}" "$BW_SESSION")
-
-      if [ -z "$SECRET_VALUE" ] || [ "$SECRET_VALUE" = "null" ]; then
-        echo "Error: Failed to fetch secret ${secret.name}" >&2
-        exit 1
-      fi
-
-      # Write secret to file
-      echo "$SECRET_VALUE" > "$SECRETS_DIR/${secret.name}"
-      chmod ${secret.mode} "$SECRETS_DIR/${secret.name}"
-      ${optionalString (secret.owner != null) ''
-        chown ${secret.owner} "$SECRETS_DIR/${secret.name}"
-      ''}
-
-      echo "  ✓ ${secret.name}"
-    '') (attrValues cfg.secrets)}
-
-    echo "Bitwarden secrets sync completed successfully."
+        if [ -z "$KEY_CONTENT" ] || [ "$KEY_CONTENT" = "null" ]; then
+          echo "    Warning: Failed to fetch SSH key ${key.keyName} from Bitwarden" >&2
+        else
+          echo "$KEY_CONTENT" > "$KEY_FILE"
+          chmod 600 "$KEY_FILE"
+          chown ${key.user}:users "$KEY_FILE"
+          echo "    ✓ Installed ${key.keyName}"
+        fi
+      ''
+    ) (attrNames cfg.sshKeys)}
   '';
 
 in
@@ -119,17 +178,12 @@ in
           };
           itemId = mkOption {
             type = types.str;
-            description = "Bitwarden item ID or name";
-            example = "Tailscale Auth Key";
+            description = "Bitwarden item ID";
           };
           field = mkOption {
             type = types.str;
             default = "password";
-            description = ''
-              Which field to extract from the Bitwarden item.
-              Standard fields: "password", "notes", "username"
-              Custom fields: Use the exact custom field name (e.g., "tskey")
-            '';
+            description = "Field to extract: password, notes, username, or custom field name";
           };
           mode = mkOption {
             type = types.str;
@@ -144,16 +198,6 @@ in
         };
       });
       default = {};
-      example = literalExpression ''
-        {
-          tailscale_auth_key = {
-            name = "tailscale_auth_key";
-            itemId = "Tailscale Auth Key";
-            field = "password";
-            mode = "0400";
-          };
-        }
-      '';
       description = "Secrets to fetch from Bitwarden at boot time";
     };
 
@@ -163,58 +207,33 @@ in
           user = mkOption {
             type = types.str;
             description = "User to own the SSH key";
-            example = "scott";
           };
           keyName = mkOption {
             type = types.str;
             description = "SSH key filename (e.g., 'id_ed25519')";
-            example = "id_ed25519";
           };
           itemId = mkOption {
             type = types.str;
-            description = "Bitwarden item ID or name containing the private key in notes field";
-            example = "SSH Key - GitHub";
+            description = "Bitwarden item ID containing the private key";
           };
         };
       });
       default = {};
-      example = literalExpression ''
-        {
-          github = {
-            user = "scott";
-            keyName = "id_ed25519";
-            itemId = "SSH Key - GitHub";
-          };
-        }
-      '';
       description = "SSH keys to fetch from Bitwarden and install to ~/.ssh/";
     };
   };
 
   config = mkIf cfg.enable {
-    # Install Bitwarden CLI
-    environment.systemPackages = with pkgs; [
-      bitwarden-cli
-      jq
-    ];
+    environment.systemPackages = with pkgs; [ bitwarden-cli jq ];
 
-    # Configure sops to decrypt Bitwarden credentials
     sops = {
       defaultSopsFile = cfg.secretsFile;
       age.keyFile = "/var/lib/sops-nix/key.txt";
-
-      secrets."bitwarden/client_id" = {
-        mode = "0400";
-      };
-      secrets."bitwarden/client_secret" = {
-        mode = "0400";
-      };
-      secrets."bitwarden/master_password" = {
-        mode = "0400";
-      };
+      secrets."bitwarden/client_id"      = { mode = "0400"; };
+      secrets."bitwarden/client_secret"  = { mode = "0400"; };
+      secrets."bitwarden/master_password" = { mode = "0400"; };
     };
 
-    # Systemd service to sync secrets from Bitwarden
     systemd.services.bitwarden-secrets-sync = mkIf (cfg.secrets != {}) {
       description = "Sync secrets from Bitwarden";
       wantedBy = [ "multi-user.target" ];
@@ -225,33 +244,19 @@ in
         Type = "oneshot";
         ExecStart = syncScript;
         RemainAfterExit = true;
-
-        # Security hardening
-        PrivateTmp = true;
-        NoNewPrivileges = true;
-        ProtectSystem = "strict";
-        ProtectHome = true;
-
-        # Bitwarden CLI needs a writable directory for its config
         RuntimeDirectory = "bitwarden-secrets";
         RuntimeDirectoryMode = "0700";
         CacheDirectory = "bitwarden-cli";
         CacheDirectoryMode = "0700";
-
-        # Set HOME to the cache directory so bw CLI can write its data
         Environment = "HOME=/var/cache/bitwarden-cli";
-
-        ReadWritePaths = [ "/run/bitwarden-secrets" ];
       };
 
-      # Restart on failure
       unitConfig = {
         StartLimitBurst = 3;
         StartLimitIntervalSec = 300;
       };
     };
 
-    # Timer to periodically refresh secrets (every 6 hours)
     systemd.timers.bitwarden-secrets-sync = mkIf (cfg.secrets != {}) {
       wantedBy = [ "timers.target" ];
       timerConfig = {
@@ -261,9 +266,8 @@ in
       };
     };
 
-    # Activation script to install SSH keys at build time
     system.activationScripts.bitwarden-ssh-keys = mkIf (cfg.sshKeys != {}) (
-      lib.stringAfter [ "users" ] ''
+      lib.stringAfter [ "users" "setupSecrets" ] ''
         echo "Installing SSH keys from Bitwarden..."
 
         CLIENT_ID_FILE="${config.sops.secrets."bitwarden/client_id".path}"
@@ -273,54 +277,13 @@ in
         if [ ! -f "$CLIENT_ID_FILE" ] || [ ! -f "$CLIENT_SECRET_FILE" ] || [ ! -f "$MASTER_PASSWORD_FILE" ]; then
           echo "Warning: Bitwarden credential files not found, skipping SSH key installation" >&2
         else
-          export BW_CLIENTID=$(cat "$CLIENT_ID_FILE")
-          export BW_CLIENTSECRET=$(cat "$CLIENT_SECRET_FILE")
-          export BW_PASSWORD=$(cat "$MASTER_PASSWORD_FILE")
-
-          # Login with API key
-          ${pkgs.bitwarden-cli}/bin/bw login --apikey --quiet 2>/dev/null || true
-
-          unset BW_SESSION
-          export BW_SESSION=$(${pkgs.bitwarden-cli}/bin/bw unlock --passwordfile "$MASTER_PASSWORD_FILE" --raw)
-
-          # Sync vault first
-          ${pkgs.bitwarden-cli}/bin/bw sync --session "$BW_SESSION" 2>/dev/null || true
-
-          ${concatMapStringsSep "\n" (name:
-            let
-              key = cfg.sshKeys.${name};
-              userHome = config.users.users.${key.user}.home;
-            in ''
-              echo "  Fetching SSH key: ${key.keyName} for ${key.user}..."
-
-              SSH_DIR="${userHome}/.ssh"
-              KEY_FILE="$SSH_DIR/${key.keyName}"
-
-              # Create .ssh directory if it doesn't exist, ensure scott owns it
-              mkdir -p "$SSH_DIR"
-              chown ${key.user}:users "$SSH_DIR"
-              chmod 700 "$SSH_DIR"
-
-              # Fetch the key from Bitwarden
-              # Try .sshKey.privateKey first (for SSH Key type items), then fall back to .notes (for Secure Note items)
-              KEY_CONTENT=$(${pkgs.bitwarden-cli}/bin/bw get item "${key.itemId}" --session "$BW_SESSION" | ${pkgs.jq}/bin/jq -r '.sshKey.privateKey // .notes // empty' || echo "")
-
-              if [ -z "$KEY_CONTENT" ] || [ "$KEY_CONTENT" = "null" ]; then
-                echo "    Warning: Failed to fetch SSH key ${key.keyName} from Bitwarden" >&2
-              else
-                # Write the key
-                echo "$KEY_CONTENT" > "$KEY_FILE"
-                chmod 600 "$KEY_FILE"
-                chown ${key.user}:users "$KEY_FILE"
-                echo "    ✓ Installed ${key.keyName}"
-              fi
-            ''
-          ) (attrNames cfg.sshKeys)}
+          export HOME=/var/cache/bitwarden-cli
+          mkdir -p "$HOME"
+          ${bwServeHelper} "$CLIENT_ID_FILE" "$CLIENT_SECRET_FILE" "$MASTER_PASSWORD_FILE" ${sshKeysInnerScript}
         fi
       ''
     );
 
-    # Ensure sops age key exists
     system.activationScripts.sops-nix-setup = lib.mkBefore ''
       if [ ! -f /var/lib/sops-nix/key.txt ]; then
         mkdir -p /var/lib/sops-nix
