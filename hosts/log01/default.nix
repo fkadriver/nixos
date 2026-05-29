@@ -7,6 +7,7 @@ let
       inputs.self.nixosModules.bitwarden
       inputs.self.nixosModules.bitwarden-scott
       inputs.self.nixosModules.borg-backup
+      inputs.self.nixosModules.vscode-server
       inputs.self.nixosModules.wazuh-agent
       inputs.self.nixosModules.user-scott
       inputs.home-manager.nixosModules.home-manager
