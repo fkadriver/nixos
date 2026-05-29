@@ -1,9 +1,10 @@
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }:
 
-# Wazuh agent is not in nixpkgs. We install the official .deb via dpkg on
-# first boot (ConditionPathExists guards re-runs). The .deb installs to
-# /var/ossec; systemd units wrap wazuh-control start/stop.
+# Wazuh agent is not in nixpkgs. We extract the official .deb directly
+# (ar + tar, no dpkg) to avoid NixOS PATH/FHS issues with dpkg post-install
+# scripts. The FHS env is only needed at runtime so Wazuh's glibc-linked
+# binaries resolve /lib/x86_64-linux-gnu etc.
 
 with lib;
 
@@ -16,6 +17,68 @@ let
     url = "https://packages.wazuh.com/4.x/apt/pool/main/w/wazuh-agent/wazuh-agent_${wazuhVersion}-1_amd64.deb";
     hash = "sha256-eNIpMtZVaXT2e9SIQ0FgloHcYy6nRNvXJV1wSl/V1w0=";
   };
+
+  # FHS env for runtime — Wazuh binaries are glibc-linked and expect
+  # /lib/x86_64-linux-gnu, /usr/lib, etc.
+  wazuhFHS = pkgs.buildFHSEnv {
+    name = "wazuh-fhs";
+    targetPkgs = p: with p; [
+      bash
+      coreutils
+      glibc
+      gcc.cc.lib   # libstdc++, libgcc_s
+      zlib
+      openssl
+      curl
+      libcap
+    ];
+    extraBwrapArgs = [ "--bind" "/var/ossec" "/var/ossec" ];
+  };
+
+  installScript = pkgs.writeShellScript "wazuh-install" ''
+    set -euo pipefail
+
+    # tar needs compression helpers in PATH (gzip/xz/zstd depending on .deb version)
+    export PATH="${pkgs.gzip}/bin:${pkgs.xz}/bin:${pkgs.zstd}/bin:${pkgs.coreutils}/bin:$PATH"
+
+    # Extract the .deb manually — avoids dpkg post-install script PATH issues on NixOS.
+    # A .deb is an ar archive containing control.tar.* and data.tar.*.
+    WORK=$(mktemp -d)
+    trap "rm -rf $WORK" EXIT
+
+    ${pkgs.binutils}/bin/ar x --output="$WORK" ${wazuhDeb}
+
+    # data.tar may be .xz, .gz, or .zst depending on deb version
+    DATA=$(ls "$WORK"/data.tar.* 2>/dev/null | head -1)
+    if [ -z "$DATA" ]; then
+      echo "ERROR: no data.tar.* found in .deb" >&2
+      exit 1
+    fi
+
+    mkdir -p /var/ossec
+    ${pkgs.gnutar}/bin/tar -xf "$DATA" -C / \
+      --strip-components=0 \
+      --no-same-owner \
+      --exclude='./usr/lib/systemd' \
+      --exclude='./etc/init.d'
+
+    # Patch manager address into the shipped ossec.conf template
+    ${pkgs.gnused}/bin/sed -i \
+      's|<address>.*</address>|<address>${cfg.manager}</address>|' \
+      /var/ossec/etc/ossec.conf
+
+    echo "Wazuh agent installed successfully."
+  '';
+
+  enrollScript = pkgs.writeShellScript "wazuh-enroll" ''
+    set -euo pipefail
+    PASSWORD=$(cat ${cfg.enrollmentPasswordFile})
+    HOSTNAME=$(${pkgs.hostname}/bin/hostname -s)
+    ${wazuhFHS}/bin/wazuh-fhs -- /var/ossec/bin/agent-auth \
+      -m "${cfg.manager}" \
+      -P "$PASSWORD" \
+      -A "$HOSTNAME"
+  '';
 
 in
 {
@@ -31,14 +94,21 @@ in
     enrollmentPasswordFile = mkOption {
       type = types.nullOr types.path;
       default = null;
-      description = "Path to file containing the agent enrollment password (wazuh-authd)";
+      description = "Path to file containing the agent enrollment password";
     };
   };
 
   config = mkIf cfg.enable {
-    environment.systemPackages = with pkgs; [ dpkg ];
+    # wazuh user/group expected by the agent binaries
+    users.users.wazuh = {
+      isSystemUser = true;
+      group = "wazuh";
+      home = "/var/ossec";
+      description = "Wazuh agent service user";
+    };
+    users.groups.wazuh = {};
 
-    # Install the Wazuh .deb on first boot if /var/ossec doesn't exist yet
+    # Install the .deb contents once — guard on wazuh-agentd binary
     systemd.services.wazuh-agent-install = {
       description = "Install Wazuh agent from official .deb";
       wantedBy = [ "multi-user.target" ];
@@ -48,14 +118,11 @@ in
       serviceConfig = {
         Type = "oneshot";
         RemainAfterExit = true;
-        ExecStart = pkgs.writeShellScript "wazuh-install" ''
-          set -euo pipefail
-          WAZUH_MANAGER=${cfg.manager} ${pkgs.dpkg}/bin/dpkg -i ${wazuhDeb}
-        '';
+        ExecStart = installScript;
       };
     };
 
-    # One-shot enrollment — runs agent-auth, skipped if already enrolled
+    # Enroll once — skipped if client.keys already exists
     systemd.services.wazuh-agent-enroll = mkIf (cfg.enrollmentPasswordFile != null) {
       description = "Enroll Wazuh agent with manager";
       wantedBy = [ "wazuh-agent.service" ];
@@ -67,14 +134,7 @@ in
       serviceConfig = {
         Type = "oneshot";
         RemainAfterExit = true;
-        ExecStart = pkgs.writeShellScript "wazuh-enroll" ''
-          set -euo pipefail
-          PASSWORD=$(cat ${cfg.enrollmentPasswordFile})
-          /var/ossec/bin/agent-auth \
-            -m ${cfg.manager} \
-            -P "$PASSWORD" \
-            -A "$(${pkgs.hostname}/bin/hostname -s)"
-        '';
+        ExecStart = enrollScript;
       };
     };
 
@@ -87,9 +147,9 @@ in
 
       serviceConfig = {
         Type = "forking";
-        ExecStart  = "/var/ossec/bin/wazuh-control start";
-        ExecStop   = "/var/ossec/bin/wazuh-control stop";
-        ExecReload = "/var/ossec/bin/wazuh-control restart";
+        ExecStart  = "${wazuhFHS}/bin/wazuh-fhs -- /var/ossec/bin/wazuh-control start";
+        ExecStop   = "${wazuhFHS}/bin/wazuh-fhs -- /var/ossec/bin/wazuh-control stop";
+        ExecReload = "${wazuhFHS}/bin/wazuh-fhs -- /var/ossec/bin/wazuh-control restart";
         PIDFile    = "/var/ossec/var/run/wazuh-agentd.pid";
         Restart    = "on-failure";
         RestartSec = "30s";
