@@ -59,9 +59,7 @@ inputs.nixpkgs.lib.nixosSystem {
         "broadcom-sta"
       ];
       nixpkgs.config.permittedInsecurePackages = [
-        "broadcom-sta-6.30.223.271-59-6.12.60"
-        "broadcom-sta-6.30.223.271-59-6.12.63"
-        "broadcom-sta-6.30.223.271-59-6.12.68"
+        "broadcom-sta-6.30.223.271-59-6.18.26"
       ];
 
       # Include necessary packages for installation
