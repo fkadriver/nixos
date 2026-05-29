@@ -55,14 +55,31 @@ let
       exit 1
     fi
 
-    mkdir -p /var/ossec
-    ${pkgs.gnutar}/bin/tar -xf "$DATA" -C / \
-      --strip-components=0 \
+    # Extract only ./var/ossec into a staging dir, then move into place.
+    # Never extract to / — the deb contains /usr, /etc, and other paths that
+    # would overwrite NixOS system files including the bootloader.
+    STAGE=$(mktemp -d)
+    trap "rm -rf $WORK $STAGE" EXIT
+
+    ${pkgs.gnutar}/bin/tar -xf "$DATA" -C "$STAGE" \
       --no-same-owner \
-      --exclude='./usr/lib/systemd' \
-      --exclude='./etc/init.d'
+      --no-overwrite-dir \
+      --wildcards './var/ossec'
+
+    if [ ! -d "$STAGE/var/ossec" ]; then
+      echo "ERROR: /var/ossec not found in .deb data archive" >&2
+      exit 1
+    fi
+
+    # Atomic-ish move: copy into place so a partial failure leaves ossec.conf
+    # absent (ConditionPathExists guard re-triggers) rather than half-written.
+    cp -a "$STAGE/var/ossec/." /var/ossec/
 
     # Patch manager address into the shipped ossec.conf template
+    if [ ! -f /var/ossec/etc/ossec.conf ]; then
+      echo "ERROR: ossec.conf not found after extraction" >&2
+      exit 1
+    fi
     ${pkgs.gnused}/bin/sed -i \
       's|<address>.*</address>|<address>${cfg.manager}</address>|' \
       /var/ossec/etc/ossec.conf
@@ -108,12 +125,12 @@ in
     };
     users.groups.wazuh = {};
 
-    # Install the .deb contents once — guard on wazuh-agentd binary
+    # Install the .deb contents once — guard on ossec.conf presence
     systemd.services.wazuh-agent-install = {
       description = "Install Wazuh agent from official .deb";
       wantedBy = [ "multi-user.target" ];
       before = [ "wazuh-agent-enroll.service" "wazuh-agent.service" ];
-      unitConfig.ConditionPathExists = "!/var/ossec/bin/wazuh-agentd";
+      unitConfig.ConditionPathExists = "!/var/ossec/etc/ossec.conf";
 
       serviceConfig = {
         Type = "oneshot";
