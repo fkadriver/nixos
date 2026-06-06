@@ -164,8 +164,12 @@ sudo systemctl status rsyslog
 
 ## Hardware Notes
 
-- **MacBook Air 7,2 (airbook)**: Broadcom WiFi requires insecure broadcom-sta driver (has known CVEs)
+- **MacBook Air 7,2 (airbook-darwin)**: Now running macOS via nix-darwin. Broadcom WiFi driver is only included in the installer ISO (needed to get WiFi during NixOS installation on this hardware).
 - **vm01**: Headless server with 1TB external drive at `/mnt/immich`
+
+## Logitech Device Management
+
+Logitech devices on `latitude` are managed by [Solaar](https://github.com/pwr-Solaar/Solaar) via `modules/logitech.nix`. [OpenLogi](https://openlogi.org) is a promising telemetry-free alternative but is currently macOS-only (Linux support is on their roadmap — check back before the next major Solaar update).
 
 ## Shell Aliases
 

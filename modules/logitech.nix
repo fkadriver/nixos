@@ -1,3 +1,7 @@
+# OpenLogi (https://openlogi.org) is a modern replacement for Solaar —
+# no Logitech account, no telemetry. As of 2026-06-06 it is macOS-only;
+# Linux support is on their roadmap. Check back before the next major
+# Solaar update and migrate if Linux support has landed.
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }: {
   imports = [
