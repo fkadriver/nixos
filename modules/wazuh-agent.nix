@@ -31,6 +31,7 @@ let
       openssl
       curl
       libcap
+      procps  # provides ps, used by wazuh-control's pstatus() to verify daemons started
     ];
     extraBwrapArgs = [ "--bind" "/var/ossec" "/var/ossec" ];
   };
@@ -83,6 +84,13 @@ let
     ${pkgs.gnused}/bin/sed -i \
       's|<address>.*</address>|<address>${cfg.manager}</address>|' \
       /var/ossec/etc/ossec.conf
+
+    # Apply the same chown/chmod the deb post-install would have run.
+    # Without this, daemons that run as the wazuh user cannot write to
+    # queue/sockets, queue/alerts, var/run, etc.
+    if [ -f /var/ossec/packages_files/agent_installation_scripts/restore-permissions.sh ]; then
+      sh /var/ossec/packages_files/agent_installation_scripts/restore-permissions.sh
+    fi
 
     echo "Wazuh agent installed successfully."
   '';
@@ -167,9 +175,11 @@ in
         ExecStart  = "${wazuhFHS}/bin/wazuh-fhs -- /var/ossec/bin/wazuh-control start";
         ExecStop   = "${wazuhFHS}/bin/wazuh-fhs -- /var/ossec/bin/wazuh-control stop";
         ExecReload = "${wazuhFHS}/bin/wazuh-fhs -- /var/ossec/bin/wazuh-control restart";
-        PIDFile    = "/var/ossec/var/run/wazuh-agentd.pid";
         Restart    = "on-failure";
         RestartSec = "30s";
+        # Only kill the tracked main PID on stop — wazuh-control stop handles
+        # the daemon PIDs via their own PID files in /var/ossec/var/run/.
+        KillMode   = "process";
       };
     };
   };
