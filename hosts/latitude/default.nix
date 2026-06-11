@@ -49,13 +49,19 @@ let
       # RustDesk remote desktop - Tailscale-only access from airbook
       # VMware Workstation for SANS ICS310 RELICS VM (VMware .vmx format)
       # git-lfs for GRFICSv3 OT lab (large Docker image assets)
+      # input-leap: KVM server sharing latitude's keyboard/mouse with airbook-darwin
       environment.systemPackages = [
         pkgs.rustdesk
         pkgs.geany
         pkgs.gimp
         pkgs.vmware-workstation
         pkgs.git-lfs
+        pkgs.input-leap
       ];
+
+      # Input Leap server: allow connections on LAN and via Tailscale
+      # Port 24800 is the default Input Leap/Barrier port
+      networking.firewall.allowedTCPPorts = [ 24800 ];
 
       # VMware kernel modules required for VMware Workstation
       virtualisation.vmware.host.enable = true;

@@ -54,6 +54,9 @@ let
       python3
       claude-code
 
+      # Input Leap: KVM client — connects to latitude's keyboard/mouse server
+      input-leap
+
       # Backup
       borgbackup
 

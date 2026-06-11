@@ -11,7 +11,7 @@ This document provides a brief overview of all host configurations in this repos
 |---|---|
 | Desktop | KDE Plasma (default), XFCE and minimal variants available |
 | Purpose | Daily driver development laptop |
-| Key Features | Borg backup, 3D printing, Logitech support, multi-monitor |
+| Key Features | Borg backup, 3D printing, Logitech support, multi-monitor, Input Leap KVM server |
 | Variants | `latitude-xfce`, `latitude-kde`, `latitude-minimal` |
 | Tailscale tags | `tag:mgmt-admin` (SSH to all infra as scott), `tag:backup-client` (borg to nas01) |
 
@@ -93,7 +93,7 @@ Then add to `.sops.yaml` and run `sops updatekeys secrets/secrets.yaml`.
 |---|---|
 | Purpose | Declarative macOS package/settings management |
 | Homebrew Casks | Bitwarden, Firefox, iTerm2, Rectangle, VSCode, 3D printing apps |
-| Services | Tailscale VPN, Syncthing |
+| Services | Tailscale VPN, Syncthing, Input Leap KVM client (connects to latitude) |
 | Settings | Dark mode, Touch ID sudo, dock/keyboard/trackpad preferences |
 
 **Rebuild:** `sudo darwin-rebuild switch --flake ~/git/nixos#airbook-darwin`
