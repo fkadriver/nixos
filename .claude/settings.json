@@ -19,7 +19,13 @@
       "Bash(find /nix/store/79s4spq8hxb39cgi8cglapcrl5mzwnvg-home-manager-files 2>/dev/null)",
       "Read(//nix/store/79s4spq8hxb39cgi8cglapcrl5mzwnvg-home-manager-files/**)",
       "Read(//Users/scott/Library/LaunchAgents/**)",
-      "Bash(launchctl list *)"
+      "Bash(launchctl list *)",
+      "Read(//Users/scott/.claude/projects/-Users-scott-git-nixos/memory/**)",
+      "Read(//Users/scott/.claude/shared-memory/**)"
+    ],
+    "additionalDirectories": [
+      "/Users/scott/.claude/projects/-Users-scott-git-nixos/memory",
+      "/Users/scott/.claude/shared-memory"
     ]
   }
 }
