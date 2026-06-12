@@ -11,17 +11,17 @@ let
         # Add ~/.local/bin to PATH for non-interactive shells (VS Code Server)
         sessionPath = [ "$HOME/.local/bin" ];
       };
-      # Input Leap server layout: airbook-darwin is to the left of latitude
+      # Input Leap server layout: airbook.local is to the left of latitude
       xdg.configFile."InputLeap/input-leap.conf".text = ''
         section: screens
           latitude:
-          airbook-darwin:
+          airbook.local:
         end
 
         section: links
           latitude:
-            left = airbook-darwin
-          airbook-darwin:
+            left = airbook.local
+          airbook.local:
             right = latitude
         end
 
@@ -279,7 +279,7 @@ let
         export PATH="$PATH:$HOME/bin:$HOME/.local/bin:$HOME/go/bin:/nix/var/nix/profiles/nas01/bin"
 
         # Borg server functions — take hostname as argument
-        # Usage: borg-ls latitude | borg-check vm01 | borg-unlock airbook-darwin
+        # Usage: borg-ls latitude | borg-check vm01 | borg-unlock airbook.local
         BORG_BIN=/nix/var/nix/profiles/nas01/bin/borg
         BORG_REPOS=/mnt/wd18t_3/borg/repos
         borg-ls()     { sudo "$BORG_BIN" list      "$BORG_REPOS/$1"; }

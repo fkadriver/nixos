@@ -549,7 +549,7 @@ in
         "${pkgs.input-leap}/bin/input-leapc"
         "--no-daemon"
         "--name"
-        "airbook-darwin"
+        "airbook.local"
         "latitude.warthog-royal.ts.net"
       ];
       RunAtLoad = true;
