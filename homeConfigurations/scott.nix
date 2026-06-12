@@ -11,6 +11,24 @@ let
         # Add ~/.local/bin to PATH for non-interactive shells (VS Code Server)
         sessionPath = [ "$HOME/.local/bin" ];
       };
+      # Input Leap server config: airbook-darwin is to the left of latitude
+      xdg.configFile."InputLeap/input-leap.conf".text = ''
+        section: screens
+          latitude:
+          airbook-darwin:
+        end
+
+        section: links
+          latitude:
+            left = airbook-darwin
+          airbook-darwin:
+            right = latitude
+        end
+
+        section: options
+        end
+      '';
+
       programs = {
         bash = {
           enable = true;
