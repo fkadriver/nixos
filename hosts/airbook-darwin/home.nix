@@ -542,7 +542,7 @@ in
   # Input Leap client: auto-start at login, connecting to latitude's keyboard/mouse server
   # Requires: System Preferences > Privacy & Security > Accessibility → grant input-leapc access
   launchd.agents.input-leap = {
-    serviceConfig = {
+    config = {
       Label = "com.local.input-leap-client";
       ProgramArguments = [
         "${pkgs.input-leap}/bin/input-leapc"
