@@ -44,6 +44,10 @@ in
       fi
     '';
 
+    activation.inputLeapDirs = lib.hm.dag.entryAfter ["writeBoundary"] ''
+      mkdir -p "$HOME/.local/share/input-leap"
+    '';
+
     # User packages (in addition to system packages)
     packages = with pkgs; [
       # Development
@@ -457,6 +461,21 @@ in
       };
     };
 
+    # Input Leap aliases
+    bash.shellAliases = {
+      input-leap-start  = "launchctl start com.local.input-leap-client";
+      input-leap-stop   = "launchctl stop com.local.input-leap-client";
+      input-leap-status = "launchctl list com.local.input-leap-client";
+      input-leap-logs   = "tail -50 $HOME/.local/share/input-leap/client.log";
+    };
+
+    zsh.shellAliases = {
+      input-leap-start  = "launchctl start com.local.input-leap-client";
+      input-leap-stop   = "launchctl stop com.local.input-leap-client";
+      input-leap-status = "launchctl list com.local.input-leap-client";
+      input-leap-logs   = "tail -50 $HOME/.local/share/input-leap/client.log";
+    };
+
     tmux = {
       enable = true;
       terminal = "screen-256color";
@@ -517,6 +536,25 @@ in
           identityFile = "~/.ssh/id_ed25519_github";
         };
       };
+    };
+  };
+
+  # Input Leap client: auto-start at login, connecting to latitude's keyboard/mouse server
+  # Requires: System Preferences > Privacy & Security > Accessibility → grant input-leapc access
+  launchd.user.agents.input-leap = {
+    serviceConfig = {
+      Label = "com.local.input-leap-client";
+      ProgramArguments = [
+        "${pkgs.input-leap}/bin/input-leapc"
+        "--no-daemon"
+        "--name"
+        "airbook-darwin"
+        "latitude.warthog-royal.ts.net"
+      ];
+      RunAtLoad = true;
+      KeepAlive = true;
+      StandardOutPath = "/Users/scott/.local/share/input-leap/client.log";
+      StandardErrorPath = "/Users/scott/.local/share/input-leap/client.error.log";
     };
   };
 }

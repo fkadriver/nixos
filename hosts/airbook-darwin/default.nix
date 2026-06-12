@@ -125,7 +125,7 @@ let
       enable = true;
       onActivation = {
         autoUpdate = true;
-        cleanup = "zap";  # Remove unlisted packages
+        cleanup = "none";
         upgrade = true;
       };
       brews = [
@@ -266,6 +266,7 @@ let
     # sops-nix for secrets management
     sops = {
       defaultSopsFile = ../../secrets/secrets.yaml;
+      age.sshKeyPaths = [];
       age.keyFile = "/var/root/.config/sops/age/keys.txt";
 
       secrets = {
