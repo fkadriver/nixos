@@ -21,7 +21,9 @@
       "Read(//Users/scott/Library/LaunchAgents/**)",
       "Bash(launchctl list *)",
       "Read(//Users/scott/.claude/projects/-Users-scott-git-nixos/memory/**)",
-      "Read(//Users/scott/.claude/shared-memory/**)"
+      "Read(//Users/scott/.claude/shared-memory/**)",
+      "Bash(ping -c 3 10.147.37.154)",
+      "Bash(git -C /Users/scott/git/nixos add hosts/airbook-darwin/home.nix .claude/settings.json)"
     ],
     "additionalDirectories": [
       "/Users/scott/.claude/projects/-Users-scott-git-nixos/memory",
