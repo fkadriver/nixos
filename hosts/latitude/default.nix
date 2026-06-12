@@ -78,6 +78,19 @@ let
       ];
       networking.firewall.interfaces."tailscale0".allowedUDPPorts = [ 21116 ];
 
+      # Input Leap server: share latitude's keyboard/mouse with airbook-darwin
+      # Config at ~/.config/InputLeap/input-leap.conf (deployed via home-manager)
+      systemd.user.services.input-leap-server = {
+        description = "Input Leap keyboard/mouse sharing server";
+        wantedBy = [ "graphical-session.target" ];
+        after = [ "graphical-session.target" "network.target" ];
+        serviceConfig = {
+          ExecStart = "${pkgs.input-leap}/bin/input-leaps --no-daemon";
+          Restart = "on-failure";
+          RestartSec = 3;
+        };
+      };
+
       systemd.user.services.rustdesk = {
         description = "RustDesk Remote Desktop daemon";
         wantedBy = [ "graphical-session.target" ];
