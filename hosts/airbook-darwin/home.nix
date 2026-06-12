@@ -539,18 +539,14 @@ in
     };
   };
 
-  # Input Leap client: auto-start at login, connecting to latitude's keyboard/mouse server
-  # Requires: System Preferences > Privacy & Security > Accessibility → grant input-leapc access
+  # Input Leap client: auto-start at login as a tray app
+  # Requires: System Preferences > Privacy & Security > Accessibility → grant input-leap access
   launchd.agents.input-leap = {
     enable = true;
     config = {
       Label = "com.local.input-leap-client";
       ProgramArguments = [
-        "${pkgs.input-leap}/bin/input-leapc"
-        "--no-daemon"
-        "--name"
-        "airbook.local"
-        "latitude.warthog-royal.ts.net"
+        "${pkgs.input-leap}/bin/input-leap"
       ];
       RunAtLoad = true;
       KeepAlive = true;
