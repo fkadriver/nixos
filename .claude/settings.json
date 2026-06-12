@@ -13,7 +13,13 @@
       "Bash(git -C /Users/scott/git/nixos diff .claude/settings.json)",
       "Bash(git -C /Users/scott/git/nixos add .claude/settings.json)",
       "Bash(brew search *)",
-      "Bash(git -C /Users/scott/git/nixos diff HEAD)"
+      "Bash(git -C /Users/scott/git/nixos diff HEAD)",
+      "Read(//nix/store/vxyl4ipx9xvx5psib0lzrlyvzp9xqkii-input-leap-3.0.3/bin/**)",
+      "Read(//nix/store/gimk5gvj2a0hh66vw4hqbj1l1prdcxb5-system-path/bin/**)",
+      "Bash(find /nix/store/79s4spq8hxb39cgi8cglapcrl5mzwnvg-home-manager-files 2>/dev/null)",
+      "Read(//nix/store/79s4spq8hxb39cgi8cglapcrl5mzwnvg-home-manager-files/**)",
+      "Read(//Users/scott/Library/LaunchAgents/**)",
+      "Bash(launchctl list *)"
     ]
   }
 }
