@@ -550,7 +550,7 @@ in
         "--no-daemon"
         "--name"
         "airbook.local"
-        "latitude.warthog-royal.ts.net"
+        "10.147.37.154"
       ];
       RunAtLoad = true;
       KeepAlive = true;
