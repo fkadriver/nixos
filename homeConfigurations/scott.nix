@@ -11,7 +11,7 @@ let
         # Add ~/.local/bin to PATH for non-interactive shells (VS Code Server)
         sessionPath = [ "$HOME/.local/bin" ];
       };
-      # Input Leap server config: airbook-darwin is to the left of latitude
+      # Input Leap server layout: airbook-darwin is to the left of latitude
       xdg.configFile."InputLeap/input-leap.conf".text = ''
         section: screens
           latitude:
@@ -27,6 +27,35 @@ let
 
         section: options
         end
+      '';
+
+      # Input Leap GUI settings: point to the external config file above
+      # useExternalConfig=true so the GUI uses input-leap.conf instead of its internal grid
+      xdg.configFile."InputLeap/InputLeap.conf".force = true;
+      xdg.configFile."InputLeap/InputLeap.conf".text = ''
+        [General]
+        autoHide=false
+        autoStart=false
+        configFile=/home/scott/.config/InputLeap/input-leap.conf
+        cryptoEnabled=true
+        elevateMode=false
+        elevateModeEnum=0
+        groupClientChecked=false
+        groupServerChecked=true
+        interface=
+        language=en
+        logFilename=/var/log/input-leap.log
+        logLevel=3
+        logToFile=false
+        minimizeToTray=false
+        port=24800
+        requireClientCertificate=false
+        screenName=latitude
+        serverHostname=
+        startedBefore=true
+        useExternalConfig=true
+        useInternalConfig=false
+        wizardLastRun=9
       '';
 
       programs = {
