@@ -11,7 +11,9 @@
       "Bash(git -C /Users/scott/git/nixos commit -m ' *)",
       "Bash(git -C /Users/scott/git/nixos push)",
       "Bash(git -C /Users/scott/git/nixos diff .claude/settings.json)",
-      "Bash(git -C /Users/scott/git/nixos add .claude/settings.json)"
+      "Bash(git -C /Users/scott/git/nixos add .claude/settings.json)",
+      "Bash(brew search *)",
+      "Bash(git -C /Users/scott/git/nixos diff HEAD)"
     ]
   }
 }
