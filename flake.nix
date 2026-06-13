@@ -67,6 +67,7 @@
 
       nixosConfigurations = {
         latitude = import ./hosts/latitude flakeContext;
+        latitude-ics = import ./hosts/latitude-ics flakeContext;
         latitude-minimal = import ./hosts/latitude/minimal.nix flakeContext;
         latitude-xfce = import ./hosts/latitude/xfce.nix flakeContext;
         vm01 = import ./hosts/vm01 flakeContext;
