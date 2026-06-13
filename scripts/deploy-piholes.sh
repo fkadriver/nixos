@@ -7,13 +7,19 @@
 #   2. localhost — latitude loopback sshd (requires latitude rebuild)
 #
 # Usage:
-#   ./scripts/deploy-piholes.sh                        # deploy both, auto-select build host
-#   ./scripts/deploy-piholes.sh pihole01               # deploy only pihole01
+#   ./scripts/deploy-piholes.sh                        # deploy both; logs to /tmp/pihole-update_<ts>.log
+#   ./scripts/deploy-piholes.sh pihole01               # deploy only pihole01; logs to /tmp/pihole01-update_<ts>.log
 #   ./scripts/deploy-piholes.sh pihole02               # deploy only pihole02
 #   ./scripts/deploy-piholes.sh --build-host vm01
 #   ./scripts/deploy-piholes.sh pihole01 --build-host localhost
+#   ./scripts/deploy-piholes.sh --verbose              # also show full nix build logs on screen
+#   ./scripts/deploy-piholes.sh --quiet                # no log file, minimal screen output
+#   ./scripts/deploy-piholes.sh --check-version        # check if a newer version exists on GitHub
 
 set -euo pipefail
+
+SCRIPT_VERSION="1.2.0"
+SCRIPT_URL="https://raw.githubusercontent.com/fkadriver/nixos/main/scripts/deploy-piholes.sh"
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -22,6 +28,8 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 FLAKE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+VERBOSE=false
+QUIET=false
 
 # Must match pihole.lockedKernelVersion in each host's default.nix.
 # Update both together when intentionally upgrading the kernel.
@@ -41,10 +49,26 @@ PI_DNS_RETRIES[pihole02]=15
 
 PIHOLES=("pihole01" "pihole02")
 
-log()  { echo -e "${BLUE}[$(date +%H:%M:%S)]${NC} $*"; }
-ok()   { echo -e "${GREEN}  ✓${NC} $*"; }
+log()  { $QUIET || echo -e "${BLUE}[$(date +%H:%M:%S)]${NC} $*"; }
+ok()   { $QUIET || echo -e "${GREEN}  ✓${NC} $*"; }
 fail() { echo -e "${RED}  ✗${NC} $*"; }
-warn() { echo -e "${YELLOW}  !${NC} $*"; }
+warn() { $QUIET || echo -e "${YELLOW}  !${NC} $*"; }
+
+check_new_version() {
+    local remote_version
+    remote_version=$(curl -fsSL --max-time 5 "$SCRIPT_URL" 2>/dev/null \
+        | grep '^SCRIPT_VERSION=' | head -1 | cut -d'"' -f2) || true
+    if [[ -z "$remote_version" ]]; then
+        warn "Could not fetch remote version (offline or URL changed)"
+        return 0
+    fi
+    if [[ "$remote_version" == "$SCRIPT_VERSION" ]]; then
+        ok "Script is up to date (v${SCRIPT_VERSION})"
+    else
+        warn "New version available: v${remote_version} (current: v${SCRIPT_VERSION})"
+        warn "Update: git pull in ${FLAKE_DIR}"
+    fi
+}
 
 # Parse arguments
 BUILD_HOST=""
@@ -52,13 +76,34 @@ TARGET=()
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --build-host) BUILD_HOST="$2"; shift 2 ;;
+        --verbose|-v) VERBOSE=true; shift ;;
+        --quiet|-q) QUIET=true; shift ;;
+        --check-version) check_new_version; exit 0 ;;
         pihole01|pihole02) TARGET+=("$1"); shift ;;
         *) echo "Unknown argument: $1"; exit 1 ;;
     esac
 done
 
+if $VERBOSE && $QUIET; then
+    echo "Error: --verbose and --quiet are mutually exclusive" >&2
+    exit 1
+fi
+
 # Default to both if no target specified
 [[ ${#TARGET[@]} -eq 0 ]] && TARGET=("${PIHOLES[@]}")
+
+# Determine log file name based on targets
+TS=$(date +%Y%m%d-%H%M%S)
+if [[ ${#TARGET[@]} -eq 1 ]]; then
+    LOGFILE="/tmp/${TARGET[0]}-update_${TS}.log"
+else
+    LOGFILE="/tmp/pihole-update_${TS}.log"
+fi
+
+# Set up logging: default and verbose tee to logfile; quiet skips it
+if ! $QUIET; then
+    exec > >(tee -a "$LOGFILE") 2>&1
+fi
 
 # Auto-select build host if not specified
 if [[ -z "$BUILD_HOST" ]]; then
@@ -169,13 +214,16 @@ deploy_pi() {
     local build_args=()
     [[ "$BUILD_HOST" != "localhost" ]] && build_args=(--build-host "${BUILD_HOST}")
 
+    local rebuild_log_flag=()
+    $VERBOSE && rebuild_log_flag=(--print-build-logs)
+
     if nixos-rebuild boot \
         --flake "${FLAKE_DIR}#${name}" \
         --target-host "$ssh_target" \
         "${build_args[@]}" \
         --option builders '' \
         --sudo \
-        --print-build-logs; then
+        "${rebuild_log_flag[@]}"; then
         ok "nixos-rebuild boot completed"
     else
         fail "nixos-rebuild boot failed for ${name}"
@@ -223,8 +271,12 @@ deploy_pi() {
 echo ""
 echo -e "${BLUE}Pi-hole deployment — $(date)${NC}"
 echo -e "${BLUE}Flake: ${FLAKE_DIR}${NC}"
+echo -e "${BLUE}Script version: ${SCRIPT_VERSION}${NC}"
+$QUIET || echo -e "${BLUE}Log: ${LOGFILE}${NC}"
+$VERBOSE && echo -e "${YELLOW}Verbose mode — full build logs enabled${NC}"
 echo ""
 
+check_new_version
 verify_build_host
 
 for pi in "${TARGET[@]}"; do
@@ -247,3 +299,4 @@ if [[ ${#TARGET[@]} -eq 1 ]]; then
 else
     echo -e "${GREEN}━━━ All Pi-holes updated successfully ━━━${NC}"
 fi
+$QUIET || echo -e "${BLUE}Log saved: ${LOGFILE}${NC}"

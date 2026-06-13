@@ -126,6 +126,23 @@ See [docs/bitwarden-secrets-setup.md](docs/bitwarden-secrets-setup.md) for compr
 | [docs/multi-monitor-setup.md](docs/multi-monitor-setup.md) | Display profiles |
 | [docs/nixos-binary-compatibility.md](docs/nixos-binary-compatibility.md) | Running non-NixOS binaries |
 
+## Scripts
+
+### deploy-piholes.sh
+
+Deploys NixOS updates to pihole01 and pihole02 sequentially, verifying DNS health after each reboot.
+
+```bash
+./scripts/deploy-piholes.sh                        # deploy both; log → /tmp/pihole-update_<ts>.log
+./scripts/deploy-piholes.sh pihole01               # deploy one; log → /tmp/pihole01-update_<ts>.log
+./scripts/deploy-piholes.sh --build-host vm01      # force build host
+./scripts/deploy-piholes.sh --verbose              # full nix build logs on screen + in log file
+./scripts/deploy-piholes.sh --quiet                # no log file, minimal screen output
+./scripts/deploy-piholes.sh --check-version        # check for newer version on GitHub
+```
+
+All output is tee'd to a timestamped log in `/tmp/` by default. Use `--quiet` to suppress logging (errors and final status only). Use `--verbose` to add `--print-build-logs` output.
+
 ## Common Tasks
 
 ### Check Configuration
