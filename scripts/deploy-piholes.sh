@@ -170,10 +170,20 @@ verify_pi() {
 
     log "Verifying $name..."
 
-    if ssh "$ssh_target" "systemctl is-active --quiet pihole-ftl" 2>/dev/null; then
+    # pihole-ftl starts after bitwarden-secrets-sync → pihole-set-password,
+    # so SSH may be available well before the service is ready. Retry for up to 90s.
+    local ftl_ok=false
+    for i in $(seq 1 18); do
+        if ssh "$ssh_target" "systemctl is-active --quiet pihole-ftl" 2>/dev/null; then
+            ftl_ok=true; break
+        fi
+        warn "pihole-ftl not active yet, retrying (${i}/18)..."
+        sleep 5
+    done
+    if $ftl_ok; then
         ok "pihole-ftl is running"
     else
-        fail "pihole-ftl is not active"
+        fail "pihole-ftl is not active after 90s"
         return 1
     fi
 
