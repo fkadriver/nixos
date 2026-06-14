@@ -477,6 +477,67 @@
       wants = [ "pihole-set-password.service" ];
     };
 
+    # pihole-FTL v6.4 moved the list `type` field from the JSON body to a URL
+    # query parameter (POST /api/lists?type=block). The nixpkgs pihole-ftl module
+    # still sends type in the body, causing pihole-ftl-setup to fail and leaving
+    # the gravity database empty after every deploy/reboot.
+    #
+    # Patch: override ExecStart with a corrected script that extracts type from
+    # the list definition and passes it as ?type=<type> in the URL instead.
+    systemd.services.pihole-ftl-setup.serviceConfig.ExecStart = let
+      pihole = pkgs.pihole;
+      curl   = pkgs.curl;
+      jq     = pkgs.jq;
+      lists  = config.services.pihole-ftl.lists;
+    in lib.mkForce (pkgs.writeShellScript "pihole-ftl-setup-start" ''
+      set -eo pipefail
+
+      # Download MAC vendor database (non-fatal)
+      ${curl}/bin/curl --retry 3 --retry-delay 5 \
+        "https://ftl.pi-hole.net/macvendor.db" \
+        -o "/var/lib/pihole/macvendor.db" \
+        || echo "Failed to download MAC database (non-fatal)"
+
+      # Initialize gravity.db if missing
+      if [ ! -f /var/lib/pihole/gravity.db ]; then
+        ${pihole}/bin/pihole -g
+        kill -s SIGRTMIN "$(systemctl show --property MainPID --value pihole-ftl.service)"
+      fi
+
+      source ${pihole}/share/pihole/advanced/Scripts/api.sh
+      source ${pihole}/share/pihole/advanced/Scripts/utils.sh
+
+      for i in 1 2 3; do (TestAPIAvailability) && break; echo "Retrying API..."; sleep 0.5; done
+      LoginAPI
+
+      any_failed=0
+
+      addList() {
+        local type="$1" address="$2" comment="$3"
+        local payload
+        payload=$(printf '{"address":"%s","comment":"%s","enabled":true}' "$address" "$comment")
+        echo "Adding $type list: $address"
+        local result
+        result=$(PostFTLData "lists?type=$type" "$payload")
+        local id
+        id=$(${jq}/bin/jq -r '.lists.[].id? // empty' <<< "$result")
+        if [ -z "$id" ]; then
+          echo "Error: $(${jq}/bin/jq -r '.error.message // .processed.errors.[].error // "unknown"' <<< "$result")"
+          any_failed=1
+        else
+          echo "Added list ID $id"
+        fi
+      }
+
+      ${lib.concatMapStrings (l: ''
+        addList ${lib.escapeShellArg l.type} ${lib.escapeShellArg l.url} ${lib.escapeShellArg (l.description or "")}
+      '') lists}
+
+      ${pihole}/bin/pihole -g
+      exit $any_failed
+    '');
+
+
     # Rotate pihole's DNS query log daily — it grows quickly (1 DNS entry per line)
     # and is not rotated by the upstream pihole-ftl NixOS module.
     # After rotation, send SIGHUP to rsyslog so imfile re-opens the new file.
