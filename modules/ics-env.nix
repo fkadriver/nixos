@@ -10,6 +10,8 @@
       (pkgs.writeShellScriptBin "icsactivate" ''
         set -euo pipefail
         STATE=/var/lib/ics-env/prev-generation
+        VMRUN=${pkgs.vmware-workstation}/bin/vmrun
+        VM_DIR=$HOME/vms
 
         if [ "$(hostname)" = "latitude-ics" ]; then
           echo "Already in ICS environment (hostname is latitude-ics)."
@@ -27,6 +29,14 @@
         echo "Switching to latitude-ics configuration…"
         cd ~/git/nixos
         sudo nixos-rebuild switch --flake ~/git/nixos#latitude-ics
+
+        echo "Enabling shared folders on all VMs…"
+        while IFS= read -r -d "" vmx; do
+          echo "  $vmx"
+          "$VMRUN" enableSharedFolders "$vmx" 2>/dev/null \
+            && echo "    shared folders enabled" \
+            || echo "    (skipped — VM may need to be powered on first)"
+        done < <(find "$VM_DIR" -maxdepth 2 -name "*.vmx" -print0)
       '')
 
       (pkgs.writeShellScriptBin "icsleave" ''
