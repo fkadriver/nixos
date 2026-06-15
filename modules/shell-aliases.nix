@@ -14,6 +14,7 @@
         # Basic
         wtf = "alias";
         clr = "clear";
+        ipa = "ip -o -4 a";
 
         # Docker one-liners
         cyberchef = "docker run -d -p 8080:8080 humangod/cyberchef";
