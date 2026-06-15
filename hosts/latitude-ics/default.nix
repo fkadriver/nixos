@@ -7,6 +7,7 @@ let
       inputs.self.nixosModules.common
       inputs.self.nixosModules.laptop-kde-ics
       inputs.self.nixosModules.vmware
+      inputs.self.nixosModules.ics-env
       inputs.self.nixosModules.logitech
       inputs.self.nixosModules.multi-monitor
       inputs.self.nixosModules.user-scott

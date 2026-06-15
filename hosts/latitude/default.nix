@@ -11,6 +11,7 @@ let
       inputs.self.nixosModules.user-scott
       inputs.self.nixosModules.virtualbox
       inputs.self.nixosModules.vmware
+      inputs.self.nixosModules.ics-env
       inputs.self.nixosModules.pi-builder
       inputs.self.nixosModules.distributed-builds
     ];
@@ -57,51 +58,6 @@ let
         pkgs.gimp
         pkgs.git-lfs
         pkgs.input-leap
-
-        # Switch into the ICS lab configuration (latitude-ics) and back.
-        # icsactivate: records the current system generation, then rebuilds to latitude-ics.
-        # icsleave:    rolls back to the generation saved by icsactivate (or the previous
-        #              generation if the state file is absent), then removes the state file.
-        (pkgs.writeShellScriptBin "icsactivate" ''
-          set -euo pipefail
-          STATE=/var/lib/ics-env/prev-generation
-
-          if [ "$(hostname)" = "latitude-ics" ]; then
-            echo "Already in ICS environment (hostname is latitude-ics)."
-            exit 0
-          fi
-
-          current=$(sudo nix-env --list-generations \
-            --profile /nix/var/nix/profiles/system \
-            | awk '/\(current\)/{print $1}')
-
-          sudo mkdir -p /var/lib/ics-env
-          echo "$current" | sudo tee "$STATE" > /dev/null
-
-          echo "Saved generation $current → $STATE"
-          echo "Switching to latitude-ics configuration…"
-          cd ~/git/nixos
-          sudo nixos-rebuild switch --flake ~/git/nixos#latitude-ics
-        '')
-
-        (pkgs.writeShellScriptBin "icsleave" ''
-          set -euo pipefail
-          STATE=/var/lib/ics-env/prev-generation
-
-          if [ ! -f "$STATE" ]; then
-            echo "No saved generation found; rolling back to the previous generation."
-            sudo nixos-rebuild switch --rollback
-            exit 0
-          fi
-
-          target=$(cat "$STATE")
-          echo "Rolling back to generation $target…"
-          sudo nix-env --switch-generation "$target" \
-            --profile /nix/var/nix/profiles/system
-          sudo /nix/var/nix/profiles/system/bin/switch-to-configuration switch
-          sudo rm -f "$STATE"
-          echo "Returned to generation $target (latitude)."
-        '')
       ];
 
       # Input Leap server: allow connections on LAN and via Tailscale
