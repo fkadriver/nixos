@@ -10,6 +10,7 @@ let
       inputs.self.nixosModules.multi-monitor
       inputs.self.nixosModules.user-scott
       inputs.self.nixosModules.virtualbox
+      inputs.self.nixosModules.vmware
       inputs.self.nixosModules.pi-builder
       inputs.self.nixosModules.distributed-builds
     ];
@@ -54,7 +55,6 @@ let
         pkgs.rustdesk
         pkgs.geany
         pkgs.gimp
-        pkgs.vmware-workstation
         pkgs.git-lfs
         pkgs.input-leap
 
@@ -108,8 +108,7 @@ let
       # Port 24800 is the default Input Leap/Barrier port
       networking.firewall.allowedTCPPorts = [ 24800 ];
 
-      # VMware kernel modules required for VMware Workstation
-      virtualisation.vmware.host.enable = true;
+      services.vmware-host.enable = true;
 
       # Default text editor for .txt and .conf files
       xdg.mime.defaultApplications = {

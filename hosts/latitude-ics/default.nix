@@ -6,6 +6,7 @@ let
       ./syncthing.nix
       inputs.self.nixosModules.common
       inputs.self.nixosModules.laptop-kde-ics
+      inputs.self.nixosModules.vmware
       inputs.self.nixosModules.logitech
       inputs.self.nixosModules.multi-monitor
       inputs.self.nixosModules.user-scott
@@ -24,19 +25,18 @@ let
         }];
       };
 
-      # VMware Workstation
-      virtualisation.vmware.host = {
+      services.vmware-host = {
         enable = true;
-        # Bridge vmnet0 to the USB NIC for ICS lab connectivity
-        extraConfig = ''
-          answer VMNET_0_INTERFACE enp0s20f0u1u4
-        '';
+        bridgeInterface = "enp0s20f0u1u4";
+        sharedFolders = [{
+          hostPath = "/home/scott/Documents/SANS/ics/515/capstone";
+          name = "ics515-capstone";
+        }];
       };
 
       environment.systemPackages = [
         pkgs.rustdesk
         pkgs.geany
-        pkgs.vmware-workstation
         pkgs.git-lfs
         pkgs.input-leap
       ];
