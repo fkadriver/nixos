@@ -356,7 +356,9 @@ If your host uses the bitwarden module (included in `desktop-minimal` and laptop
    git commit -m "Add AGE key for newhost"
    git push
 
-   # On the new host
+   # On the new host — clone the repo first, then rebuild
+   git clone https://github.com/fkadriver/nixos ~/git/nixos
+   cd ~/git/nixos
    sudo nixos-rebuild switch --flake .#newhost
    ```
 
