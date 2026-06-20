@@ -5,6 +5,7 @@ let
       ./hardware.nix
       ./syncthing.nix
       inputs.self.nixosModules.common
+      inputs.self.nixosModules.wazuh-agent
       inputs.self.nixosModules.laptop-kde
       inputs.self.nixosModules.logitech
       inputs.self.nixosModules.multi-monitor
@@ -18,6 +19,12 @@ let
     config = {
       networking = {
         hostName = "latitude";
+      };
+
+      services.wazuh-agent = {
+        enable = true;
+        manager = "wazuh.warthog-royal.ts.net";
+        enrollmentPasswordFile = "/run/bitwarden-secrets/wazuh_agent_enrollment_password";
       };
 
       # Borg backup to nas01

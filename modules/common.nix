@@ -309,6 +309,15 @@
       '';
     };
 
+    # ClamAV antivirus — daemon for real-time scanning, updater for daily signature refresh
+    services.clamav = {
+      daemon.enable = true;
+      updater.enable = true;
+    };
+
+    # Osquery endpoint telemetry — SQL queries against running processes, network, files
+    services.osquery.enable = true;
+
     # Logrotate — daily rotation, 1 week retention, compressed with date suffix
     services.logrotate.settings.local-logs = {
       files = "/var/log/*.log";
