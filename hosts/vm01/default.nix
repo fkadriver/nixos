@@ -6,7 +6,6 @@ let
       inputs.home-manager.nixosModules.home-manager
       (inputs.self.homeConfigurations.scott).nixosModule
       inputs.self.nixosModules.common
-      inputs.self.nixosModules.wazuh-agent
       inputs.self.nixosModules.bitwarden
       inputs.self.nixosModules.bitwarden-scott
       inputs.self.nixosModules.borg-backup
@@ -137,12 +136,6 @@ EOF
         paths = [ "/home" "/mnt/immich" ];
         encryption.passphraseFile = "/run/bitwarden-secrets/borg_passphrase";
         sshKeyFile = "/home/scott/.ssh/id_ed25519_legacy";
-      };
-
-      services.wazuh-agent = {
-        enable = true;
-        manager = "wazuh.warthog-royal.ts.net";
-        enrollmentPasswordFile = "/run/bitwarden-secrets/wazuh_agent_enrollment_password";
       };
 
       system = {
