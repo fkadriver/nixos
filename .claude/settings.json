@@ -23,7 +23,12 @@
       "Read(//Users/scott/.claude/projects/-Users-scott-git-nixos/memory/**)",
       "Read(//Users/scott/.claude/shared-memory/**)",
       "Bash(ping -c 3 10.147.37.154)",
-      "Bash(git -C /Users/scott/git/nixos add hosts/airbook-darwin/home.nix .claude/settings.json)"
+      "Bash(git -C /Users/scott/git/nixos add hosts/airbook-darwin/home.nix .claude/settings.json)",
+      "Bash(qemu-img --version)",
+      "Bash(ls -lh \"/Users/scott/Virtual Machines/ICS-Netwars/\" 2>/dev/null | head -30)",
+      "Read(//Users/scott/Virtual Machines/**)",
+      "Read(//Users/scott/**)",
+      "Bash(qemu-img info *)"
     ],
     "additionalDirectories": [
       "/Users/scott/.claude/projects/-Users-scott-git-nixos/memory",
