@@ -132,6 +132,7 @@ let
         "syncthing"
         "bitwarden-cli"  # nix version requires xcodebuild, use homebrew instead
         "duti"           # Set default file type associations on macOS
+        "clamav"         # Antivirus — clamscan + freshclam for signature updates
       ];
       casks = [
         "balenaetcher"       # USB image writer
@@ -174,6 +175,9 @@ let
         "caffeine"         # Prevent Mac from sleeping (menubar app)
         "rustdesk"         # Remote desktop to latitude (via Tailscale)
         "sweet-home3d"     # Interior design and home planning
+
+        # Security
+        "osquery"          # Endpoint telemetry — installs LaunchDaemon for continuous monitoring
       ];
     };
 
