@@ -99,10 +99,24 @@ let
     set -euo pipefail
     PASSWORD=$(cat ${cfg.enrollmentPasswordFile})
     HOSTNAME=$(${pkgs.hostname}/bin/hostname -s)
-    ${wazuhFHS}/bin/wazuh-fhs -- /var/ossec/bin/agent-auth \
+    # Run agent-auth directly — it is a Debian ELF binary that resolves fine via
+    # nix-ld on the host but fails inside buildFHSEnv bwrap (ld.so cache shadowing).
+    /var/ossec/bin/agent-auth \
       -m "${cfg.manager}" \
       -P "$PASSWORD" \
       -A "$HOSTNAME"
+  '';
+
+  configureScript = pkgs.writeShellScript "wazuh-configure" ''
+    set -euo pipefail
+    CONF=/var/ossec/etc/ossec.conf
+    [ -f "$CONF" ] || exit 0
+    # Add remote syslog monitoring stanza if not already present (idempotent)
+    if ! ${pkgs.gnused}/bin/grep -q '/var/log/remote' "$CONF"; then
+      ${pkgs.gnused}/bin/sed -i \
+        's|</ossec_config>|  <localfile>\n    <log_format>syslog</log_format>\n    <location>/var/log/remote/*/*.log</location>\n  </localfile>\n</ossec_config>|' \
+        "$CONF"
+    fi
   '';
 
 in
@@ -124,6 +138,13 @@ in
   };
 
   config = mkIf cfg.enable {
+    # nix-ld makes Debian-compiled Wazuh ELF binaries (agent-auth, wazuh-*) work
+    # directly on NixOS without a chroot/bwrap FHS env.
+    programs.nix-ld = {
+      enable = true;
+      libraries = with pkgs; [ stdenv.cc.cc.lib zlib openssl curl libcap ];
+    };
+
     # wazuh user/group expected by the agent binaries
     users.users.wazuh = {
       isSystemUser = true;
@@ -147,14 +168,30 @@ in
       };
     };
 
-    # Enroll once — skipped if client.keys already exists
+    # Patch ossec.conf after install: add localfile stanzas not shipped in the deb
+    systemd.services.wazuh-agent-configure = {
+      description = "Configure Wazuh agent settings";
+      wantedBy = [ "wazuh-agent.service" ];
+      before = [ "wazuh-agent.service" "wazuh-agent-enroll.service" ];
+      after = [ "wazuh-agent-install.service" ];
+
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        ExecStart = configureScript;
+      };
+    };
+
+    # Enroll once — skipped if client.keys already exists and is non-empty.
+    # ConditionFileNotEmpty (not ConditionPathExists) so a 0-byte placeholder
+    # from the .deb does not suppress enrollment.
     systemd.services.wazuh-agent-enroll = mkIf (cfg.enrollmentPasswordFile != null) {
       description = "Enroll Wazuh agent with manager";
       wantedBy = [ "wazuh-agent.service" ];
       before = [ "wazuh-agent.service" ];
-      after = [ "network-online.target" "wazuh-agent-install.service" ];
+      after = [ "network-online.target" "wazuh-agent-install.service" "wazuh-agent-configure.service" ];
       wants = [ "network-online.target" ];
-      unitConfig.ConditionPathExists = "!/var/ossec/etc/client.keys";
+      unitConfig.ConditionFileNotEmpty = "!/var/ossec/etc/client.keys";
 
       serviceConfig = {
         Type = "oneshot";
