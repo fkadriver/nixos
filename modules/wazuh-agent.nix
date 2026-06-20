@@ -86,11 +86,23 @@ let
       /var/ossec/etc/ossec.conf
 
     # Apply the same chown/chmod the deb post-install would have run.
-    # Without this, daemons that run as the wazuh user cannot write to
-    # queue/sockets, queue/alerts, var/run, etc.
     if [ -f /var/ossec/packages_files/agent_installation_scripts/restore-permissions.sh ]; then
-      sh /var/ossec/packages_files/agent_installation_scripts/restore-permissions.sh
+      sh /var/ossec/packages_files/agent_installation_scripts/restore-permissions.sh || true
     fi
+
+    # Ensure critical directories are writable by the wazuh user.
+    # restore-permissions.sh may not handle all cases correctly on NixOS
+    # (e.g. when NSS resolves the wazuh uid differently during activation).
+    chown wazuh:wazuh \
+      /var/ossec/etc /var/ossec/etc/shared \
+      /var/ossec/queue/rids \
+      /var/ossec/logs \
+      /var/ossec/var/run
+    chmod 770 \
+      /var/ossec/etc /var/ossec/etc/shared \
+      /var/ossec/queue/rids \
+      /var/ossec/logs \
+      /var/ossec/var/run
 
     echo "Wazuh agent installed successfully."
   '';
@@ -112,7 +124,7 @@ let
     CONF=/var/ossec/etc/ossec.conf
     [ -f "$CONF" ] || exit 0
     # Add remote syslog monitoring stanza if not already present (idempotent)
-    if ! ${pkgs.gnused}/bin/grep -q '/var/log/remote' "$CONF"; then
+    if ! ${pkgs.gnugrep}/bin/grep -q '/var/log/remote' "$CONF"; then
       ${pkgs.gnused}/bin/sed -i \
         's|</ossec_config>|  <localfile>\n    <log_format>syslog</log_format>\n    <location>/var/log/remote/*/*.log</location>\n  </localfile>\n</ossec_config>|' \
         "$CONF"
