@@ -10,6 +10,8 @@ let
     hash = "sha256-0qy9WX7lhiVoY5Jv5pdXHOMXf6QfnrEJ5XHzv5B2Skk=";
   };
 
+  wazuhVersion = "4.14.5";
+
   darwinModule = { config, lib, pkgs, ... }: {
     # Nix configuration
     nix = {
@@ -350,6 +352,67 @@ let
     system.activationScripts.fixSopsOwnership.text = ''
       chown scott:staff /Users/scott/.local/share || true
       chown scott:staff /Users/scott/.local/share/bitwarden-secrets || true
+    '';
+
+    # Wazuh security agent — install .pkg, enroll via Bitwarden, and start LaunchDaemon.
+    # Uses same Bitwarden fetch pattern as borg-backup (credentials already deployed by sops-nix).
+    system.activationScripts.wazuhAgent.text = ''
+      set -euo pipefail
+
+      WAZUH_MANAGER="wazuh.warthog-royal.ts.net"
+      BW_SECRETS="/Users/scott/.local/share/bitwarden-secrets"
+      BW_WAZUH_ITEM_ID="ccc8c503-1b96-4e23-bb70-b457012c90b3"
+      BW="/usr/local/bin/bw"
+
+      # --- Install ---
+      if [ ! -f /Library/Ossec/etc/ossec.conf ]; then
+        echo "Installing Wazuh agent ${wazuhVersion}..."
+        TMPDIR=$(mktemp -d)
+        trap "rm -rf $TMPDIR" EXIT
+        /usr/bin/curl -fsSL \
+          "https://packages.wazuh.com/4.x/macos/wazuh-agent-${wazuhVersion}-1.intel64.pkg" \
+          -o "$TMPDIR/wazuh-agent.pkg"
+        # launchctl setenv required — installer spawns subprocesses that don't inherit shell env
+        /bin/launchctl setenv WAZUH_MANAGER "$WAZUH_MANAGER"
+        /usr/sbin/installer -pkg "$TMPDIR/wazuh-agent.pkg" -target /
+        /bin/launchctl unsetenv WAZUH_MANAGER
+        # Belt-and-suspenders: patch ossec.conf directly in case setenv wasn't picked up
+        ${pkgs.gnused}/bin/sed -i \
+          "s|<address>.*</address>|<address>$WAZUH_MANAGER</address>|" \
+          /Library/Ossec/etc/ossec.conf
+        echo "Wazuh agent installed."
+      fi
+
+      # --- Enroll ---
+      # client.keys is created empty by the pkg; -s checks for non-zero size (i.e. enrolled)
+      if [ -f /Library/Ossec/bin/agent-auth ] && [ ! -s /Library/Ossec/etc/client.keys ]; then
+        if [ ! -f "$BW_SECRETS/client_id" ]; then
+          echo "Bitwarden secrets not yet deployed; skipping Wazuh enrollment." >&2
+        else
+          echo "Enrolling Wazuh agent..."
+          export BW_CLIENTID="$(cat "$BW_SECRETS/client_id")"
+          export BW_CLIENTSECRET="$(cat "$BW_SECRETS/client_secret")"
+          export BW_PASSWORD="$(cat "$BW_SECRETS/master_password")"
+          export HOME="/Users/scott"
+          "$BW" login --apikey --quiet 2>/dev/null || true
+          BW_SESSION="$("$BW" unlock --passwordenv BW_PASSWORD --raw)"
+          export BW_SESSION
+          ENROLL_PASS="$("$BW" get item "$BW_WAZUH_ITEM_ID" | ${pkgs.jq}/bin/jq -r '.login.password')"
+          "$BW" lock --quiet || true
+          /Library/Ossec/bin/agent-auth \
+            -m "$WAZUH_MANAGER" \
+            -P "$ENROLL_PASS" \
+            -A "$(hostname -s)"
+          echo "Wazuh agent enrolled."
+        fi
+      fi
+
+      # --- Service ---
+      # The .pkg installs /Library/LaunchDaemons/com.wazuh.agent.plist; load it if not running.
+      if [ -f /Library/LaunchDaemons/com.wazuh.agent.plist ]; then
+        /bin/launchctl list com.wazuh.agent >/dev/null 2>&1 || \
+          /bin/launchctl load /Library/LaunchDaemons/com.wazuh.agent.plist 2>/dev/null || true
+      fi
     '';
 
     # Borg backup to nas01 via launchd (macOS equivalent of systemd)
