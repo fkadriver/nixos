@@ -93,14 +93,18 @@ let
     # Ensure critical directories are writable by the wazuh user.
     # restore-permissions.sh may not handle all cases correctly on NixOS
     # (e.g. when NSS resolves the wazuh uid differently during activation).
+    # queue/sockets is omitted by restore-permissions.sh but wazuh-agentd
+    # must create queue/sockets/queue there as the wazuh user.
     chown wazuh:wazuh \
       /var/ossec/etc /var/ossec/etc/shared \
       /var/ossec/queue/rids \
+      /var/ossec/queue/sockets \
       /var/ossec/logs \
       /var/ossec/var/run
     chmod 770 \
       /var/ossec/etc /var/ossec/etc/shared \
       /var/ossec/queue/rids \
+      /var/ossec/queue/sockets \
       /var/ossec/logs \
       /var/ossec/var/run
 
@@ -117,6 +121,25 @@ let
       -m "${cfg.manager}" \
       -P "$PASSWORD" \
       -A "$HOSTNAME"
+    # agent-auth creates client.keys as root:root — fix so wazuh user can read it.
+    chown root:wazuh /var/ossec/etc/client.keys
+    chmod 640 /var/ossec/etc/client.keys
+  '';
+
+  fixPermsScript = pkgs.writeShellScript "wazuh-fix-perms" ''
+    set -euo pipefail
+    # Ensure ossec.conf and client.keys are root:wazuh readable before each start.
+    # agent-auth writes client.keys as root:root on fresh enrollment; this corrects it.
+    chown root:wazuh /var/ossec/etc/ossec.conf 2>/dev/null || true
+    chmod 660 /var/ossec/etc/ossec.conf 2>/dev/null || true
+    if [ -f /var/ossec/etc/client.keys ]; then
+      chown root:wazuh /var/ossec/etc/client.keys
+      chmod 640 /var/ossec/etc/client.keys
+    fi
+    # wazuh-agentd (running as wazuh) must create queue/sockets/queue;
+    # the install's restore-permissions.sh leaves queue/sockets as root:root 755.
+    chown wazuh:wazuh /var/ossec/queue/sockets 2>/dev/null || true
+    chmod 770 /var/ossec/queue/sockets 2>/dev/null || true
   '';
 
   configureScript = pkgs.writeShellScript "wazuh-configure" ''
@@ -221,6 +244,7 @@ in
 
       serviceConfig = {
         Type = "forking";
+        ExecStartPre = fixPermsScript;
         ExecStart  = "${wazuhFHS}/bin/wazuh-fhs -- /var/ossec/bin/wazuh-control start";
         ExecStop   = "${wazuhFHS}/bin/wazuh-fhs -- /var/ossec/bin/wazuh-control stop";
         ExecReload = "${wazuhFHS}/bin/wazuh-fhs -- /var/ossec/bin/wazuh-control restart";
