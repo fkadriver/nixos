@@ -172,6 +172,9 @@ let
         # Text editor
         "geany"
 
+        # AI / image generation
+        "diffusionbee"     # Stable Diffusion GUI — Intel Mac compatible, manages models itself
+
         # Utilities
         "tailscale-app"    # VPN with tray icon (replaces nix-darwin service; renamed from tailscale)
         "caffeine"         # Prevent Mac from sleeping (menubar app)

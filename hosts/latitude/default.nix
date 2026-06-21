@@ -65,6 +65,7 @@ let
         pkgs.gimp
         pkgs.git-lfs
         pkgs.input-leap
+        pkgs.stable-diffusion-cpp-vulkan
       ];
 
       # Input Leap server: allow connections on LAN and via Tailscale
