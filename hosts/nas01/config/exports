@@ -9,6 +9,9 @@
 # Main data share - read/write for local network
 /pool/data    192.168.1.0/24(rw,sync,no_subtree_check,no_root_squash)
 
+# shares
+/pool/shares/SANS 192.168.0.0/20(rw,sync,no_subtree_check,no_root_squash)
+
 # Media (read-only if clients should not write)
 # /pool/media  192.168.1.0/24(ro,sync,no_subtree_check)
 
