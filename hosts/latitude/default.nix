@@ -21,9 +21,25 @@ let
         hostName = "latitude";
       };
 
-      # NFS mount for SANS share on nas01 via Tailscale
+      # NFS mounts for nas01 shares via Tailscale
       fileSystems."/mnt/nas01/SANS" = {
         device = "nas01.warthog-royal.ts.net:/pool/shares/SANS";
+        fsType = "nfs";
+        options = [
+          "x-systemd.automount"
+          "x-systemd.idle-timeout=600"
+          "noauto"
+          "nofail"
+          "soft"
+          "timeo=30"
+          "_netdev"
+          "x-systemd.requires=tailscaled.service"
+          "x-systemd.after=tailscaled.service"
+        ];
+      };
+
+      fileSystems."/mnt/nas01/photos" = {
+        device = "nas01.warthog-royal.ts.net:/pool/shares/photos";
         fsType = "nfs";
         options = [
           "x-systemd.automount"
