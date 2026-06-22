@@ -147,6 +147,7 @@ mkdir -p /var/lib/samba/private
 # NFS exports
 echo "Installing NFS exports..."
 install -m 644 "${NAS01_DIR}/config/exports" /etc/exports
+exportfs -ra
 
 # hd-idle spindown config
 echo "Installing hd-idle config..."
