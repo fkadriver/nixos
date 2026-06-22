@@ -31,14 +31,14 @@ let
     sshKey = "/home/scott/.ssh/id_ed25519_legacy";
   };
 in {
-  # Enable distributing derivations to remote build machines.
-  # When one machine is the --build-host for a pihole deploy, it farms out
-  # independent derivations to the other, building in parallel.
-  # The linux-rpi kernel is a single derivation and still builds on one machine,
-  # but all other aarch64 packages can build concurrently across both.
-  nix.distributedBuilds = true;
+  # Distributed builds: only enabled on vm01.
+  # latitude must not offload its own local builds to vm01 — only pihole deploys
+  # use both machines, and those are driven explicitly via --build-host, not the daemon.
+  nix.distributedBuilds = hostname != "latitude";
 
   # Each host lists the other as a build machine (excludes itself).
+  # latitude still has vm01 in its list so --build-host latitude can farm out to vm01
+  # when building pihole configs, but the daemon won't use it for local builds.
   nix.buildMachines =
     lib.optionals (hostname != "latitude") [ latitudeMachine ] ++
     lib.optionals (hostname != "vm01")     [ vm01Machine ];
