@@ -21,6 +21,23 @@ let
         hostName = "latitude";
       };
 
+      # NFS mount for SANS share on nas01 via Tailscale
+      fileSystems."/mnt/nas01/SANS" = {
+        device = "nas01.warthog-royal.ts.net:/pool/shares/SANS";
+        fsType = "nfs";
+        options = [
+          "x-systemd.automount"
+          "x-systemd.idle-timeout=600"
+          "noauto"
+          "nofail"
+          "soft"
+          "timeo=30"
+          "_netdev"
+          "x-systemd.requires=tailscaled.service"
+          "x-systemd.after=tailscaled.service"
+        ];
+      };
+
       services.wazuh-agent = {
         enable = true;
         manager = "wazuh.warthog-royal.ts.net";

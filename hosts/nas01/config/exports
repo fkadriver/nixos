@@ -2,18 +2,12 @@
 #
 # After editing, reload with: sudo exportfs -ra
 # View active exports:       sudo exportfs -v
-#
-# TODO: Adjust paths to match ZFS dataset mountpoints
-# TODO: Adjust IP ranges to match your local network (currently 192.168.1.0/24)
 
 # Main data share - read/write for local network
 /pool/data    192.168.1.0/24(rw,sync,no_subtree_check,no_root_squash)
 
-# shares
-/pool/shares/SANS 192.168.0.0/20(rw,sync,no_subtree_check,no_root_squash)
-
-# Media (read-only if clients should not write)
-# /pool/media  192.168.1.0/24(ro,sync,no_subtree_check)
-
-# Specific host access example:
-# /pool/data   192.168.1.10(rw,sync,no_subtree_check,no_root_squash)
+# SANS course materials share
+# LAN access (192.168.0.0/20 covers the local network) — read-only
+/pool/shares/SANS    192.168.0.0/20(sync,wdelay,hide,no_subtree_check,sec=sys,ro,secure,no_root_squash,no_all_squash)
+# Tailscale access (100.64.0.0/10 is the Tailscale CGNAT range) — read/write
+/pool/shares/SANS    100.64.0.0/10(sync,wdelay,hide,no_subtree_check,sec=sys,rw,secure,no_root_squash,no_all_squash)

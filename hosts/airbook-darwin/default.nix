@@ -351,6 +351,27 @@ let
       fi
     '';
 
+    # NFS mount for SANS share on nas01 via Tailscale
+    # Uses autofs so the mount happens on first access rather than at boot.
+    # /etc/auto_master and /etc/auto_nas01 are managed here; autofs is built into macOS.
+    system.activationScripts.nfsMounts.text = ''
+      # Mount point
+      mkdir -p /mnt/nas01/SANS
+
+      # autofs indirect map: /mnt/nas01/* → nas01 exports
+      cat > /etc/auto_nas01 << 'AUTOFSMAP'
+SANS  -fstype=nfs,resvport,soft,timeo=30,intr,rw  nas01.warthog-royal.ts.net:/pool/shares/SANS
+AUTOFSMAP
+
+      # Register the map in auto_master if not already present
+      if ! grep -q '/mnt/nas01' /etc/auto_master; then
+        echo '/mnt/nas01  auto_nas01  -nobrowse' >> /etc/auto_master
+      fi
+
+      # Reload autofs to pick up changes
+      automount -vc 2>/dev/null || true
+    '';
+
     # Fix ownership of sops-created directories (sops runs as root and creates parent dirs as root)
     system.activationScripts.fixSopsOwnership.text = ''
       chown scott:staff /Users/scott/.local/share || true
