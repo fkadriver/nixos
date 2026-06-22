@@ -13,8 +13,5 @@
 /pool/shares/SANS    100.64.0.0/10(sync,wdelay,hide,no_subtree_check,sec=sys,rw,secure,no_root_squash,no_all_squash)
 
 
-# Photos share
-# LAN access (192.168.0.0/16 covers the local network) — read-only
-/pool/shares/photos    192.168.0.0/16(sync,wdelay,hide,no_subtree_check,sec=sys,ro,secure,no_root_squash,no_all_squash)
-# Tailscale access (100.64.0.0/10 is the Tailscale CGNAT range) — read/write
+# Photos share — Tailscale only
 /pool/shares/photos    100.64.0.0/10(sync,wdelay,hide,no_subtree_check,sec=sys,rw,secure,no_root_squash,no_all_squash)
