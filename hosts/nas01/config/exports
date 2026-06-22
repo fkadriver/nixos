@@ -8,6 +8,6 @@
 
 # SANS course materials share
 # LAN access (192.168.0.0/20 covers the local network) — read-only
-/pool/shares/SANS    192.168.0.0/20(sync,wdelay,hide,no_subtree_check,sec=sys,ro,secure,no_root_squash,no_all_squash)
+/pool/shares/SANS    192.168.0.0/16(sync,wdelay,hide,no_subtree_check,sec=sys,ro,secure,no_root_squash,no_all_squash)
 # Tailscale access (100.64.0.0/10 is the Tailscale CGNAT range) — read/write
 /pool/shares/SANS    100.64.0.0/10(sync,wdelay,hide,no_subtree_check,sec=sys,rw,secure,no_root_squash,no_all_squash)
