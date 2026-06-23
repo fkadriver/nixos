@@ -11,6 +11,15 @@ let
         # Add ~/.local/bin to PATH for non-interactive shells (VS Code Server)
         sessionPath = [ "$HOME/.local/bin" ];
       };
+      # Disable RustDesk public rendezvous/relay servers — use Tailscale direct only
+      xdg.configFile."rustdesk/RustDesk.toml".text = ''
+        [options]
+        custom-rendezvous-server = ""
+        relay-server = ""
+        api-server = ""
+        key = ""
+      '';
+
       # Input Leap server layout: airbook.local is to the left of latitude
       xdg.configFile."InputLeap/input-leap.conf".text = ''
         section: screens
