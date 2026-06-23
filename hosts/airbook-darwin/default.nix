@@ -490,6 +490,11 @@ AUTOFSMAP
         };
       };
 
+    # Ignore Tahoe upgrade so softwareupdate only offers Sequoia (15.x) updates
+    system.activationScripts.ignoreTahoeUpgrade.text = ''
+      /usr/sbin/softwareupdate --ignore "macOS Tahoe" 2>/dev/null || true
+    '';
+
     # Enable SSH server (Remote Login)
     system.activationScripts.remoteLogin.text = ''
       /usr/sbin/systemsetup -setremotelogin on > /dev/null 2>&1 || true
