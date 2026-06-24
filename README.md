@@ -28,6 +28,7 @@ nix build .#nixosConfigurations.<hostname>.config.system.build.vm
 | `latitude-minimal` | Dell Latitude 7480 | XFCE | Testing |
 | `airbook` | MacBook Air 7,2 | XFCE | NixOS on Mac |
 | `airbook-kde` | MacBook Air 7,2 | KDE | NixOS on Mac |
+| `OTworkstation` | Dell Latitude 5480 | XFCE | OT lab VM workstation |
 | `vm01` | Dell Latitude E7270 | Headless | Immich photo server |
 | `log01` | Shuttle Zingbox GL014G128W10 | Headless | Centralized syslog collector |
 | `pihole01` | Raspberry Pi 3B | Headless | Primary Pi-hole DNS |

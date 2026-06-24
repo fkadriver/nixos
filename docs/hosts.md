@@ -75,6 +75,17 @@ Then add to `.sops.yaml` and run `sops updatekeys secrets/secrets.yaml`.
 
 **Note:** Cross-compiled from x86_64. Uses `nixos-hardware` raspberry-pi-3 module. No borg backup. DNS query logs forwarded to log01 via rsyslog (FTL syslog enabled).
 
+### OTworkstation
+**Dell Latitude 5480** - OT lab workstation
+
+| | |
+|---|---|
+| Purpose | Operational Technology (OT) lab VM workstation |
+| Desktop | XFCE (LightDM, minimal) |
+| Key Features | VMware, VirtualBox, Syncthing, Tailscale |
+
+**Note:** Lightweight desktop optimized for running VMs. Hardware UUIDs in `hardware.nix` are placeholders — replace with output from `nixos-generate-config` after first boot.
+
 ### installer
 **Bootable ISO** - Automated installation media
 
@@ -106,6 +117,7 @@ Then add to `.sops.yaml` and run `sops updatekeys secrets/secrets.yaml`.
 | `latitude-xfce` | Laptop | XFCE | Full desktop variant |
 | `latitude-kde` | Laptop | KDE | Full desktop variant |
 | `latitude-minimal` | Laptop | XFCE | Testing |
+| `OTworkstation` | Laptop | XFCE | OT lab VM workstation |
 | `vm01` | Server | None | Immich photo server |
 | `log01` | Server | None | Syslog collector |
 | `pihole01` | RPi 3B | None | Primary Pi-hole DNS |
