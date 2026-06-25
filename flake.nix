@@ -92,6 +92,13 @@
             nixosModules.disko-config
           ];
         }).config;
+        OTworkstation = (inputs.nixpkgs.lib.nixosSystem {
+          system = "x86_64-linux";
+          modules = [
+            inputs.disko.nixosModules.disko
+            nixosModules.disko-config
+          ];
+        }).config;
       };
 
       # macOS configurations using nix-darwin
