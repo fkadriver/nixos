@@ -88,12 +88,13 @@ let
           StrictHostKeyChecking no
       '';
 
-      # RustDesk remote desktop - Tailscale-only access from airbook
       # VMware Workstation for SANS ICS310 RELICS VM (VMware .vmx format)
       # git-lfs for GRFICSv3 OT lab (large Docker image assets)
       # input-leap: KVM server sharing latitude's keyboard/mouse with airbook-darwin
+      # krdp: KDE native Wayland RDP server
       environment.systemPackages = [
-        pkgs.rustdesk
+        pkgs.kdePackages.krdp
+        # pkgs.rustdesk  # revisit: Wayland screen capture not working
         pkgs.geany
         pkgs.gimp
         pkgs.git-lfs
@@ -113,11 +114,8 @@ let
         "text/x-config" = "geany.desktop";
       };
 
-      # Only allow RustDesk ports on the Tailscale interface
-      networking.firewall.interfaces."tailscale0".allowedTCPPortRanges = [
-        { from = 21115; to = 21119; }
-      ];
-      networking.firewall.interfaces."tailscale0".allowedUDPPorts = [ 21116 ];
+      # RDP (krdp) — Tailscale-only
+      networking.firewall.interfaces."tailscale0".allowedTCPPorts = [ 3389 ];
 
       # Input Leap server: share latitude's keyboard/mouse with airbook-darwin
       # Config at ~/.config/InputLeap/input-leap.conf (deployed via home-manager)
@@ -132,15 +130,18 @@ let
         };
       };
 
-      systemd.user.services.rustdesk = {
-        description = "RustDesk Remote Desktop daemon";
-        wantedBy = [ "graphical-session.target" ];
-        after = [ "graphical-session.target" ];
-        serviceConfig = {
-          ExecStart = "${pkgs.rustdesk}/bin/rustdesk --service";
-          Restart = "on-failure";
-        };
-      };
+      # RustDesk service — disabled; Wayland screen capture unsolved
+      # systemd.user.services.rustdesk = {
+      #   description = "RustDesk Remote Desktop daemon";
+      #   wantedBy = [ "graphical-session.target" ];
+      #   after = [ "graphical-session.target" ];
+      #   serviceConfig = {
+      #     ExecStart = "${pkgs.rustdesk}/bin/rustdesk --service";
+      #     Restart = "on-failure";
+      #     PassEnvironment = "DISPLAY XAUTHORITY WAYLAND_DISPLAY XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS";
+      #     Environment = "XDG_SESSION_TYPE=wayland";
+      #   };
+      # };
 
       system = {
         stateVersion = "25.11";
