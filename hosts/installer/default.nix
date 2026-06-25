@@ -5,11 +5,9 @@ inputs.nixpkgs.lib.nixosSystem {
   specialArgs = { inherit inputs; };
   modules = [
     "${inputs.nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-minimal.nix"
-    inputs.disko.nixosModules.disko
     ({ config, lib, pkgs, ... }: {
       # Include the disko configuration and wireless support
       imports = [
-        inputs.self.nixosModules.disko-config
         inputs.self.nixosModules.wireless
       ];
 
