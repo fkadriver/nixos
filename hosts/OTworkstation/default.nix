@@ -3,6 +3,7 @@ let
   nixosModule = { config, lib, pkgs, ... }: {
     imports = [
       ./hardware.nix
+      inputs.sops-nix.nixosModules.sops
       inputs.self.nixosModules.common
       inputs.self.nixosModules.syncthing
       inputs.self.nixosModules.laptop-minimal
@@ -13,6 +14,18 @@ let
     ];
     config = {
       networking.hostName = "OTworkstation";
+
+      sops.age.keyFile = "/var/lib/sops-nix/key.txt";
+
+      system.activationScripts.sops-nix-setup = lib.mkBefore ''
+        if [ ! -f /var/lib/sops-nix/key.txt ]; then
+          mkdir -p /var/lib/sops-nix
+          ${pkgs.age}/bin/age-keygen -o /var/lib/sops-nix/key.txt
+          chmod 600 /var/lib/sops-nix/key.txt
+          echo "Generated new age key for sops-nix at /var/lib/sops-nix/key.txt"
+          echo "Public key: $(${pkgs.age}/bin/age-keygen -y /var/lib/sops-nix/key.txt)"
+        fi
+      '';
 
       system.stateVersion = "25.11";
     };
