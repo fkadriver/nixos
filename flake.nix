@@ -97,6 +97,10 @@
           modules = [
             inputs.disko.nixosModules.disko
             nixosModules.disko-config
+            # 8GB RAM + 2×4GB VMs saturates physical RAM; 32GB swap covers VM overcommit
+            ({ lib, ... }: {
+              disko.devices.lvm_vg.main_vg.lvs.swap.size = lib.mkForce "32G";
+            })
           ];
         }).config;
       };
