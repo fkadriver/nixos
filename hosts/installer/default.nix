@@ -152,7 +152,31 @@ inputs.nixpkgs.lib.nixosSystem {
 
           echo ""
           echo "Installing NixOS..."
-          sudo nixos-install --flake "$GIT_REPO#$CONFIG" --no-root-passwd
+          sudo nixos-install --flake "''${GIT_REPO}#''${CONFIG}" --no-root-passwd
+
+          # Clone repo into scott's home on the installed system.
+          # Skipped for pihole hosts (headless, no dev environment needed).
+          if [[ "''${CONFIG}" != pihole* ]]; then
+            echo ""
+            echo "Cloning repository to ~/git/..."
+
+            # Convert flake URL to https git URL
+            if [[ "''${GIT_REPO}" == github:* ]]; then
+              CLONE_URL="https://github.com/''${GIT_REPO#github:}"
+            elif [[ "''${GIT_REPO}" == gitlab:* ]]; then
+              CLONE_URL="https://gitlab.com/''${GIT_REPO#gitlab:}"
+            else
+              CLONE_URL="''${GIT_REPO}"
+            fi
+
+            REPO_NAME=$(basename "''${CLONE_URL%.git}")
+
+            sudo nixos-enter --root /mnt -- mkdir -p /home/scott/git
+            sudo nixos-enter --root /mnt -- git clone "''${CLONE_URL}" "/home/scott/git/''${REPO_NAME}"
+            sudo nixos-enter --root /mnt -- chown -R scott:users /home/scott/git
+
+            echo "Repository cloned to ~/git/''${REPO_NAME}"
+          fi
 
           echo ""
           echo "Installation complete!"
@@ -187,6 +211,14 @@ inputs.nixpkgs.lib.nixosSystem {
           ssh scott@<hostname> 'sudo age-keygen -y /var/lib/sops-nix/key.txt'
           Then add to .sops.yaml and run: sops updatekeys secrets/secrets.yaml
 
+      '';
+
+      # Auto-login root on tty1 and launch the install script immediately
+      services.getty.autologinUser = lib.mkDefault "root";
+      programs.bash.loginShellInit = ''
+        if [ "$(tty)" = "/dev/tty1" ]; then
+          /etc/nixos-install-helper.sh
+        fi
       '';
 
       # Enable SSH for remote installation
