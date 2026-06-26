@@ -254,6 +254,10 @@
       timeZone = "America/Chicago";
     };
 
+    # Write /etc/timezone as a plain text file so Docker containers that
+    # bind-mount it (e.g. ICSSIM) get a file rather than a missing path.
+    environment.etc."timezone".text = config.time.timeZone + "\n";
+
     # Docker virtualization
     virtualisation.docker.enable = true;
 
