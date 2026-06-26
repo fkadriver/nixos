@@ -9,6 +9,7 @@ let
       inputs.self.nixosModules.user-scott
       inputs.self.nixosModules.virtualbox
       inputs.self.nixosModules.vmware
+      inputs.self.nixosModules.wireless
     ];
     config = {
       networking.hostName = "OTworkstation";

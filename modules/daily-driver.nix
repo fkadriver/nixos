@@ -67,6 +67,7 @@
 
       shotwell
       handbrake  # Video transcoding
+      zoom-us
 
       libreoffice
       thunderbird

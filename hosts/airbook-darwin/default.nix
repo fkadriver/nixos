@@ -183,6 +183,9 @@ let
 
         # Security
         "osquery"          # Endpoint telemetry — installs LaunchDaemon for continuous monitoring
+
+        # Video conferencing
+        "zoom"
       ];
     };
 
