@@ -15,21 +15,24 @@ let
     config = {
       networking.hostName = "OTworkstation";
 
-      # SSH server — key-only auth, required for X2Go
+      # SSH server — key-only auth
       services.openssh = {
         enable = true;
         settings = {
           PasswordAuthentication = false;
           PermitRootLogin = "no";
-          X11Forwarding = true;
         };
       };
 
       # Open SSH on all interfaces (tailscale.nix trusts tailscale0; this covers LAN/direct)
       networking.firewall.allowedTCPPorts = [ 22 ];
 
-      # X2Go remote desktop server — sessions over SSH, XFCE session type
-      services.x2goserver.enable = true;
+      # xrdp remote desktop — XFCE session, accessible on all interfaces (opens port 3389)
+      services.xrdp = {
+        enable = true;
+        defaultWindowManager = "startxfce4";
+        openFirewall = true;
+      };
 
       sops.age.keyFile = "/var/lib/sops-nix/key.txt";
 

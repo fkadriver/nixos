@@ -28,7 +28,11 @@
       "Bash(ls -lh \"/Users/scott/Virtual Machines/ICS-Netwars/\" 2>/dev/null | head -30)",
       "Read(//Users/scott/Virtual Machines/**)",
       "Read(//Users/scott/**)",
-      "Bash(qemu-img info *)"
+      "Bash(qemu-img info *)",
+      "Bash(git commit -m ' *)",
+      "Bash(find /run/current-system 2>/dev/null | head -3 || nix eval --impure --expr 'builtins.nixVersion' 2>/dev/null || echo \"not on NixOS\")",
+      "Read(//nix/store/ygknlih6aplf09q9flxxj4wcq5cjif7m-darwin-system-26.05.6a7fdcd/**)",
+      "Read(//nix/store/ps8fhbglachs62pf47aw3rzx8zfij8sp-source/nixos/modules/services/networking/**)"
     ],
     "additionalDirectories": [
       "/Users/scott/.claude/projects/-Users-scott-git-nixos/memory",

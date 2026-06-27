@@ -180,7 +180,7 @@ let
         "caffeine"         # Prevent Mac from sleeping (menubar app)
         "rustdesk"         # Remote desktop to latitude (via Tailscale)
         "xquartz"          # X11 server required by x2goclient on macOS
-        "x2goclient"       # Remote X sessions to OTworkstation (via Tailscale + SSH)
+        "microsoft-remote-desktop"  # RDP client for OTworkstation xrdp sessions
         "sweet-home3d"     # Interior design and home planning
 
         # Security
