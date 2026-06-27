@@ -27,12 +27,19 @@ let
       # Open SSH on all interfaces (tailscale.nix trusts tailscale0; this covers LAN/direct)
       networking.firewall.allowedTCPPorts = [ 22 ];
 
-      # xrdp remote desktop — XFCE session, accessible on all interfaces (opens port 3389)
+      # xrdp remote desktop — openbox session, accessible on all interfaces (opens port 3389)
+      # xfce4-session is a singleton; it's already running on the physical display via lightdm,
+      # so xrdp sessions use openbox instead to avoid the conflict.
       services.xrdp = {
         enable = true;
-        defaultWindowManager = "startxfce4";
+        defaultWindowManager = "${pkgs.dbus}/bin/dbus-launch --exit-with-session ${pkgs.openbox}/bin/openbox-session";
         openFirewall = true;
       };
+
+      environment.systemPackages = with pkgs; [
+        openbox   # window manager for xrdp sessions
+        xterm     # terminal emulator accessible via openbox right-click menu
+      ];
 
       sops.age.keyFile = "/var/lib/sops-nix/key.txt";
 
