@@ -179,6 +179,7 @@ let
         "tailscale-app"    # VPN with tray icon (replaces nix-darwin service; renamed from tailscale)
         "caffeine"         # Prevent Mac from sleeping (menubar app)
         "rustdesk"         # Remote desktop to latitude (via Tailscale)
+        "xquartz"          # X11 server required by x2goclient on macOS
         "x2goclient"       # Remote X sessions to OTworkstation (via Tailscale + SSH)
         "sweet-home3d"     # Interior design and home planning
 
