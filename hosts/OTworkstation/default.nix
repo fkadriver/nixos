@@ -15,7 +15,20 @@ let
     config = {
       networking.hostName = "OTworkstation";
 
-      services.vmware-host.enable = true;
+      # Bridge enp0s20u2u4 (USB NIC) to vmnet0 for RELICS ICS lab VMs
+      services.vmware-host = {
+        enable = true;
+        bridgeInterface = "enp0s20u2u4";
+      };
+
+      # Static IP on the USB NIC — this interface feeds the RELICS lab network
+      networking.interfaces.enp0s20u2u4 = {
+        useDHCP = false;
+        ipv4.addresses = [{
+          address = "192.168.0.2";
+          prefixLength = 24;
+        }];
+      };
 
       # SSH server — key-only auth
       services.openssh = {
