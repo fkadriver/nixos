@@ -15,6 +15,18 @@ let
     config = {
       networking.hostName = "OTworkstation";
 
+      # SSH server — key-only auth, required for X2Go
+      services.openssh = {
+        enable = true;
+        settings = {
+          PasswordAuthentication = false;
+          PermitRootLogin = "no";
+        };
+      };
+
+      # X2Go remote desktop server — sessions over SSH, XFCE session type
+      services.x2goserver.enable = true;
+
       sops.age.keyFile = "/var/lib/sops-nix/key.txt";
 
       system.activationScripts.sops-nix-setup = lib.mkBefore ''

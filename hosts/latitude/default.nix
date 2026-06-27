@@ -100,6 +100,7 @@ let
         pkgs.git-lfs
         pkgs.input-leap
         pkgs.stable-diffusion-cpp-vulkan
+        pkgs.x2goclient  # remote X sessions to OTworkstation
       ];
 
       # Input Leap server: allow connections on LAN and via Tailscale
