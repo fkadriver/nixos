@@ -15,6 +15,8 @@ let
     config = {
       networking.hostName = "OTworkstation";
 
+      services.vmware-host.enable = true;
+
       # SSH server — key-only auth
       services.openssh = {
         enable = true;
