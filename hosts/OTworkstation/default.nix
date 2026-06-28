@@ -16,7 +16,6 @@ let
       networking.hostName = "OTworkstation";
 
       services.vmware-host = {
-        enable = true;
         bridgeInterface = "enp0s20u2u4";
         hostAddress = "192.168.0.2";
       };

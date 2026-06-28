@@ -6,8 +6,6 @@ let
 in
 {
   options.services.vmware-host = {
-    enable = lib.mkEnableOption "VMware Workstation host";
-
     bridgeInterface = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
       default = null;
@@ -50,7 +48,7 @@ in
     };
   };
 
-  config = lib.mkIf cfg.enable {
+  config = {
     environment.systemPackages = [ pkgs.vmware-workstation ];
 
     virtualisation.vmware.host = {
