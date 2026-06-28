@@ -12,7 +12,20 @@ in
       type = lib.types.nullOr lib.types.str;
       default = null;
       description = "Network interface to bridge vmnet0 to. Null leaves vmnet0 in NAT mode.";
-      example = "enp0s20f0u1u4";
+      example = "enp0s20u2u4";
+    };
+
+    hostAddress = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "Static IPv4 address for the bridge interface. Null uses DHCP.";
+      example = "192.168.0.2";
+    };
+
+    prefixLength = lib.mkOption {
+      type = lib.types.int;
+      default = 24;
+      description = "Prefix length for hostAddress.";
     };
 
     sharedFolders = lib.mkOption {
@@ -51,6 +64,16 @@ in
           answer VMNET_SHAREDFOLDERS_FOLDER_${sf.name}_PATH ${sf.hostPath}
           answer VMNET_SHAREDFOLDERS_FOLDER_${sf.name}_READONLY ${if sf.readOnly then "yes" else "no"}
         '') cfg.sharedFolders;
+    };
+
+    networking.interfaces = lib.mkIf (cfg.bridgeInterface != null && cfg.hostAddress != null) {
+      ${cfg.bridgeInterface} = {
+        useDHCP = false;
+        ipv4.addresses = [{
+          address = cfg.hostAddress;
+          prefixLength = cfg.prefixLength;
+        }];
+      };
     };
   };
 }

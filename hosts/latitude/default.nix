@@ -107,8 +107,6 @@ let
       # Port 24800 is the default Input Leap/Barrier port
       networking.firewall.allowedTCPPorts = [ 24800 ];
 
-      services.vmware-host.enable = true;
-
       # Default text editor for .txt and .conf files
       xdg.mime.defaultApplications = {
         "text/plain" = "geany.desktop";
