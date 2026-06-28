@@ -51,17 +51,27 @@ in
   config = {
     environment.systemPackages = [ pkgs.vmware-workstation ];
 
-    virtualisation.vmware.host = {
-      enable = true;
-      extraConfig =
-        lib.optionalString (cfg.bridgeInterface != null) ''
-          answer VMNET_0_INTERFACE ${cfg.bridgeInterface}
-        ''
-        + lib.concatMapStrings (sf: ''
-          answer VMNET_SHAREDFOLDERS_FOLDER_${sf.name}_ENABLED yes
-          answer VMNET_SHAREDFOLDERS_FOLDER_${sf.name}_PATH ${sf.hostPath}
-          answer VMNET_SHAREDFOLDERS_FOLDER_${sf.name}_READONLY ${if sf.readOnly then "yes" else "no"}
-        '') cfg.sharedFolders;
+    virtualisation.vmware.host.enable = true;
+
+    # Bridge vmnet0 to the specified interface via the networking file.
+    # answer directives must go here, NOT in /etc/vmware/config (AppLoader rejects them).
+    environment.etc."vmware/networking" = lib.mkIf (cfg.bridgeInterface != null) {
+      mode = "0644";
+      text = ''
+        VERSION=1,0
+        answer VNET_0_INTERFACE ${cfg.bridgeInterface}
+        answer VNET_0_DHCP no
+        answer VNET_0_VIRTUAL_ADAPTER no
+        answer VNET_1_DHCP yes
+        answer VNET_1_HOSTONLY_NETMASK 255.255.255.0
+        answer VNET_1_HOSTONLY_SUBNET 192.168.208.0
+        answer VNET_1_VIRTUAL_ADAPTER yes
+        answer VNET_8_DHCP yes
+        answer VNET_8_HOSTONLY_NETMASK 255.255.255.0
+        answer VNET_8_HOSTONLY_SUBNET 192.168.182.0
+        answer VNET_8_NAT yes
+        answer VNET_8_VIRTUAL_ADAPTER yes
+      '';
     };
 
     networking.interfaces = lib.mkIf (cfg.bridgeInterface != null && cfg.hostAddress != null) {
