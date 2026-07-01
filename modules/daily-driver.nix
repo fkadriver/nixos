@@ -66,6 +66,7 @@
       claude-code
 
       shotwell
+      mpv
       handbrake  # Video transcoding
       zoom-us
 
