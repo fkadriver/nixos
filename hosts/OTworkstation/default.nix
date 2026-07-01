@@ -111,6 +111,13 @@ let
         fi
       '';
 
+      # xrdp — new X11 XFCE session per connection, Tailscale-only
+      services.xrdp = {
+        enable = true;
+        defaultWindowManager = "startxfce4";
+      };
+      networking.firewall.interfaces."tailscale0".allowedTCPPorts = [ 3389 ];
+
       system.stateVersion = "25.11";
     };
   };

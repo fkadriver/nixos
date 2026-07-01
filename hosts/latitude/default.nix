@@ -90,22 +90,19 @@ let
 
       # VMware Workstation for SANS ICS310 RELICS VM (VMware .vmx format)
       # git-lfs for GRFICSv3 OT lab (large Docker image assets)
-      # input-leap: KVM server sharing latitude's keyboard/mouse with airbook-darwin
-      # krdp: KDE native Wayland RDP server
       environment.systemPackages = [
-        pkgs.kdePackages.krdp
         # pkgs.rustdesk  # revisit: Wayland screen capture not working
         pkgs.geany
         pkgs.gimp
         pkgs.git-lfs
-        pkgs.input-leap
+        # pkgs.input-leap
         pkgs.stable-diffusion-cpp-vulkan
         pkgs.x2goclient  # remote X sessions to OTworkstation
       ];
 
-      # Input Leap server: allow connections on LAN and via Tailscale
-      # Port 24800 is the default Input Leap/Barrier port
-      networking.firewall.allowedTCPPorts = [ 24800 ];
+      # # Input Leap server: allow connections on LAN and via Tailscale
+      # # Port 24800 is the default Input Leap/Barrier port
+      # networking.firewall.allowedTCPPorts = [ 24800 ];
 
       # Default text editor for .txt and .conf files
       xdg.mime.defaultApplications = {
@@ -113,21 +110,25 @@ let
         "text/x-config" = "geany.desktop";
       };
 
-      # RDP (krdp) — Tailscale-only
+      # xrdp — new X11 KDE session per connection, Tailscale-only
+      services.xrdp = {
+        enable = true;
+        defaultWindowManager = "startplasma-x11";
+      };
       networking.firewall.interfaces."tailscale0".allowedTCPPorts = [ 3389 ];
 
-      # Input Leap server: share latitude's keyboard/mouse with airbook-darwin
-      # Config at ~/.config/InputLeap/input-leap.conf (deployed via home-manager)
-      systemd.user.services.input-leap-server = {
-        description = "Input Leap keyboard/mouse sharing server";
-        wantedBy = [ "graphical-session.target" ];
-        after = [ "graphical-session.target" "network.target" ];
-        serviceConfig = {
-          ExecStart = "${pkgs.input-leap}/bin/input-leaps --no-daemon";
-          Restart = "on-failure";
-          RestartSec = 3;
-        };
-      };
+      # # Input Leap server: share latitude's keyboard/mouse with airbook-darwin
+      # # Config at ~/.config/InputLeap/input-leap.conf (deployed via home-manager)
+      # systemd.user.services.input-leap-server = {
+      #   description = "Input Leap keyboard/mouse sharing server";
+      #   wantedBy = [ "graphical-session.target" ];
+      #   after = [ "graphical-session.target" "network.target" ];
+      #   serviceConfig = {
+      #     ExecStart = "${pkgs.input-leap}/bin/input-leaps --no-daemon";
+      #     Restart = "on-failure";
+      #     RestartSec = 3;
+      #   };
+      # };
 
       # RustDesk service — disabled; Wayland screen capture unsolved
       # systemd.user.services.rustdesk = {
