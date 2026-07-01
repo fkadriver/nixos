@@ -80,6 +80,12 @@ This document provides a high-level overview of all available modules in this re
 | `disko-config.nix` | Automated disk partitioning (1GB boot + LVM with 8GB swap + root) |
 | `virtualbox.nix` | VirtualBox host with extension pack |
 
+## Vehicle Diagnostics
+
+| Module | Description |
+|--------|-------------|
+| `forscan.nix` | FORScan (Ford/Lincoln/Mazda OBD-II tool) via Wine. Provides `forscan` command, udev rule for OBDLink EX (FTDI + STM32 variants), maps adapter to COM1 |
+
 ## Module Architecture
 
 All modules use the **flakeContext** pattern:

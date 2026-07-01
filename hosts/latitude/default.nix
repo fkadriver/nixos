@@ -15,11 +15,14 @@ let
       inputs.self.nixosModules.pi-builder
       inputs.self.nixosModules.distributed-builds
       inputs.self.nixosModules.screen-recording
+      inputs.self.nixosModules.forscan
     ];
     config = {
       networking = {
         hostName = "latitude";
       };
+
+      services.forscan.enable = true;
 
       # NFS mounts for nas01 shares via Tailscale
       fileSystems."/mnt/nas01/SANS" = {
