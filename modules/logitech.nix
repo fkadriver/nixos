@@ -1,7 +1,8 @@
 # OpenLogi (https://openlogi.org) is a modern replacement for Solaar —
-# no Logitech account, no telemetry. As of 2026-06-06 it is macOS-only;
-# Linux support is on their roadmap. Check back before the next major
-# Solaar update and migrate if Linux support has landed.
+# no Logitech account, no telemetry. Linux support landed in v0.6.14 (2026-06-15);
+# latest is v0.6.18 (.deb/.rpm only). nixpkgs PR #527640 is open but darwin-only
+# and stalled (merge conflict + changes requested). No Nix package for Linux yet.
+# Migrate from Solaar once nixpkgs PR merges with Linux support.
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }: {
   imports = [
