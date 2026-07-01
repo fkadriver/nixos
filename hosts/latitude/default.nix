@@ -12,7 +12,6 @@ let
       inputs.self.nixosModules.user-scott
       inputs.self.nixosModules.virtualbox
       inputs.self.nixosModules.vmware
-      inputs.self.nixosModules.ics-env
       inputs.self.nixosModules.pi-builder
       inputs.self.nixosModules.distributed-builds
       inputs.self.nixosModules.screen-recording
