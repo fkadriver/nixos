@@ -53,8 +53,9 @@ in
 
     virtualisation.vmware.host.enable = true;
 
-    # Bridge vmnet0 to the specified interface via the networking file.
-    # answer directives must go here, NOT in /etc/vmware/config (AppLoader rejects them).
+    # VNET_0_INTERFACE sets the preferred bridge interface. vmnet-bridge may temporarily
+    # switch to another interface (e.g. WiFi) at boot, but switches back to the configured
+    # interface once it comes up. answer directives must go here, NOT in /etc/vmware/config.
     environment.etc."vmware/networking" = lib.mkIf (cfg.bridgeInterface != null) {
       mode = "0644";
       text = ''
