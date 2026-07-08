@@ -6,6 +6,7 @@ let
       inputs.home-manager.nixosModules.home-manager
       (inputs.self.homeConfigurations.scott).nixosModule
       inputs.self.nixosModules.common
+      inputs.self.nixosModules.dnclient
       inputs.self.nixosModules.bitwarden
       inputs.self.nixosModules.bitwarden-scott
       inputs.self.nixosModules.borg-backup

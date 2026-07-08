@@ -5,6 +5,7 @@ let
       ./hardware.nix
       ./syncthing.nix
       inputs.self.nixosModules.common
+      inputs.self.nixosModules.dnclient
       inputs.self.nixosModules.wazuh-agent
       inputs.self.nixosModules.laptop-kde
       inputs.self.nixosModules.logitech

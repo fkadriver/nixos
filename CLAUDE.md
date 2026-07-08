@@ -121,7 +121,9 @@ The flake automatically discovers all `.nix` files in `./modules/` and exposes t
 - `home-design.nix` - Sweet Home 3D for interior design and floor plans (with plugin installer)
 - `vscode.nix` - VSCode with gnome-keyring integration
 - `syncthing.nix` - File synchronization service
-- `tailscale.nix` - VPN with firewall configuration
+- `tailscale.nix` - VPN with firewall configuration (being replaced by Managed Nebula; parallel during migration)
+- `dnclient.nix` - Managed Nebula client (defined.net control plane); one-time `dnclient enroll` per host (see `docs/nebula.md`)
+- `nebula.nix` - Self-hosted nebula fallback (own CA in sops) - currently unused
 
 ### Host Configuration Structure
 
