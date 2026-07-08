@@ -31,8 +31,7 @@ roaming is proven.
    name and (optionally) a specific IP and role.
 3. Copy the one-time enrollment code, then on the host:
    `sudo dnclient enroll -code <code>`
-4. Verify: `systemctl status dnclient`, `ip link` (interface should be
-   `defined` — if it differs, fix `trustedInterfaces` in `modules/dnclient.nix`),
+4. Verify: `systemctl status dnclient`, `ip link` (interface is `defined1`),
    and ping another mesh host.
 
 State persists in `/var/lib/defined` across rebuilds. Non-NixOS hosts (nas01,
@@ -65,7 +64,7 @@ roaming meanwhile.
 - [ ] Create lighthouse01 on OCI, enroll as lighthouse; test latitude off-LAN
 - [ ] Enroll remaining hosts (nas01*, OTworkstation, log01, piholes, airbook-darwin)
 - [ ] Repoint NFS mounts, Borg repos, Wazuh manager, xrdp firewall rule from
-      `*.warthog-royal.ts.net` / `tailscale0` to mesh IPs/names / `defined`
+      `*.warthog-royal.ts.net` / `tailscale0` to mesh IPs/names / `defined1`
 - [ ] Decide name resolution (defined.net DNS features, pihole entries, or
       `networking.hosts` with assigned mesh IPs)
 - [ ] Retire `modules/tailscale.nix` from `common.nix`

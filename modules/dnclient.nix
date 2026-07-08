@@ -67,8 +67,7 @@ in
     };
 
     # Nebula's firewall (managed via defined.net roles) governs mesh traffic;
-    # don't double-filter locally. Verify the interface name with `ip link`
-    # after first enrollment and adjust if it isn't "defined".
-    networking.firewall.trustedInterfaces = [ "defined" ];
+    # don't double-filter locally. Interface name verified on latitude.
+    networking.firewall.trustedInterfaces = [ "defined1" ];
   };
 }
