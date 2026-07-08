@@ -1,9 +1,61 @@
 # Nebula Overlay Network (Managed Nebula via defined.net)
 
-Nebula mesh VPN, migrating away from Tailscale. The control plane is
-**Managed Nebula** from Defined Networking — free tier, up to 100 hosts, signed
-up via the LINUX Unplugged referral link <https://defined.net/unplugged>.
-Admin panel: <https://admin.defined.net/hosts>.
+> **STATUS: PAUSED (2026-07-08) — staying on Tailscale.**
+> Nebula requires at least one lighthouse with a stable, publicly reachable
+> UDP endpoint. Every viable free option came down to either a cloud VM
+> (Oracle free tier had no capacity) or an exterior→interior port-forward on
+> the ISP firewall, which was ruled out as a matter of policy. Tailscale's
+> hosted DERP/coordination infrastructure is exactly the piece nebula makes
+> you own. dnclient imports were removed from latitude and vm01;
+> `modules/dnclient.nix` and the self-hosted fallback are kept for a future
+> resume. Findings below.
+
+## Findings (2026-07)
+
+- **defined.net free tier** (100 hosts, signed up via the LINUX Unplugged
+  referral <https://defined.net/unplugged> — referral only, no extra discount)
+  manages certs/IPs/firewall roles well, but **does not host lighthouses** —
+  by design, you run your own.
+- **Oracle Cloud Always Free**: `VM.Standard.E2.1.Micro` hides under the
+  "Specialty and previous generation" shape series and is AD-restricted (only
+  US-CHICAGO-1-AD-2 for this tenancy); Ampere A1 was "out of capacity" in all
+  ADs for a free-tier account. PAYG upgrade (still $0) reportedly unlocks
+  capacity and prevents idle reclamation. GCP always-free e2-micro is the
+  other $0 option.
+- **vm01 as LAN lighthouse + OPNsense UDP 4242 port-forward** would be a
+  complete $0 design: mark vm01 as lighthouse **and relay** (with the
+  lighthouse inside the LAN it never learns home hosts' WAN NAT mappings, so
+  remote hole-punching can fail; the relay covers that through the same
+  forwarded port). Dynamic WAN IP is solvable with DDNS (nebula re-resolves
+  DNS names in static host maps; unconfirmed whether the defined.net panel
+  accepts hostnames) or a small defined.net host-edit API updater on vm01.
+  **Rejected**: requires an inbound hole in the ISP firewall.
+- **Mixing Tailscale + Nebula** (reaching the lighthouse over TS when remote)
+  technically works but the lighthouse then learns hosts' TS addresses, so
+  every remote tunnel runs nebula-inside-tailscale: double encryption, double
+  MTU cost, and Tailscale remains permanently load-bearing — defeats the
+  migration. Fallback-only, not an architecture.
+- **dnclient on NixOS**: not in nixpkgs; `modules/dnclient.nix` pins the
+  static binary (v0.9.5) from dl.defined.net (URL list at
+  `https://api.defined.net/v1/downloads`) and runs it as a systemd service.
+  Verified working on latitude: tun interface is **`defined1`**, state in
+  `/var/lib/defined`, enrollment via one-time `dnclient enroll -code`.
+
+## Resume path
+
+1. Pick the lighthouse: OPNsense port-forward to vm01 (if the policy changes)
+   or a cloud free-tier VM.
+2. Re-add `inputs.self.nixosModules.dnclient` to hosts (latitude's enrollment
+   state in `/var/lib/defined` likely still valid; others enroll fresh).
+3. Continue the checklist below.
+
+Cleanup done at pause time: dnclient imports removed. Optional extra cleanup:
+delete hosts at <https://admin.defined.net/hosts> and `rm -rf /var/lib/defined`
+on latitude — or leave both for a future resume.
+
+---
+
+Everything below is the runbook from when the migration was active.
 
 Tailscale runs in parallel until everything that references
 `*.warthog-royal.ts.net` (NFS mounts, Borg, Wazuh) has been repointed and

@@ -30,8 +30,8 @@ This document provides a high-level overview of all available modules in this re
 
 | Module | Description |
 |--------|-------------|
-| `dnclient.nix` | Managed Nebula client (defined.net) — replacing Tailscale. Importing installs/runs dnclient; one-time `dnclient enroll -code <code>` per host. See `docs/nebula.md` |
-| `nebula.nix` | Self-hosted nebula fallback (10.100.0.0/24, own CA in sops) — currently unused; see `docs/nebula.md` |
+| `dnclient.nix` | Managed Nebula client (defined.net) — migration PAUSED, not imported anywhere; findings + resume path in `docs/nebula.md` |
+| `nebula.nix` | Self-hosted nebula fallback (10.100.0.0/24, own CA in sops) — unused; see `docs/nebula.md` |
 | `tailscale.nix` | Tailscale VPN with firewall rules, DNS over TLS, DNSSEC (being replaced by nebula, runs in parallel during migration) |
 | `wireless.nix` | WiFi auto-connect for JEN_ACRES network (WPA-PSK) |
 
