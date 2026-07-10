@@ -78,6 +78,29 @@ in
       '';
     };
 
+    # vmware-networks spawns vmnet-bridge in auto-sensing mode, which steals the
+    # bridge for the default-route interface (e.g. WiFi) on any route change —
+    # VNET_0_INTERFACE and add_bridge_mapping do not prevent this (verified on
+    # OTworkstation, 2026-07-10). Replace it with a daemon pinned via -i, which
+    # restricts the candidate set to the configured interface.
+    systemd.services.vmnet-bridge-pin = lib.mkIf (cfg.bridgeInterface != null) {
+      description = "vmnet0 bridge pinned to ${cfg.bridgeInterface}";
+      after = [ "vmware-networks.service" ];
+      requires = [ "vmware-networks.service" ];
+      partOf = [ "vmware-networks.service" ];
+      wantedBy = [ "multi-user.target" ];
+      serviceConfig = {
+        Type = "forking";
+        PIDFile = "/run/vmnet-bridge-0.pid";
+        ExecStartPre = [
+          "-${pkgs.procps}/bin/pkill -x vmnet-bridge"
+          "${pkgs.coreutils}/bin/sleep 1"
+        ];
+        ExecStart = "${pkgs.vmware-workstation}/bin/vmnet-bridge -n0 -i${cfg.bridgeInterface} -d/run/vmnet-bridge-0.pid";
+        Restart = "on-failure";
+      };
+    };
+
     networking.interfaces = lib.mkIf (cfg.bridgeInterface != null && cfg.hostAddress != null) {
       ${cfg.bridgeInterface} = {
         useDHCP = false;
