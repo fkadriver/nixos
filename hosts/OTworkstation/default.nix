@@ -1,6 +1,67 @@
 { inputs, ... }@flakeContext:
 let
-  nixosModule = { config, lib, pkgs, ... }: {
+  nixosModule = { config, lib, pkgs, ... }:
+    let
+      # CPU/MEM readout for the tint2 executor (runs every 2s)
+      cpumem = pkgs.writeShellScript "tint2-cpumem" ''
+        sample() {
+          ${pkgs.gawk}/bin/awk '/^cpu /{idle=$5+$6; tot=0; for(i=2;i<=NF;i++)tot+=$i; print tot, idle}' /proc/stat
+        }
+        read -r t1 i1 <<< "$(sample)"
+        ${pkgs.coreutils}/bin/sleep 1
+        read -r t2 i2 <<< "$(sample)"
+        dt=$((t2 - t1))
+        cpu=0
+        [ "$dt" -gt 0 ] && cpu=$(( (100 * (dt - (i2 - i1))) / dt ))
+        mem=$(${pkgs.gawk}/bin/awk '/^MemTotal/{t=$2} /^MemAvailable/{a=$2} END{printf "%d", (t-a)*100/t}' /proc/meminfo)
+        echo "CPU ''${cpu}%  MEM ''${mem}%"
+      '';
+
+      tint2rc = pkgs.writeText "tint2rc" ''
+        # Background 1: panel
+        rounded = 0
+        border_width = 0
+        background_color = #2e3440 100
+        border_color = #2e3440 100
+
+        # Background 2: active task
+        rounded = 3
+        border_width = 1
+        background_color = #4c566a 100
+        border_color = #88c0d0 100
+
+        # Panel
+        panel_items = TEC
+        panel_size = 100% 30
+        panel_position = bottom center horizontal
+        panel_layer = top
+        panel_background_id = 1
+        panel_padding = 4 2 4
+        wm_menu = 1
+
+        # Taskbar
+        taskbar_mode = single_desktop
+        taskbar_padding = 2 2 4
+        task_text = 1
+        task_maximum_size = 200 30
+        task_font_color = #d8dee9 100
+        task_active_background_id = 2
+
+        # Executor: CPU/MEM usage
+        execp = new
+        execp_command = ${cpumem}
+        execp_interval = 2
+        execp_has_icon = 0
+        execp_font_color = #d8dee9 100
+        execp_padding = 8 0
+
+        # Clock
+        time1_format = %H:%M
+        clock_font_color = #d8dee9 100
+        clock_padding = 8 0
+      '';
+    in
+  {
     imports = [
       ./hardware.nix
       inputs.home-manager.nixosModules.home-manager
@@ -57,7 +118,7 @@ let
         enable = true;
         defaultWindowManager = "${pkgs.writeShellScript "openbox-xrdp-session" ''
           ${pkgs.hsetroot}/bin/hsetroot -solid "#2e3440" &
-          ${pkgs.tint2}/bin/tint2 &
+          ${pkgs.tint2}/bin/tint2 -c ${tint2rc} &
           ${pkgs.xfce4-clipman-plugin}/bin/xfce4-clipman &
           exec ${pkgs.dbus}/bin/dbus-launch --exit-with-session ${pkgs.openbox}/bin/openbox-session
         ''}";
