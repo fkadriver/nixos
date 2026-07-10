@@ -13,8 +13,10 @@ let
         dt=$((t2 - t1))
         cpu=0
         [ "$dt" -gt 0 ] && cpu=$(( (100 * (dt - (i2 - i1))) / dt ))
-        mem=$(${pkgs.gawk}/bin/awk '/^MemTotal/{t=$2} /^MemAvailable/{a=$2} END{printf "%d", (t-a)*100/t}' /proc/meminfo)
-        echo "CPU ''${cpu}%  MEM ''${mem}%"
+        read -r mem cache <<< "$(${pkgs.gawk}/bin/awk '
+          /^MemTotal/{t=$2} /^MemAvailable/{a=$2} /^Buffers/{b=$2} /^Cached/{c=$2}
+          END{printf "%d %d", (t-a)*100/t, (b+c)*100/t}' /proc/meminfo)"
+        echo "CPU ''${cpu}%  MEM ''${mem}%  CACHE ''${cache}%"
       '';
 
       tint2rc = pkgs.writeText "tint2rc" ''
