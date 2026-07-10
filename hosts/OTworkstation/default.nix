@@ -44,15 +44,26 @@ let
       # xrdp remote desktop — openbox session, accessible on all interfaces (opens port 3389)
       # xfce4-session is a singleton; it's already running on the physical display via lightdm,
       # so xrdp sessions use openbox instead to avoid the conflict.
+      # QoL apps start from a session wrapper (not /etc/xdg/openbox/autostart:
+      # nixpkgs' openbox-autostart hardcodes the store path for the global
+      # autostart, so the /etc/xdg copy is never sourced).
       services.xrdp = {
         enable = true;
-        defaultWindowManager = "${pkgs.dbus}/bin/dbus-launch --exit-with-session ${pkgs.openbox}/bin/openbox-session";
+        defaultWindowManager = "${pkgs.writeShellScript "openbox-xrdp-session" ''
+          ${pkgs.hsetroot}/bin/hsetroot -solid "#2e3440" &
+          ${pkgs.tint2}/bin/tint2 &
+          ${pkgs.clipit}/bin/clipit &
+          exec ${pkgs.dbus}/bin/dbus-launch --exit-with-session ${pkgs.openbox}/bin/openbox-session
+        ''}";
         openFirewall = true;
       };
 
       environment.systemPackages = with pkgs; [
         openbox   # window manager for xrdp sessions
-        xterm     # terminal emulator accessible via openbox right-click menu
+        xterm     # fallback terminal
+        tint2     # taskbar/panel for openbox xrdp sessions
+        clipit    # clipboard manager
+        hsetroot  # solid desktop background
       ];
 
       # C3PO wired profile — eno1 (built-in NIC) with static 192.168.0.2/24, no gateway.
@@ -81,6 +92,52 @@ let
         '';
       };
 
+      # Openbox rc.xml — stock config patched with launcher keybinds and
+      # window snapping (W- is the Super/Windows key).
+      environment.etc."xdg/openbox/rc.xml".source =
+        pkgs.runCommand "openbox-rc.xml"
+          {
+            keybinds = ''
+              <keybind key="W-t">
+                <action name="Execute"><command>xfce4-terminal</command></action>
+              </keybind>
+              <keybind key="W-f">
+                <action name="Execute"><command>firefox</command></action>
+              </keybind>
+              <keybind key="W-v">
+                <action name="Execute"><command>vmware</command></action>
+              </keybind>
+              <keybind key="W-Up">
+                <action name="Maximize"/>
+              </keybind>
+              <keybind key="W-Down">
+                <action name="Unmaximize"/>
+              </keybind>
+              <keybind key="W-Left">
+                <action name="Unmaximize"/>
+                <action name="MoveResizeTo">
+                  <x>0</x><y>0</y><width>50%</width><height>100%</height>
+                </action>
+              </keybind>
+              <keybind key="W-Right">
+                <action name="Unmaximize"/>
+                <action name="MoveResizeTo">
+                  <x>-0</x><y>0</y><width>50%</width><height>100%</height>
+                </action>
+              </keybind>
+              </keyboard>
+            '';
+            passAsFile = [ "keybinds" ];
+          } ''
+          cp ${pkgs.openbox}/etc/xdg/openbox/rc.xml rc.xml
+          chmod +w rc.xml
+          substituteInPlace rc.xml \
+            --replace-fail 'kfmclient openProfile filemanagement' 'thunar' \
+            --replace-fail '<name>Konqueror</name>' '<name>Thunar</name>' \
+            --replace-fail '</keyboard>' "$(cat "$keybindsPath")"
+          cp rc.xml $out
+        '';
+
       # Openbox right-click menu for xrdp sessions
       environment.etc."xdg/openbox/menu.xml" = {
         text = ''
@@ -96,7 +153,10 @@ let
               <action name="Execute"><execute>firefox</execute></action>
             </item>
             <item label="Terminal">
-              <action name="Execute"><execute>xterm</execute></action>
+              <action name="Execute"><execute>xfce4-terminal</execute></action>
+            </item>
+            <item label="File Manager">
+              <action name="Execute"><execute>thunar</execute></action>
             </item>
             <separator/>
             <menu id="client-list-menu"/>
