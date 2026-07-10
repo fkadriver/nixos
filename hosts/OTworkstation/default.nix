@@ -52,7 +52,7 @@ let
         defaultWindowManager = "${pkgs.writeShellScript "openbox-xrdp-session" ''
           ${pkgs.hsetroot}/bin/hsetroot -solid "#2e3440" &
           ${pkgs.tint2}/bin/tint2 &
-          ${pkgs.clipit}/bin/clipit &
+          ${pkgs.xfce4-clipman-plugin}/bin/xfce4-clipman &
           exec ${pkgs.dbus}/bin/dbus-launch --exit-with-session ${pkgs.openbox}/bin/openbox-session
         ''}";
         openFirewall = true;
@@ -62,7 +62,7 @@ let
         openbox   # window manager for xrdp sessions
         xterm     # fallback terminal
         tint2     # taskbar/panel for openbox xrdp sessions
-        clipit    # clipboard manager
+        xfce4-clipman-plugin  # clipboard manager (standalone xfce4-clipman)
         hsetroot  # solid desktop background
       ];
 
