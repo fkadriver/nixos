@@ -29,6 +29,8 @@
         latitude = "tailscale ssh latitude";
         vm01 = "tailscale ssh vm01";
         OTworkstation = "tailscale ssh OTworkstation";
+        otworkstation = "tailscale ssh OTworkstation";
+        ot = "tailscale ssh OTworkstation";
 
         # Tailscale troubleshooting
         ts-status = "tailscale status";
