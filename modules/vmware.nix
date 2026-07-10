@@ -53,14 +53,17 @@ in
 
     virtualisation.vmware.host.enable = true;
 
-    # VNET_0_INTERFACE sets the preferred bridge interface. vmnet-bridge may temporarily
-    # switch to another interface (e.g. WiFi) at boot, but switches back to the configured
-    # interface once it comes up. answer directives must go here, NOT in /etc/vmware/config.
+    # VNET_0_INTERFACE alone is only a soft preference: vmnet-bridge re-runs auto-sensing
+    # on route changes and steals the bridge for the default-route interface (seen on
+    # OTworkstation: WiFi came up 2s after eno1 at boot and took vmnet0 permanently).
+    # add_bridge_mapping statically pins the interface to vmnet0, disabling auto-sensing.
+    # answer directives must go here, NOT in /etc/vmware/config.
     environment.etc."vmware/networking" = lib.mkIf (cfg.bridgeInterface != null) {
       mode = "0644";
       text = ''
         VERSION=1,0
         answer VNET_0_INTERFACE ${cfg.bridgeInterface}
+        add_bridge_mapping ${cfg.bridgeInterface} 0
         answer VNET_0_DHCP no
         answer VNET_0_VIRTUAL_ADAPTER no
         answer VNET_1_DHCP yes
