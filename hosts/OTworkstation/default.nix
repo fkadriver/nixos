@@ -4,6 +4,8 @@ let
     imports = [
       ./hardware.nix
       inputs.sops-nix.nixosModules.sops
+      inputs.self.nixosModules.bitwarden
+      inputs.self.nixosModules.bitwarden-scott
       inputs.self.nixosModules.common
       inputs.self.nixosModules.syncthing
       inputs.self.nixosModules.laptop-minimal
@@ -18,6 +20,14 @@ let
       # VMware: bridge built-in NIC (eno1) to vmnet0 for RELICS ICS lab VMs
       # Static IP is managed by the C3PO NetworkManager profile below.
       services.vmware-host.bridgeInterface = "eno1";
+
+      # NAT the RELICS lab network (192.168.0.0/24 on eno1) out via WiFi so
+      # lab VMs can reach the internet using 192.168.0.2 as their gateway.
+      networking.nat = {
+        enable = true;
+        internalInterfaces = [ "eno1" ];
+        externalInterface = "wlp2s0";
+      };
 
       # SSH server — key-only auth
       services.openssh = {
@@ -81,6 +91,9 @@ let
           <menu id="root-menu" label="OTWorkstation">
             <item label="VMware Workstation">
               <action name="Execute"><execute>vmware</execute></action>
+            </item>
+            <item label="Firefox">
+              <action name="Execute"><execute>firefox</execute></action>
             </item>
             <item label="Terminal">
               <action name="Execute"><execute>xterm</execute></action>
