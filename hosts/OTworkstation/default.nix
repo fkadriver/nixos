@@ -3,6 +3,8 @@ let
   nixosModule = { config, lib, pkgs, ... }: {
     imports = [
       ./hardware.nix
+      inputs.home-manager.nixosModules.home-manager
+      (inputs.self.homeConfigurations.scott).nixosModule
       inputs.sops-nix.nixosModules.sops
       inputs.self.nixosModules.bitwarden
       inputs.self.nixosModules.bitwarden-scott
@@ -16,6 +18,10 @@ let
     ];
     config = {
       networking.hostName = "OTworkstation";
+
+      # Home-manager builds scott's dotfiles (.bashrc, .profile, starship, etc.)
+      home-manager.useGlobalPkgs = true;
+      home-manager.useUserPackages = true;
 
       # VMware: bridge built-in NIC (eno1) to vmnet0 for RELICS ICS lab VMs
       # Static IP is managed by the C3PO NetworkManager profile below.
