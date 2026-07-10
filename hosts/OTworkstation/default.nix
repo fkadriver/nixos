@@ -96,6 +96,27 @@ let
         externalInterface = "wlp2s0";
       };
 
+      # DHCP + DNS for the OT lab segment (eno1/vmnet0 bridge). Note: vmnet0 is
+      # bridged, so physical lab devices set to DHCP will also take leases.
+      # Range avoids static devices (PLC at .10, host at .2).
+      services.dnsmasq = {
+        enable = true;
+        resolveLocalQueries = false;  # leave the host's resolv.conf alone
+        settings = {
+          interface = "eno1";
+          bind-interfaces = true;
+          dhcp-range = "192.168.0.100,192.168.0.150,12h";
+          dhcp-option = [
+            "option:router,192.168.0.2"
+            "option:dns-server,192.168.0.2"
+          ];
+        };
+      };
+      networking.firewall.interfaces.eno1 = {
+        allowedUDPPorts = [ 53 67 ];
+        allowedTCPPorts = [ 53 ];
+      };
+
       # SSH server — key-only auth
       services.openssh = {
         enable = true;
