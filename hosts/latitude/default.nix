@@ -94,7 +94,6 @@ let
       # VMware Workstation for SANS ICS310 RELICS VM (VMware .vmx format)
       # git-lfs for GRFICSv3 OT lab (large Docker image assets)
       environment.systemPackages = [
-        # pkgs.rustdesk  # revisit: Wayland screen capture not working
         pkgs.geany
         pkgs.gimp
         pkgs.git-lfs
@@ -130,19 +129,6 @@ let
       #     ExecStart = "${pkgs.input-leap}/bin/input-leaps --no-daemon";
       #     Restart = "on-failure";
       #     RestartSec = 3;
-      #   };
-      # };
-
-      # RustDesk service — disabled; Wayland screen capture unsolved
-      # systemd.user.services.rustdesk = {
-      #   description = "RustDesk Remote Desktop daemon";
-      #   wantedBy = [ "graphical-session.target" ];
-      #   after = [ "graphical-session.target" ];
-      #   serviceConfig = {
-      #     ExecStart = "${pkgs.rustdesk}/bin/rustdesk --service";
-      #     Restart = "on-failure";
-      #     PassEnvironment = "DISPLAY XAUTHORITY WAYLAND_DISPLAY XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS";
-      #     Environment = "XDG_SESSION_TYPE=wayland";
       #   };
       # };
 

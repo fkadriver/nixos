@@ -178,7 +178,6 @@ let
         # Utilities
         "tailscale-app"    # VPN with tray icon (replaces nix-darwin service; renamed from tailscale)
         "caffeine"         # Prevent Mac from sleeping (menubar app)
-        "rustdesk"         # Remote desktop to latitude (via Tailscale)
         "xquartz"          # X11 server required by x2goclient on macOS
         "microsoft-remote-desktop"  # RDP client for OTworkstation xrdp sessions
         "sweet-home3d"     # Interior design and home planning
@@ -345,89 +344,116 @@ let
       };
     };
 
-    # Install BOSL2 library to OpenSCAD user libraries directory
-    system.activationScripts.openscadBosl2.text = ''
-      OPENSCAD_LIB="/Users/scott/Library/Application Support/OpenSCAD/libraries"
-      mkdir -p "$OPENSCAD_LIB"
-      if [ ! -L "$OPENSCAD_LIB/BOSL2" ]; then
-        rm -rf "$OPENSCAD_LIB/BOSL2"
-        ln -sfn ${bosl2} "$OPENSCAD_LIB/BOSL2"
-        chown -h scott:staff "$OPENSCAD_LIB/BOSL2" 2>/dev/null || true
-      fi
-    '';
+    # nix-darwin only splices pre/extra/postActivation into the activate script;
+    # custom-named system.activationScripts.<name> entries are silently dropped and
+    # never run. All host activation logic must therefore live under postActivation.
+    # Fragments are merged via mkMerge (text is types.lines, so they concatenate).
+    system.activationScripts.postActivation.text = lib.mkMerge [
+      # Fix ownership of sops-created directories (sops creates parent dirs as root)
+      ''
+        chown scott:staff /Users/scott/.local/share || true
+        chown scott:staff /Users/scott/.local/share/bitwarden-secrets || true
+      ''
 
-    # NFS mounts for nas01 shares via Tailscale
-    # Uses autofs so mounts happen on first access rather than at boot.
-    # /etc/auto_master and /etc/auto_nas01 are managed here; autofs is built into macOS.
-    system.activationScripts.nfsMounts.text = ''
-      # Mount points
-      mkdir -p /mnt/nas01/SANS
-      mkdir -p /mnt/nas01/photos
+      # Install BOSL2 library to OpenSCAD user libraries directory
+      ''
+        (
+          OPENSCAD_LIB="/Users/scott/Library/Application Support/OpenSCAD/libraries"
+          mkdir -p "$OPENSCAD_LIB"
+          if [ ! -L "$OPENSCAD_LIB/BOSL2" ]; then
+            rm -rf "$OPENSCAD_LIB/BOSL2"
+            ln -sfn ${bosl2} "$OPENSCAD_LIB/BOSL2"
+            chown -h scott:staff "$OPENSCAD_LIB/BOSL2" 2>/dev/null || true
+          fi
+        ) || true
+      ''
 
-      # autofs indirect map: /mnt/nas01/* → nas01 exports
-      cat > /etc/auto_nas01 << 'AUTOFSMAP'
+      # NFS mounts for nas01 shares via Tailscale, mounted on-demand via autofs.
+      # macOS has a sealed, read-only root volume, so /mnt cannot be created (that would
+      # require an /etc/synthetic.conf firmlink + reboot, like /nix). Mount under the user's
+      # home instead: ~/mnt/nas01/{SANS,photos}. Wrapped in a subshell + `|| true` so a
+      # transient NFS/autofs hiccup can't abort the rest of activation.
+      # NOTE: heredoc body/delimiter are intentionally at column 0 so Nix's `''` dedent
+      # leaves them unindented (autofs needs the map lines and delimiter flush-left).
+      ''
+        (
+          MNT="/Users/scott/mnt/nas01"
+          mkdir -p "$MNT"
+          chown scott:staff /Users/scott/mnt "$MNT" 2>/dev/null || true
+
+          # autofs indirect map: $MNT/{SANS,photos} → nas01 exports
+          cat > /etc/auto_nas01 << 'AUTOFSMAP'
 SANS    -fstype=nfs,resvport,soft,timeo=30,intr,rw  nas01.warthog-royal.ts.net:/pool/shares/SANS
 photos  -fstype=nfs,resvport,soft,timeo=30,intr,rw  nas01.warthog-royal.ts.net:/pool/shares/photos
 AUTOFSMAP
 
-      # Register the map in auto_master if not already present
-      if ! grep -q '/mnt/nas01' /etc/auto_master; then
-        echo '/mnt/nas01  auto_nas01  -nobrowse' >> /etc/auto_master
-      fi
+          # Register the map in auto_master if not already present
+          if ! grep -q '/Users/scott/mnt/nas01' /etc/auto_master; then
+            echo '/Users/scott/mnt/nas01  auto_nas01  -nobrowse' >> /etc/auto_master
+          fi
 
-      # Reload autofs to pick up changes
-      automount -vc 2>/dev/null || true
-    '';
+          # Reload autofs to pick up changes
+          automount -vc 2>/dev/null || true
+        ) || true
+      ''
 
-    # Fix ownership of sops-created directories (sops runs as root and creates parent dirs as root)
-    system.activationScripts.fixSopsOwnership.text = ''
-      chown scott:staff /Users/scott/.local/share || true
-      chown scott:staff /Users/scott/.local/share/bitwarden-secrets || true
-    '';
+      # Wazuh security agent — install .pkg, enroll, and start LaunchDaemon.
+      # Wrapped in a subshell so its `set -euo pipefail` + `trap EXIT` stay scoped,
+      # and `|| true` so an offline/install failure can't abort activation (retries next rebuild).
+      ''
+        (
+          set -euo pipefail
 
-    # Wazuh security agent — install .pkg, enroll via Bitwarden, and start LaunchDaemon.
-    # Uses same Bitwarden fetch pattern as borg-backup (credentials already deployed by sops-nix).
-    system.activationScripts.wazuhAgent.text = ''
-      set -euo pipefail
+          WAZUH_MANAGER="wazuh.warthog-royal.ts.net"
 
-      WAZUH_MANAGER="wazuh.warthog-royal.ts.net"
+          # --- Install ---
+          if [ ! -f /Library/Ossec/etc/ossec.conf ]; then
+            echo "Installing Wazuh agent ${wazuhVersion}..."
+            TMPDIR=$(mktemp -d)
+            trap 'rm -rf "$TMPDIR"' EXIT
+            /usr/bin/curl -fsSL \
+              "https://packages.wazuh.com/4.x/macos/wazuh-agent-${wazuhVersion}-1.intel64.pkg" \
+              -o "$TMPDIR/wazuh-agent.pkg"
+            # launchctl setenv required — installer spawns subprocesses that don't inherit shell env
+            /bin/launchctl setenv WAZUH_MANAGER "$WAZUH_MANAGER"
+            /usr/sbin/installer -pkg "$TMPDIR/wazuh-agent.pkg" -target /
+            /bin/launchctl unsetenv WAZUH_MANAGER
+            # Belt-and-suspenders: patch ossec.conf directly in case setenv wasn't picked up
+            ${pkgs.gnused}/bin/sed -i \
+              "s|<address>.*</address>|<address>$WAZUH_MANAGER</address>|" \
+              /Library/Ossec/etc/ossec.conf
+            echo "Wazuh agent installed."
+          fi
 
-      # --- Install ---
-      if [ ! -f /Library/Ossec/etc/ossec.conf ]; then
-        echo "Installing Wazuh agent ${wazuhVersion}..."
-        TMPDIR=$(mktemp -d)
-        trap "rm -rf $TMPDIR" EXIT
-        /usr/bin/curl -fsSL \
-          "https://packages.wazuh.com/4.x/macos/wazuh-agent-${wazuhVersion}-1.intel64.pkg" \
-          -o "$TMPDIR/wazuh-agent.pkg"
-        # launchctl setenv required — installer spawns subprocesses that don't inherit shell env
-        /bin/launchctl setenv WAZUH_MANAGER "$WAZUH_MANAGER"
-        /usr/sbin/installer -pkg "$TMPDIR/wazuh-agent.pkg" -target /
-        /bin/launchctl unsetenv WAZUH_MANAGER
-        # Belt-and-suspenders: patch ossec.conf directly in case setenv wasn't picked up
-        ${pkgs.gnused}/bin/sed -i \
-          "s|<address>.*</address>|<address>$WAZUH_MANAGER</address>|" \
-          /Library/Ossec/etc/ossec.conf
-        echo "Wazuh agent installed."
-      fi
+          # --- Enroll ---
+          # client.keys is created empty by the pkg; -s checks for non-zero size (i.e. enrolled)
+          if [ -f /Library/Ossec/bin/agent-auth ] && [ ! -s /Library/Ossec/etc/client.keys ]; then
+            echo "Enrolling Wazuh agent..."
+            /Library/Ossec/bin/agent-auth \
+              -m "$WAZUH_MANAGER" \
+              -A "$(hostname -s)"
+            echo "Wazuh agent enrolled."
+          fi
 
-      # --- Enroll ---
-      # client.keys is created empty by the pkg; -s checks for non-zero size (i.e. enrolled)
-      if [ -f /Library/Ossec/bin/agent-auth ] && [ ! -s /Library/Ossec/etc/client.keys ]; then
-        echo "Enrolling Wazuh agent..."
-        /Library/Ossec/bin/agent-auth \
-          -m "$WAZUH_MANAGER" \
-          -A "$(hostname -s)"
-        echo "Wazuh agent enrolled."
-      fi
+          # --- Service ---
+          # The .pkg installs /Library/LaunchDaemons/com.wazuh.agent.plist; load it if not running.
+          if [ -f /Library/LaunchDaemons/com.wazuh.agent.plist ]; then
+            /bin/launchctl list com.wazuh.agent >/dev/null 2>&1 || \
+              /bin/launchctl load /Library/LaunchDaemons/com.wazuh.agent.plist 2>/dev/null || true
+          fi
+        ) || true
+      ''
 
-      # --- Service ---
-      # The .pkg installs /Library/LaunchDaemons/com.wazuh.agent.plist; load it if not running.
-      if [ -f /Library/LaunchDaemons/com.wazuh.agent.plist ]; then
-        /bin/launchctl list com.wazuh.agent >/dev/null 2>&1 || \
-          /bin/launchctl load /Library/LaunchDaemons/com.wazuh.agent.plist 2>/dev/null || true
-      fi
-    '';
+      # Ignore Tahoe upgrade so softwareupdate only offers Sequoia (15.x) updates
+      ''
+        /usr/sbin/softwareupdate --ignore "macOS Tahoe" 2>/dev/null || true
+      ''
+
+      # Enable SSH server (Remote Login)
+      ''
+        /usr/sbin/systemsetup -setremotelogin on > /dev/null 2>&1 || true
+      ''
+    ];
 
     # Borg backup to nas01 via launchd (macOS equivalent of systemd)
     launchd.daemons.borg-backup =
@@ -494,16 +520,6 @@ AUTOFSMAP
           StandardErrorPath = "/Users/scott/.local/share/borg/backup.error.log";
         };
       };
-
-    # Ignore Tahoe upgrade so softwareupdate only offers Sequoia (15.x) updates
-    system.activationScripts.ignoreTahoeUpgrade.text = ''
-      /usr/sbin/softwareupdate --ignore "macOS Tahoe" 2>/dev/null || true
-    '';
-
-    # Enable SSH server (Remote Login)
-    system.activationScripts.remoteLogin.text = ''
-      /usr/sbin/systemsetup -setremotelogin on > /dev/null 2>&1 || true
-    '';
 
     # Services
     services = {
