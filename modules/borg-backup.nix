@@ -107,6 +107,13 @@ in
   config = mkIf cfg.enable {
     environment.systemPackages = with pkgs; [ borgbackup ];
 
+    # Pin the backup server's host key declaratively so rebuilds are sufficient
+    # after a server reinstall — no manual ssh-keygen -R on each client. The
+    # borg job's ssh ignores per-user known_hosts (stale entries would
+    # otherwise fail the CHANGED-key check) and trusts only this pin.
+    programs.ssh.knownHosts."nas01.warthog-royal.ts.net".publicKey =
+      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHrBHn7I+Zd1FGvi4L3hLzxJoRoydTKiDDKJ4Ivg1x2N";
+
     services.borgbackup.jobs."system" = {
       paths = cfg.paths;
       exclude = cfg.exclude;
@@ -120,7 +127,7 @@ in
       environment = mkMerge [
         { BORG_RELOCATED_REPO_ACCESS_IS_OK = "yes"; }
         (mkIf (cfg.sshKeyFile != null) {
-          BORG_RSH = "ssh -i ${cfg.sshKeyFile} -o StrictHostKeyChecking=accept-new";
+          BORG_RSH = "ssh -i ${cfg.sshKeyFile} -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=yes";
         })
         (mkIf (cfg.remotePath != null) {
           BORG_REMOTE_PATH = cfg.remotePath;

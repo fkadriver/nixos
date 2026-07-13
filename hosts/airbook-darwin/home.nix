@@ -11,7 +11,7 @@ let
       | ${pkgs.jq}/bin/jq -r '.login.password'
   '';
   borgRepo = "ssh://scott@nas01.warthog-royal.ts.net/pool/borg/airbook-darwin";
-  borgEnv  = ''BORG_RSH="ssh -i $HOME/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new" BORG_PASSCOMMAND="${borgPassCmd}" BORG_REMOTE_PATH=/nix/var/nix/profiles/nas01/bin/borg'';
+  borgEnv  = ''BORG_RSH="ssh -i $HOME/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new" BORG_PASSCOMMAND="${borgPassCmd}" BORG_REMOTE_PATH=/run/current-system/sw/bin/borg'';
 in
 {
   home = {
