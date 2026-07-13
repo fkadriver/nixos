@@ -89,7 +89,9 @@
       "Read(//etc/**)",
       "Bash(cd /Users/scott/git/nixos *)",
       "Read(//nix/store/azk9pzm5xizc903ndvj0vj3gwjcxhkkc-darwin-system-26.05.6a7fdcd/**)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Read(//nix/store/rij8yw1ir89zqvi7xrw1s9rhcd8v0ykw-darwin-system-26.05.6a7fdcd/**)",
+      "Bash(col -b)"
     ],
     "additionalDirectories": [
       "/Users/scott/.claude/projects/-Users-scott-git-nixos/memory",

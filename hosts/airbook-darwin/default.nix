@@ -368,32 +368,52 @@ let
         ) || true
       ''
 
-      # NFS mounts for nas01 shares via Tailscale, mounted on-demand via autofs.
-      # macOS has a sealed, read-only root volume, so /mnt cannot be created (that would
-      # require an /etc/synthetic.conf firmlink + reboot, like /nix). Mount under the user's
-      # home instead: ~/mnt/nas01/{SANS,photos}. Wrapped in a subshell + `|| true` so a
-      # transient NFS/autofs hiccup can't abort the rest of activation.
+      # NFS mounts for nas01 shares via Tailscale, on-demand via autofs, at /mnt/nas01
+      # (matches latitude).
+      #
+      # macOS specifics: the root volume is sealed and read-only. /etc/synthetic.conf gives
+      # us an empty /mnt, but a single-token synthetic entry lives ON the read-only root —
+      # it is a valid *mountpoint*, not a writable directory (this is why /nix works: Nix
+      # mounts a separate APFS volume onto it). So automountd cannot mkdir /mnt/nas01 inside
+      # it. Instead we mount autofs directly ONTO /mnt (mounting over a dir needs no write
+      # access to it) and use an autofs multi-mount entry keyed `nas01`, which yields
+      # /mnt/nas01/SANS and /mnt/nas01/photos. See auto_master(5) "multiple mounts".
+      #
+      # Wrapped in a subshell + `|| true` so a transient NFS/autofs hiccup can't abort the
+      # rest of activation.
       # NOTE: heredoc body/delimiter are intentionally at column 0 so Nix's `''` dedent
       # leaves them unindented (autofs needs the map lines and delimiter flush-left).
+      # The trailing backslashes are literal — Nix `''` strings do not process \ escapes.
       ''
         (
-          MNT="/Users/scott/mnt/nas01"
-          mkdir -p "$MNT"
-          chown scott:staff /Users/scott/mnt "$MNT" 2>/dev/null || true
-
-          # autofs indirect map: $MNT/{SANS,photos} → nas01 exports
-          cat > /etc/auto_nas01 << 'AUTOFSMAP'
-SANS    -fstype=nfs,resvport,soft,timeo=30,intr,rw  nas01.warthog-royal.ts.net:/pool/shares/SANS
-photos  -fstype=nfs,resvport,soft,timeo=30,intr,rw  nas01.warthog-royal.ts.net:/pool/shares/photos
-AUTOFSMAP
-
-          # Register the map in auto_master if not already present
-          if ! grep -q '/Users/scott/mnt/nas01' /etc/auto_master; then
-            echo '/Users/scott/mnt/nas01  auto_nas01  -nobrowse' >> /etc/auto_master
+          # autofs mounts maps onto the writable data volume (/System/Volumes/Data/...).
+          # /home gets away with a bare name because macOS firmlinks it; /mnt has no firmlink,
+          # so a plain `mnt` synthetic entry would be an empty dir on the READ-ONLY root and
+          # the mounts would be invisible there. Use synthetic.conf's symlink form instead:
+          #   mnt<TAB>System/Volumes/Data/mnt
+          # which points /mnt at exactly where autofs mounts. Takes effect after a REBOOT.
+          # Rewrite idempotently, preserving the installer-managed nix/run entries.
+          mkdir -p /System/Volumes/Data/mnt 2>/dev/null || true
+          if ! grep -q '^mnt[[:space:]]*System/Volumes/Data/mnt$' /etc/synthetic.conf 2>/dev/null; then
+            ${pkgs.gnused}/bin/sed -i -E '/^mnt([[:space:]]|$)/d' /etc/synthetic.conf
+            printf 'mnt\tSystem/Volumes/Data/mnt\n' >> /etc/synthetic.conf
           fi
 
-          # Reload autofs to pick up changes
+          # autofs multi-mount map: key `nas01` with /SANS and /photos sub-mounts
+          cat > /etc/auto_nas01 << 'AUTOFSMAP'
+nas01 \
+	/SANS	-fstype=nfs,resvport,soft,timeo=30,rw	nas01.warthog-royal.ts.net:/pool/shares/SANS \
+	/photos	-fstype=nfs,resvport,soft,timeo=30,rw	nas01.warthog-royal.ts.net:/pool/shares/photos
+AUTOFSMAP
+
+          # Manage the auto_master entry idempotently: drop any prior auto_nas01 line
+          # (the old ~/mnt/nas01 and /mnt/nas01 paths) and mount the map on /mnt itself.
+          ${pkgs.gnused}/bin/sed -i '/auto_nas01/d' /etc/auto_master 2>/dev/null || true
+          echo '/mnt  auto_nas01  -nobrowse' >> /etc/auto_master
+
+          # Reload autofs, then retire the previous ~/mnt/nas01 location (best-effort).
           automount -vc 2>/dev/null || true
+          rmdir /Users/scott/mnt/nas01 /Users/scott/mnt 2>/dev/null || true
         ) || true
       ''
 
