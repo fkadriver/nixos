@@ -43,6 +43,9 @@ let
         programs.bash.initExtra = ''
           # Borg server functions — take hostname as argument
           # Usage: borg-ls latitude | borg-check vm01 | borg-unlock airbook.local
+          # unalias first: shell-aliases.nix defines client-side borg-check/borg-unlock
+          # aliases (ssh to nas01), which break these function definitions at parse time
+          unalias borg-check borg-unlock 2>/dev/null
           BORG_REPOS=/pool/borg
           borg-ls()     { sudo borg list       "$BORG_REPOS/$1"; }
           borg-check()  { sudo borg check      "$BORG_REPOS/$1"; }
