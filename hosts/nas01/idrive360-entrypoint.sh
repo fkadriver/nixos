@@ -14,6 +14,14 @@ if ! command -v curl >/dev/null 2>&1; then
     rm -rf /var/lib/apt/lists/*
 fi
 
+# The seeded profile is uid 1000 and the agent resolves user "scott" by name
+# (fails with "Failed to save user configuration" otherwise); ubuntu:24.04
+# ships uid 1000 as "ubuntu", so replace it
+if ! id scott >/dev/null 2>&1; then
+    userdel -r ubuntu 2>/dev/null || true
+    useradd -u 1000 -m -s /bin/bash scott
+fi
+
 if [ ! -x /etc/idrive360cron ]; then
     if [ -f /seed/idrive360cron.bin ]; then
         # The binary refuses to run unless $0 is a symlink (vendor packaging
