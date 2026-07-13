@@ -38,4 +38,11 @@ if [ ! -x /etc/idrive360cron ]; then
     fi
 fi
 
+# The daemon's job schedule lives at /etc/idrive360crontab.json (ephemeral,
+# recreated empty on container start); the app maintains a copy in the
+# persistent volume — without it no jobs run and the console shows offline
+if [ -s /opt/IDrive360/crontab.bak ] && [ ! -s /etc/idrive360crontab.json ]; then
+    cp /opt/IDrive360/crontab.bak /etc/idrive360crontab.json
+fi
+
 exec /etc/idrive360cron --cron
