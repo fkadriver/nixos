@@ -16,7 +16,10 @@ fi
 
 if [ ! -x /etc/idrive360cron ]; then
     if [ -f /seed/idrive360cron.bin ]; then
-        install -m 755 /seed/idrive360cron.bin /etc/idrive360cron
+        # The binary refuses to run unless $0 is a symlink (vendor packaging
+        # check: unless(-l $0){ saferetreat('you_cant_run_supporting_service') })
+        install -m 755 /seed/idrive360cron.bin /usr/local/lib/idrive360cron
+        ln -sf /usr/local/lib/idrive360cron /etc/idrive360cron
     elif ls /seed/IDrive360_*.deb >/dev/null 2>&1; then
         # Fresh bootstrap: postinst registers the device with the token embedded
         # in the .deb filename and downloads the backup engine into /opt/IDrive360
