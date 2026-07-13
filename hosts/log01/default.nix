@@ -93,11 +93,23 @@ let
         '';
       };
 
-      # Wazuh Docker Compose stack — TS auth key fetched from Bitwarden at boot
+      # Wazuh Docker Compose stack — all secrets fetched from Bitwarden at boot
       services.bitwarden.secrets.wazuh_ts_authkey = {
         name = "wazuh_ts_authkey";
         itemId = "c6077703-deef-4684-bb9d-b48601451e64";
         field = "tskey";
+        mode = "0400";
+      };
+      services.bitwarden.secrets.wazuh_username = {
+        name = "wazuh_username";
+        itemId = "c6077703-deef-4684-bb9d-b48601451e64";
+        field = "username";
+        mode = "0400";
+      };
+      services.bitwarden.secrets.wazuh_password = {
+        name = "wazuh_password";
+        itemId = "c6077703-deef-4684-bb9d-b48601451e64";
+        field = "password";
         mode = "0400";
       };
 
@@ -112,16 +124,38 @@ let
           Type = "oneshot";
           RemainAfterExit = true;
           WorkingDirectory = "/home/scott/git/wazuh-tailscale";
-          ExecStartPre = pkgs.writeShellScript "wazuh-write-secrets" ''
-            set -euo pipefail
-            printf 'TS_AUTHKEY=%s\n' "$(cat /run/bitwarden-secrets/wazuh_ts_authkey)" \
-              > /home/scott/git/wazuh-tailscale/.env
-            chmod 600 /home/scott/git/wazuh-tailscale/.env
-            rm -rf /home/scott/git/wazuh-tailscale/config/wazuh_cluster/authd.pass
-            cp /run/bitwarden-secrets/wazuh_agent_enrollment_password \
-              /home/scott/git/wazuh-tailscale/config/wazuh_cluster/authd.pass
-            chmod 600 /home/scott/git/wazuh-tailscale/config/wazuh_cluster/authd.pass
-          '';
+          ExecStartPre =
+            let python = pkgs.python3.withPackages (ps: [ ps.bcrypt ]);
+            in pkgs.writeShellScript "wazuh-write-secrets" ''
+              set -euo pipefail
+              REPO=/home/scott/git/wazuh-tailscale
+
+              # .env — Tailscale auth key
+              printf 'TS_AUTHKEY=%s\n' "$(cat /run/bitwarden-secrets/wazuh_ts_authkey)" \
+                > "$REPO/.env"
+              chmod 600 "$REPO/.env"
+
+              # authd.pass — agent enrollment password
+              rm -rf "$REPO/config/wazuh_cluster/authd.pass"
+              cp /run/bitwarden-secrets/wazuh_agent_enrollment_password \
+                "$REPO/config/wazuh_cluster/authd.pass"
+              chmod 600 "$REPO/config/wazuh_cluster/authd.pass"
+
+              # internal_users.yml — base users + Bitwarden admin user
+              WAZUH_USERNAME=$(cat /run/bitwarden-secrets/wazuh_username)
+              WAZUH_HASH=$(cat /run/bitwarden-secrets/wazuh_password \
+                | ${python}/bin/python3 -c "
+              import bcrypt, sys
+              pw = sys.stdin.buffer.read().rstrip(b'\n')
+              print(bcrypt.hashpw(pw, bcrypt.gensalt(12)).decode())
+              ")
+              cp "$REPO/config/wazuh_indexer/internal_users.yml.base" \
+                 "$REPO/config/wazuh_indexer/internal_users.yml"
+              printf '\n%s:\n  hash: "%s"\n  reserved: false\n  backend_roles:\n  - "admin"\n  description: "Bitwarden managed admin"\n' \
+                "$WAZUH_USERNAME" "$WAZUH_HASH" \
+                >> "$REPO/config/wazuh_indexer/internal_users.yml"
+              chmod 600 "$REPO/config/wazuh_indexer/internal_users.yml"
+            '';
           ExecStart = "${pkgs.docker}/bin/docker compose up -d";
           ExecStop = "${pkgs.docker}/bin/docker compose down";
         };
