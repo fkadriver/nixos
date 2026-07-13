@@ -51,6 +51,16 @@ let
         enrollmentPasswordFile = "/run/bitwarden-secrets/wazuh_agent_enrollment_password";
       };
 
+      # Clear stale /var/ossec from when vm01 hosted the Wazuh manager.
+      # Only fires if ossec.conf exists but points to the wrong manager.
+      system.activationScripts.wazuhClearStaleInstall = lib.stringAfter [ "users" ] ''
+        CONF=/var/ossec/etc/ossec.conf
+        if [ -f "$CONF" ] && ! ${pkgs.gnugrep}/bin/grep -q "wazuh.warthog-royal.ts.net" "$CONF" 2>/dev/null; then
+          echo "Clearing stale Wazuh install (wrong manager address)..."
+          rm -rf /var/ossec
+        fi
+      '';
+
       # Fallback DNS if both piholes are unreachable (build host must resolve to deploy piholes)
       services.resolved.settings.Resolve.FallbackDNS = [ "1.1.1.3" ];
 
