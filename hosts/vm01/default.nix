@@ -52,12 +52,17 @@ let
       };
 
       # Clear stale /var/ossec from when vm01 hosted the Wazuh manager.
-      # Only fires if ossec.conf exists but points to the wrong manager.
-      system.activationScripts.wazuhClearStaleInstall = lib.stringAfter [ "users" ] ''
+      # Runs after daemon-reload so the explicit systemctl start calls are valid.
+      system.activationScripts.wazuhClearStaleInstall = lib.stringAfter [ "users" "setupSecrets" ] ''
         CONF=/var/ossec/etc/ossec.conf
         if [ -f "$CONF" ] && ! ${pkgs.gnugrep}/bin/grep -q "wazuh.warthog-royal.ts.net" "$CONF" 2>/dev/null; then
           echo "Clearing stale Wazuh install (wrong manager address)..."
+          ${pkgs.procps}/bin/pkill -9 -f "wazuh-" 2>/dev/null || true
           rm -rf /var/ossec
+          # Force install/enroll/agent to run now that /var/ossec is gone
+          /run/current-system/sw/bin/systemctl start wazuh-agent-install.service || true
+          /run/current-system/sw/bin/systemctl start wazuh-agent-enroll.service || true
+          /run/current-system/sw/bin/systemctl restart wazuh-agent.service || true
         fi
       '';
 
