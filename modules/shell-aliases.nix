@@ -71,6 +71,7 @@
 
         # NixOS system shortcuts with automatic hostname detection
         nix-rebuild = "_d=$PWD; [ \"$_d\" != \"$HOME/git/nixos\" ] && cd ~/git/nixos; GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=accept-new' git pull && sudo nixos-rebuild switch --flake ~/git/nixos#$(hostname); [ \"$_d\" != \"$HOME/git/nixos\" ] && cd -; unset _d; source ~/.bashrc";
+        nix-sync = "~/git/nixos/scripts/sync-nixos-hosts.sh";
         nos-rebuild = "sudo nixos-rebuild switch --flake .";
         nos-test = "sudo nixos-rebuild test --flake .";
         nos-boot = "sudo nixos-rebuild boot --flake .";
