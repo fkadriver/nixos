@@ -93,6 +93,40 @@ let
         '';
       };
 
+      # Wazuh Docker Compose stack — TS auth key fetched from Bitwarden at boot
+      services.bitwarden.secrets.wazuh_ts_authkey = {
+        name = "wazuh_ts_authkey";
+        itemId = "c6077703-deef-4684-bb9d-b48601451e64";
+        field = "tskey";
+        mode = "0400";
+      };
+
+      systemd.services.wazuh-docker = {
+        description = "Wazuh Docker Compose Stack";
+        wantedBy = [ "multi-user.target" ];
+        after = [ "bitwarden-secrets-sync.service" "docker.service" "network-online.target" ];
+        wants = [ "network-online.target" ];
+        requires = [ "bitwarden-secrets-sync.service" "docker.service" ];
+
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+          WorkingDirectory = "/home/scott/git/wazuh-tailscale";
+          ExecStartPre = pkgs.writeShellScript "wazuh-write-secrets" ''
+            set -euo pipefail
+            printf 'TS_AUTHKEY=%s\n' "$(cat /run/bitwarden-secrets/wazuh_ts_authkey)" \
+              > /home/scott/git/wazuh-tailscale/.env
+            chmod 600 /home/scott/git/wazuh-tailscale/.env
+            rm -rf /home/scott/git/wazuh-tailscale/config/wazuh_cluster/authd.pass
+            cp /run/bitwarden-secrets/wazuh_agent_enrollment_password \
+              /home/scott/git/wazuh-tailscale/config/wazuh_cluster/authd.pass
+            chmod 600 /home/scott/git/wazuh-tailscale/config/wazuh_cluster/authd.pass
+          '';
+          ExecStart = "${pkgs.docker}/bin/docker compose up -d";
+          ExecStop = "${pkgs.docker}/bin/docker compose down";
+        };
+      };
+
       # Ensure remote log directory and root SSH dir exist with correct permissions
       systemd.tmpfiles.rules = [
         "d /var/log/remote 0750 root adm -"
