@@ -140,6 +140,12 @@ let
     # the install's restore-permissions.sh leaves queue/sockets as root:root 755.
     chown wazuh:wazuh /var/ossec/queue/sockets 2>/dev/null || true
     chmod 770 /var/ossec/queue/sockets 2>/dev/null || true
+    # Daily rotation creates logs/wazuh/<year>/ as the wazuh user; root:root 755
+    # there kills wazuh-agentd at midnight (CRITICAL 1107) and the agent drops
+    # off the manager until restarted.
+    mkdir -p /var/ossec/logs/wazuh
+    chown wazuh:wazuh /var/ossec/logs /var/ossec/logs/wazuh 2>/dev/null || true
+    chmod 770 /var/ossec/logs /var/ossec/logs/wazuh 2>/dev/null || true
   '';
 
   configureScript = pkgs.writeShellScript "wazuh-configure" ''
@@ -224,8 +230,10 @@ in
       description = "Enroll Wazuh agent with manager";
       wantedBy = [ "wazuh-agent.service" ];
       before = [ "wazuh-agent.service" ];
-      after = [ "network-online.target" "wazuh-agent-install.service" "wazuh-agent-configure.service" ];
-      wants = [ "network-online.target" ];
+      # bitwarden-secrets-sync writes the enrollment password to /run/bitwarden-secrets;
+      # without the ordering, first boot races and enrollment fails permanently
+      after = [ "network-online.target" "wazuh-agent-install.service" "wazuh-agent-configure.service" "bitwarden-secrets-sync.service" ];
+      wants = [ "network-online.target" "bitwarden-secrets-sync.service" ];
       unitConfig.ConditionFileNotEmpty = "!/var/ossec/etc/client.keys";
 
       serviceConfig = {
