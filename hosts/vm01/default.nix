@@ -13,6 +13,7 @@ let
       inputs.self.nixosModules.user-scott
       inputs.self.nixosModules.pi-builder
       inputs.self.nixosModules.distributed-builds
+      inputs.self.nixosModules.wazuh-agent
     ];
 
     config = {
@@ -43,6 +44,12 @@ let
           IdentityFile /root/.ssh/id_ed25519_build
           StrictHostKeyChecking no
       '';
+
+      services.wazuh-agent = {
+        enable = true;
+        manager = "wazuh.warthog-royal.ts.net";
+        enrollmentPasswordFile = "/run/bitwarden-secrets/wazuh_agent_enrollment_password";
+      };
 
       # Fallback DNS if both piholes are unreachable (build host must resolve to deploy piholes)
       services.resolved.settings.Resolve.FallbackDNS = [ "1.1.1.3" ];
