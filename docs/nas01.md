@@ -1,140 +1,84 @@
 # nas01 — NAS Server Reference
 
-nas01 is an Ubuntu-based NAS (not NixOS). Configuration is managed via this repo and deployed with `apply.sh`. Nix is used only for userspace packages — the OS, kernel modules, and core services are managed by Ubuntu/apt/systemd.
+nas01 is a NixOS host (converted from Ubuntu in July 2026 after a permissions accident broke sudo/root). The entire system — ZFS, Samba, NFS, Syncthing, Borg server, Tailscale, IDrive360 — is declared in [hosts/nas01/default.nix](../hosts/nas01/default.nix).
+
+The Ubuntu-era `apply.sh` deployment is archived at `archive/hosts/nas01-ubuntu/`.
 
 ## Hardware
 
-- **OS**: Ubuntu 25.10
-- **Role**: NAS — file serving, Borg backup server, Syncthing hub
+- **Role**: NAS — file serving, Borg backup server, Syncthing hub, IDrive360 cloud backup
 - **Tailscale hostname**: `nas01.warthog-royal.ts.net`
 
 ### Drives
 
 | Drive | Mount | Purpose |
 |---|---|---|
-| 3x 4TB HGST (RAIDZ1) | `/pool` | ZFS pool — NAS data |
-| WD 18TB | `/mnt/wd18t_3` | Borg backup repos, large storage |
+| Micron 256GB SSD (serial UGXVK01J7C9TJA) | `/` (LVM/ext4 via disko) | OS |
+| 3x 4TB HGST (RAIDZ1) | `/pool` | ZFS pool — NAS data + borg repos (lz4, ashift=12) |
+| WD 18TB | `/mnt/wd18t_1`, `/mnt/wd18t_3` | **FAILING (2026-07)** — mounts kept `nofail` for salvage only |
+
+The ZFS pool and WD drive are **not** managed by disko — they carry data across OS reinstalls.
 
 ---
 
-## Fresh Deployment
+## Fresh Installation
 
-### 1. Install Ubuntu prerequisites
+### 1. Partition OS disk and install (from NixOS installer USB)
 
 ```bash
-sudo apt install curl git
-sudo apt install nfs-kernel-server zfsutils-linux
-sudo apt install docker.io
-sudo usermod -aG docker scott
+# Identify the OS SSD by-id (Micron, serial UGXVK01J7C9TJA):
+ls -la /dev/disk/by-id/ | grep -i micron
+
+# Partition ONLY the OS SSD (ZFS/WD drives untouched):
+sudo nix run github:nix-community/disko -- --mode disko \
+  --flake github:fkadriver/nixos#nas01 \
+  --arg device '"/dev/disk/by-id/ata-Micron_..._UGXVK01J7C9TJA"'
+
+sudo nixos-install --flake github:fkadriver/nixos#nas01
+sudo reboot
 ```
 
-> `zfsutils-linux` and `nfs-kernel-server` must be apt-managed — they require kernel module integration via DKMS that Nix cannot provide.
-
-### 2. Clone repo and run apply.sh
+### 2. sops age key (first boot)
 
 ```bash
-git clone git@github.com:fkadriver/nixos ~/git/nixos
-cd ~/git/nixos
-sudo ./hosts/nas01/apply.sh
-```
-
-`apply.sh` handles:
-- Installing Nix (if not present)
-- Building and installing the Nix package profile at `/nix/var/nix/profiles/nas01`
-- Adding the Nix profile to system-wide `PATH` via `/etc/profile.d/nas01-nix.sh`
-- Applying home-manager config (shell aliases, starship, bash config)
-- Deploying SSH keys from `secrets.yaml` via sops
-- Installing `smb.conf`, NFS exports, and systemd service files
-- Reloading systemd
-
-### 3. Enable services
-
-```bash
-sudo systemctl enable --now smbd nmbd
-sudo systemctl enable --now nfs-kernel-server
-sudo exportfs -ra
-sudo systemctl enable --now tailscaled
-sudo tailscale up                       # one-time Tailscale auth
-sudo systemctl enable --now syncthing
-bash ~/git/nixos/hosts/nas01/config/syncthing-setup.sh
-```
-
-### 4. Set up ZFS pool (first time or new drives)
-
-```bash
-# Identify drives first
-ls -la /dev/disk/by-id/ | grep -v part
-lsblk -o NAME,SIZE,MODEL,SERIAL
-
-# Fill in DISK1/2/3 in zfs-setup.sh, then:
-sudo bash ~/git/nixos/hosts/nas01/config/zfs-setup.sh
-sudo chown -R scott:scott /pool/data
-```
-
-See [zfs-cheatsheet.md](zfs-cheatsheet.md) for ZFS commands reference.
-
-### 5. Set up Borg server
-
-```bash
-sudo bash ~/git/nixos/hosts/nas01/config/borg-server-setup.sh
-```
-
-Creates `/mnt/wd18t_3/borg/repos/{latitude,vm01,airbook-darwin}` with correct ownership.
-
-### 6. Set up sops age key (one-time, for SSH key deployment)
-
-```bash
-sudo age-keygen -o /var/lib/sops-nix/key.txt
-# Copy the public key output
-# Add it to .sops.yaml in the repo, then re-encrypt:
+sudo age-keygen -y /var/lib/sops-nix/key.txt
+# Replace the old nas01 key in .sops.yaml with this one, then:
 export SOPS_AGE_KEY_FILE=~/.config/sops/age/keys.txt
 sops updatekeys secrets/secrets.yaml
+# Commit/push, then rebuild nas01
 ```
+
+### 3. Import the ZFS pool and create the borg dataset (one-time)
+
+```bash
+sudo zpool import -f pool   # -f: pool wasn't cleanly exported from old OS
+sudo zfs create -o compression=lz4 pool/borg
+sudo chown scott:users /pool/borg && sudo chmod 750 /pool/borg
+```
+
+`boot.zfs.extraPools` auto-imports the pool on subsequent boots. Clients
+auto-init their repos at `/pool/borg/<hostname>` on their first backup run.
+
+### 4. Restore Syncthing identity (keeps device ID, no re-pairing)
+
+Copy `cert.pem`, `key.pem` from the pre-rebuild backup into
+`/home/scott/.config/syncthing/` before syncthing first starts.
+
+### 5. Samba password (not declarative)
+
+```bash
+sudo smbpasswd -a scott
+```
+
+### 6. Seed IDrive360 (see below)
 
 ---
 
 ## Ongoing Maintenance
 
-### Apply config changes
-
 ```bash
-nix-apply   # alias: cd ~/git/nixos && git pull && sudo ./hosts/nas01/apply.sh
+sudo nixos-rebuild switch --flake ~/git/nixos#nas01
 ```
-
-### Update packages only
-
-```bash
-cd ~/git/nixos && nix flake update && sudo ./hosts/nas01/apply.sh
-```
-
----
-
-## Nix Package Profile
-
-Managed in [hosts/nas01/packages.nix](../hosts/nas01/packages.nix).
-Installed to: `/nix/var/nix/profiles/nas01`
-
-| Package | Purpose |
-|---|---|
-| `borgbackup` | Borg backup server (SSH-based) |
-| `samba` | SMB/CIFS file sharing |
-| `nfs-utils` | NFS userspace tools |
-| `rsync` | File transfers / migration |
-| `smartmontools` | Drive health (`smartctl`) |
-| `hdparm` | Drive identification |
-| `hddtemp` | Hard drive temperature |
-| `lm_sensors` | CPU/board temperature (`sensors`) |
-| `btop` | TUI system monitor |
-| `ncdu` | Disk usage analyzer |
-| `htop` | Process monitor |
-| `lsof` | Open file/socket inspection |
-| `docker` | Container runtime (CLI) |
-| `tailscale` | VPN |
-| `syncthing` | File sync |
-| `sops` / `age` | Secrets decryption |
-| `home-manager` | Shell config management |
-| `vim` | Text editor |
-| `tree` | Directory viewer |
 
 ---
 
@@ -143,41 +87,53 @@ Installed to: `/nix/var/nix/profiles/nas01`
 ```
 /pool/                      ZFS RAIDZ1 (3x 4TB HGST)
   data/                     Main NAS data — SMB share [data], NFS export
+  shares/                   SANS + photos NFS exports
+  syncthing/                Syncthing folders (Documents, Downloads, Photos)
+  borg/                     Borg backup repos: <hostname> per client
 
-/mnt/wd18t_3/               WD 18TB drive
-  borg/                     Borg backup repos
-    latitude/
-    vm01/
-    airbook-darwin/
+/mnt/wd18t_3/               WD 18TB drive — failing, salvage only
 ```
 
 ---
 
 ## Services
 
-All services run binaries from `/nix/var/nix/profiles/nas01/bin/` via custom systemd unit files installed to `/etc/systemd/system/`.
+All declared in [hosts/nas01/default.nix](../hosts/nas01/default.nix):
 
-| Service | Unit file | Managed by |
+| Service | NixOS option | Notes |
 |---|---|---|
-| Samba (SMB) | `smbd.service`, `nmbd.service` | systemd (Nix binary) |
-| NFS | `nfs-kernel-server` | apt / systemd |
-| Tailscale | `tailscaled.service` | systemd (Nix binary) |
-| Syncthing | `syncthing.service` | systemd (Nix binary, runs as scott) |
-| Docker | `docker` | apt / systemd |
-| ZFS | built into kernel | apt (DKMS) |
+| Samba | `services.samba` | shares `[data]` rw, `[borg]` ro; LAN + Tailscale |
+| NFS | `services.nfs.server` | fixed ports 4000/4001/20048 for firewall |
+| Syncthing | `services.syncthing-declarative` | Tailscale-only, device ID preserved |
+| ZFS | `boot.zfs.extraPools` | weekly autoScrub + TRIM enabled |
+| hd-idle | custom `systemd.services.hd-idle` | by-id paths; pool 30 min, WD 10 min spindown |
+| smartd | `services.smartd` | drive health monitoring |
+| Wazuh agent | `services.wazuh-agent` | manager: wazuh.warthog-royal.ts.net |
+| rsyslog → log01 | `logging.forwardToLog01` (common.nix) | on by default |
+| IDrive360 | `virtualisation.oci-containers.containers.idrive360` | see below |
 
-### Service management
+---
 
+## IDrive360 (cloud backup, containerized)
+
+IDrive360's installer self-updates and downloads its backup engine at runtime,
+which is incompatible with Nix packaging (prior attempt: `archive/pkgs/idrive-e360/`).
+It runs in an `ubuntu:24.04` Docker container instead:
+
+- **State**: `/var/lib/idrive360/opt` → `/opt/IDrive360` in-container (persistent volume; holds device registration + engine)
+- **Seed**: `/var/lib/idrive360/seed` — installer `.deb` (token in filename) + rescued `idrive360cron` binary
+- **Data mounts**: `/pool` and `/mnt` read-only (backup set covers /pool, /mnt, /opt)
+- **Entrypoint**: [hosts/nas01/idrive360-entrypoint.sh](../hosts/nas01/idrive360-entrypoint.sh) — restores deps/cron binary on container recreation, falls back to full `dpkg -i` bootstrap, then runs `/etc/idrive360cron --cron`
+
+Seeding after a rebuild (from the latitude backup):
 ```bash
-sudo systemctl status smbd nmbd nfs-kernel-server tailscaled syncthing docker
-
-# Restart a service
-sudo systemctl restart smbd
-
-# View logs
-sudo journalctl -u smbd -n 50
-sudo journalctl -u syncthing -n 50
+rsync -a ~/nas01-backup/opt-IDrive360/ nas01:/var/lib/idrive360/opt/
+scp ~/nas01-backup/home/IDrive360_*.deb ~/nas01-backup/etc/idrive360cron.bin \
+    nas01:/var/lib/idrive360/seed/
 ```
+
+Manage via the [IDrive360 web console](https://www.idrive360.com/enterprise/login).
+Logs: `journalctl -u docker-idrive360`.
 
 ---
 
@@ -185,132 +141,100 @@ sudo journalctl -u syncthing -n 50
 
 ### SMB (Samba)
 
-Config: [hosts/nas01/config/smb.conf](../hosts/nas01/config/smb.conf)
-Restricted to `192.168.1.0/24`. Authentication required (`valid users = scott`).
+Restricted to `192.168.1.0/24` + Tailscale. Authentication required (`valid users = scott`).
 
 | Share | Path | Access |
 |---|---|---|
 | `[data]` | `/pool/data` | read/write, scott only |
-| `[borg]` | `/mnt/wd18t_3/borg` | read-only browse |
-
-Samba password (separate from Linux password):
-```bash
-sudo smbpasswd -a scott
-```
+| `[borg]` | `/pool/borg` | read-only browse |
 
 ### NFS
 
-Config: [hosts/nas01/config/exports](../hosts/nas01/config/exports)
+| Export | Clients | Access |
+|---|---|---|
+| `/pool/data` | 192.168.1.0/24 | rw |
+| `/pool/shares/SANS` | LAN (192.168.0.0/16) | ro |
+| `/pool/shares/SANS` | Tailscale (100.64.0.0/10) | rw |
+| `/pool/shares/photos` | Tailscale | rw |
 
-```
-/pool/data    192.168.1.0/24(rw,sync,no_subtree_check,no_root_squash)
-```
-
-Reload after changes:
-```bash
-sudo exportfs -ra
-sudo exportfs -v    # verify active exports
-```
+Verify: `sudo exportfs -v` on nas01, `showmount -e nas01` on a client.
 
 ---
 
 ## Borg Backup (Server Side)
 
 nas01 is the **backup server**. Clients connect via SSH as `scott` using `id_ed25519_legacy`.
+Client-side `BORG_REMOTE_PATH` is `/run/current-system/sw/bin/borg` (set by `modules/borg-backup.nix`).
 
 | Client | Repo path |
 |---|---|
-| latitude | `/mnt/wd18t_3/borg/repos/latitude` |
-| vm01 | `/mnt/wd18t_3/borg/repos/vm01` |
-| airbook-darwin | `/mnt/wd18t_3/borg/repos/airbook-darwin` |
+| latitude | `/pool/borg/latitude` |
+| vm01 | `/pool/borg/vm01` |
+| log01 | `/pool/borg/log01` |
+| airbook-darwin | `/pool/borg/airbook-darwin` |
 
-### Useful aliases (run on nas01)
+On-server aliases: `borg-repos` (overview), `borg-ls <host>`, `borg-check <host>`, `borg-unlock <host>`.
 
-```bash
-borg-repos      # List all repos with last backup timestamp
-```
-
-### Manually inspect a repo (on nas01)
-
-```bash
-sudo env BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" \
-    borg list /mnt/wd18t_3/borg/repos/latitude
-```
-
-See [borg-backup.md](borg-backup.md) for client-side setup and full alias reference.
+See [borg-backup.md](borg-backup.md) for client-side setup.
 
 ---
 
 ## Syncthing
 
-Web UI: `http://nas01.warthog-royal.ts.net:8384` (Tailscale only)
+Web UI: `http://127.0.0.1:8384` (tunnel via `ssh -L 8384:localhost:8384 nas01`)
 
-Syncs these folders with latitude and airbook-darwin:
+| Folder | Path on nas01 | Shared with |
+|---|---|---|
+| Documents | `/pool/syncthing/Documents` | latitude, airbook-darwin |
+| Downloads | `/pool/syncthing/Downloads` | latitude, airbook-darwin |
+| Photos | `/pool/syncthing/Photos` | latitude, airbook-darwin, iphone |
 
-| Folder | Path on nas01 |
-|---|---|
-| Documents | `~/syncthing/Documents` |
-| Downloads | `~/syncthing/Downloads` |
-| Photos | `~/syncthing/Photos` |
-
-Network: Tailscale-only (global announce, relay, and NAT traversal disabled).
-
-Reconfigure from scratch:
-```bash
-bash ~/git/nixos/hosts/nas01/config/syncthing-setup.sh
-```
-
----
-
-## Secrets (SSH Keys)
-
-SSH keys are deployed from `secrets/secrets.yaml` by `apply.sh` via sops+age.
-
-| Key | Purpose |
-|---|---|
-| `id_ed25519` | Primary SSH key |
-| `id_ed25519_github` | GitHub access |
-| `id_ed25519_legacy` | Borg client auth (all backup clients use this) |
-| `opnsense_admin_ed25519` | OPNsense router admin |
-
-Age key location: `/var/lib/sops-nix/key.txt`
+Network: Tailscale-only (declared in `modules/syncthing-declarative.nix`).
 
 ---
 
 ## Troubleshooting
 
-### Nix profile not in PATH after sudo
+### ZFS pool didn't import
 
 ```bash
-export PATH="/nix/var/nix/profiles/nas01/bin:$PATH"
-# Or source the profile:
-source /etc/profile.d/nas01-nix.sh
+zpool import                 # list importable pools
+sudo zpool import -f pool    # force if never cleanly exported
+zpool status
 ```
 
 ### Samba not accessible
 
 ```bash
-sudo systemctl status smbd nmbd
-sudo smbstatus                          # active connections
-sudo testparm                           # validate smb.conf
+sudo systemctl status samba-smbd
+sudo smbstatus
+# Password set? sudo smbpasswd -a scott
 ```
 
 ### NFS mounts failing on clients
 
 ```bash
-sudo exportfs -ra                       # reload exports
-sudo exportfs -v                        # check active exports
-sudo systemctl status nfs-kernel-server
-# On client: showmount -e nas01
+sudo exportfs -v             # on nas01
+showmount -e nas01           # on client
 ```
 
-### ZFS pool degraded
+### Salvaging old borg repos from the failing WD drive
+
+If `/mnt/wd18t_3` mounts after the rebuild (nofail — it dropped off the old
+Ubuntu install), copy the old repo history onto the pool before the drive dies:
 
 ```bash
-zpool status                            # identify failed/faulted drive
-# See zfs-cheatsheet.md for drive replacement steps
+sudo rsync -a /mnt/wd18t_3/borg/repos/ /pool/borg/
+sudo chown -R scott /pool/borg
 ```
 
-### iDrive e360 (cloud backup)
+If the drive is gone, clients simply init fresh repos on their first backup
+(history lost; the IDrive360 cloud copy of `/mnt` may also hold the old repos).
 
-iDrive cannot be packaged via Nix — install the `.deb` directly from the iDrive website (Endpoint Backup → Add Devices → Linux). See `archive/modules/idrive-e360.nix` for prior packaging attempt.
+### IDrive360 container
+
+```bash
+docker ps                            # container running?
+journalctl -u docker-idrive360 -n 50
+docker exec -it idrive360 bash       # poke inside
+```

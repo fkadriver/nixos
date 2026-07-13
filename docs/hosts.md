@@ -49,6 +49,18 @@ ssh scott@log01 'sudo age-keygen -y /var/lib/sops-nix/key.txt'
 ```
 Then add to `.sops.yaml` and run `sops updatekeys secrets/secrets.yaml`.
 
+### nas01
+**NAS server** - File serving and backup hub (converted from Ubuntu, July 2026)
+
+| | |
+|---|---|
+| Purpose | NAS: Samba/NFS file serving, Borg backup server, Syncthing hub, IDrive360 cloud backup |
+| Storage | 256GB Micron SSD (OS), 3x 4TB HGST ZFS RAIDZ1 (`/pool`, incl. borg repos), WD 18TB (failing — salvage only) |
+| Key Features | ZFS (autoScrub/TRIM), Samba, NFS, syncthing-declarative, hd-idle spindown, Wazuh agent, IDrive360 in Docker |
+| Borg Repos | `/pool/borg/{latitude,vm01,log01,airbook-darwin}` |
+
+**Note:** Headless server. ZFS pool and WD drive are not disko-managed — they survive OS reinstalls (`zpool import -f pool` once after install). IDrive360 runs in an `ubuntu:24.04` container because its installer self-updates at runtime. See [nas01.md](nas01.md) for full reference.
+
 ### pihole01
 **Raspberry Pi 3B** - Primary Pi-hole DNS server
 
@@ -119,6 +131,7 @@ Then add to `.sops.yaml` and run `sops updatekeys secrets/secrets.yaml`.
 | `latitude-minimal` | Laptop | XFCE | Testing |
 | `OTworkstation` | Laptop | XFCE | OT lab VM workstation |
 | `vm01` | Server | None | Immich photo server |
+| `nas01` | Server | None | NAS / backup hub |
 | `log01` | Server | None | Syslog collector |
 | `pihole01` | RPi 3B | None | Primary Pi-hole DNS |
 | `pihole02` | RPi 3B | None | Secondary Pi-hole DNS |

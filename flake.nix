@@ -57,9 +57,6 @@
     {
       inherit nixosModules;
 
-      # Nix package environments for non-NixOS systems managed by Nix package manager
-      packages.x86_64-linux.nas01-env = import ./hosts/nas01/packages.nix { inherit inputs; };
-
       # Export home-manager configurations
       homeConfigurations = {
         scott = scottHome;
@@ -72,6 +69,7 @@
         latitude-xfce = import ./hosts/latitude/xfce.nix flakeContext;
         vm01 = import ./hosts/vm01 flakeContext;
         log01 = import ./hosts/log01 flakeContext;
+        nas01 = import ./hosts/nas01 flakeContext;
         pihole01 = import ./hosts/pihole01 flakeContext;
         pihole02 = import ./hosts/pihole02 flakeContext;
         installer = import ./hosts/installer flakeContext;
@@ -100,6 +98,15 @@
             ({ lib, ... }: {
               disko.devices.lvm_vg.main_vg.lvs.swap.size = lib.mkForce "32G";
             })
+          ];
+        }).config;
+        # nas01 OS SSD only (Micron, serial UGXVK01J7C9TJA) — pass the by-id
+        # device explicitly at install time; ZFS pool and WD drives must not be touched
+        nas01 = (inputs.nixpkgs.lib.nixosSystem {
+          system = "x86_64-linux";
+          modules = [
+            inputs.disko.nixosModules.disko
+            nixosModules.disko-config
           ];
         }).config;
       };

@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 sudo nixos-rebuild switch --flake .#<hostname>
 
 # Available NixOS hostnames: latitude, latitude-xfce,
-# latitude-minimal, OTworkstation, vm01, pihole01, pihole02
+# latitude-minimal, OTworkstation, vm01, nas01, log01, pihole01, pihole02
 # Note: latitude-kde merged into latitude; latitude-minimal kept as fallback
 
 # Examples:
@@ -138,6 +138,7 @@ Each host has a base configuration in `hosts/<hostname>/default.nix` with option
 - **latitude** - Dell Latitude 7480 laptop (default: Borg backup + 3D printing)
 - **OTworkstation** - Dell Latitude 5480 (OT lab VM workstation, XFCE minimal, VMware + VirtualBox)
 - **vm01** - Dell Latitude E7270 (Service Tag: 7NYTSF2, Immich server with external 1TB drive)
+- **nas01** - NAS server (ZFS raidz1 pool, Samba/NFS, Borg backup server, Syncthing hub, IDrive360 in Docker; converted from Ubuntu — see docs/nas01.md)
 - **log01** - Shuttle Zingbox GL014G128W10, 128GB SSD (syslog collector — rsyslog UDP/TCP 514)
 - **installer** - Bootable ISO with automated installation script
 

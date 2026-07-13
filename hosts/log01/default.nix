@@ -103,7 +103,7 @@ let
       # Passphrase comes from bitwarden-scott.nix -> /run/bitwarden-secrets/borg_passphrase
       services.borg-backup = {
         enable = true;
-        repository = "ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18t_3/borg/repos/log01";
+        repository = "ssh://scott@nas01.warthog-royal.ts.net/pool/borg/log01";
         paths = [ "/home" "/var/log" ];
         encryption.passphraseFile = "/run/bitwarden-secrets/borg_passphrase";
         sshKeyFile = "/home/scott/.ssh/id_ed25519_legacy";

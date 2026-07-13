@@ -241,59 +241,9 @@ let
     };
   };
 
-  # nas01 standalone module — baseModule + nas01-specific additions.
-  # NOT applied to NixOS hosts. Only used by home-manager switch on nas01.
-  homeModule = { config, lib, pkgs, ... }: {
-    imports = [ baseModule ];
-    config = {
-      programs.bash.shellAliases = {
-        # nas01 deploy
-        nix-apply  = "cd ~/git/nixos && git pull && sudo ./hosts/nas01/apply.sh; cd -; source ~/.bashrc";
-        nix-update = "nix flake update";
-        nix-search = "nix search nixpkgs";
-
-        # Borg server overview (no passphrase needed — uses filesystem timestamps)
-        borg-repos = ''echo "=== Borg Repos ===" && for repo in /mnt/wd18t_3/borg/repos/*/; do host=$(basename "$repo"); last=$(stat -c "%y" "''${repo}"index.* 2>/dev/null | sort | tail -1 | cut -d'.' -f1); size=$(du -sh "''${repo}" 2>/dev/null | cut -f1); printf "%-20s %-8s %s\n" "$host" "''${size:--}" "''${last:-no backups}"; done'';
-
-        # ZFS status
-        zs    = "zpool status";
-        zsv   = "zpool status -v";
-        zpl   = "zpool list";
-
-        # ZFS list
-        zl    = "zfs list";
-        zla   = "zfs list -t all";
-        zls   = "zfs list -t snapshot";
-        zll   = "zfs list -o name,used,avail,refer,mountpoint";
-
-        # ZFS create (compression=lz4 by default)
-        zc    = "zfs create -o compression=lz4";
-
-        # ZFS destroy
-        zd    = "zfs destroy";
-        zdr   = "zfs destroy -r";
-
-        btop = "btop --force-utf";
-
-        # Temperature monitoring
-        temps = "echo '=== CPU Temps ===' && sensors 2>/dev/null || echo '(run: sudo sensors-detect)'; echo ''; echo '=== Drive Temps ===' && for d in /dev/sd?; do echo -n \"$d: \"; sudo /nix/var/nix/profiles/nas01/bin/hddtemp -u C $d 2>/dev/null || sudo /nix/var/nix/profiles/nas01/bin/smartctl -A $d | grep -i 'temperature\\|194'; done";
-      };
-      programs.bash.initExtra = ''
-        export PATH="$PATH:$HOME/bin:$HOME/.local/bin:$HOME/go/bin:/nix/var/nix/profiles/nas01/bin"
-
-        # Borg server functions — take hostname as argument
-        # Usage: borg-ls latitude | borg-check vm01 | borg-unlock airbook.local
-        BORG_BIN=/nix/var/nix/profiles/nas01/bin/borg
-        BORG_REPOS=/mnt/wd18t_3/borg/repos
-        borg-ls()     { sudo "$BORG_BIN" list      "$BORG_REPOS/$1"; }
-        borg-check()  { sudo "$BORG_BIN" check     "$BORG_REPOS/$1"; }
-        borg-unlock() { sudo "$BORG_BIN" break-lock "$BORG_REPOS/$1"; }
-      '';
-    };
-  };
-
-  # NixOS module — only baseModule, no nas01-specific PATH or borg functions.
-  # Imported by desktop-minimal.nix for NixOS desktop hosts (latitude, etc.).
+  # NixOS module — imported by NixOS hosts via home-manager.
+  # (nas01-specific server aliases live in hosts/nas01/default.nix since the
+  # Ubuntu-era standalone home-manager setup was retired.)
   nixosModule = { ... }: {
     home-manager.users.scott = baseModule;
   };
@@ -301,7 +251,7 @@ in
 (
   (
     inputs.home-manager.lib.homeManagerConfiguration {
-      modules = [ homeModule ];
+      modules = [ baseModule ];
       pkgs = inputs.nixpkgs.legacyPackages.x86_64-linux;
     }
   ) // { inherit nixosModule; }

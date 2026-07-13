@@ -3,10 +3,8 @@
 # MAINTENANCE: When updating aliases here, also update:
 #   - Darwin: hosts/airbook-darwin/home.nix
 #             (programs.bash.shellAliases / programs.zsh.shellAliases)
-#   - nas01:  homeConfigurations/scott.nix (standalone home-manager)
 # Rebuild aliases by host:
 #   nix-rebuild  → latitude, vm01 (nixos-rebuild), airbook (darwin-rebuild)
-#   nix-apply    → nas01 (runs hosts/nas01/apply.sh)
 {
   config = {
     environment = {
@@ -94,10 +92,10 @@
         borg-run    = "sudo systemctl start borgbackup-job-system.service";
 
         # Borg backup - repository operations (passphrase from bitwarden, legacy SSH key)
-        borg-list   = ''sudo env BORG_RSH="ssh -i /home/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new" BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" BORG_REMOTE_PATH=/nix/var/nix/profiles/nas01/bin/borg borg list ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18t_3/borg/repos/$(hostname)'';
-        borg-info   = ''sudo env BORG_RSH="ssh -i /home/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new" BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" BORG_REMOTE_PATH=/nix/var/nix/profiles/nas01/bin/borg borg info ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18t_3/borg/repos/$(hostname)'';
-        borg-check  = ''sudo env BORG_RSH="ssh -i /home/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new" BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" BORG_REMOTE_PATH=/nix/var/nix/profiles/nas01/bin/borg borg check ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18t_3/borg/repos/$(hostname)'';
-        borg-unlock = ''sudo env BORG_RSH="ssh -i /home/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new" BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" BORG_REMOTE_PATH=/nix/var/nix/profiles/nas01/bin/borg borg break-lock ssh://scott@nas01.warthog-royal.ts.net/mnt/wd18t_3/borg/repos/$(hostname)'';
+        borg-list   = ''sudo env BORG_RSH="ssh -i /home/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new" BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" BORG_REMOTE_PATH=/run/current-system/sw/bin/borg borg list ssh://scott@nas01.warthog-royal.ts.net/pool/borg/$(hostname)'';
+        borg-info   = ''sudo env BORG_RSH="ssh -i /home/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new" BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" BORG_REMOTE_PATH=/run/current-system/sw/bin/borg borg info ssh://scott@nas01.warthog-royal.ts.net/pool/borg/$(hostname)'';
+        borg-check  = ''sudo env BORG_RSH="ssh -i /home/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new" BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" BORG_REMOTE_PATH=/run/current-system/sw/bin/borg borg check ssh://scott@nas01.warthog-royal.ts.net/pool/borg/$(hostname)'';
+        borg-unlock = ''sudo env BORG_RSH="ssh -i /home/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new" BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" BORG_REMOTE_PATH=/run/current-system/sw/bin/borg borg break-lock ssh://scott@nas01.warthog-royal.ts.net/pool/borg/$(hostname)'';
 
         # Temperature monitoring
         temps = "echo '=== CPU Temps ===' && sensors 2>/dev/null || echo '(run: sudo sensors-detect)'; echo ''; echo '=== Drive Temps ===' && for d in /dev/sd?; do echo -n \"$d: \"; sudo hddtemp -u C $d 2>/dev/null || sudo smartctl -A $d | grep -i 'temperature\\|194'; done";
