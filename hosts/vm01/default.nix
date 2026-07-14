@@ -68,9 +68,21 @@ let
           # Remove stale ossec.conf and client.keys to trigger clean reinstall+enroll
           rm -f "$CONF" /var/ossec/etc/client.keys /var/ossec/etc/.reenrolled-log01
           touch "$MARKER"
-          # Explicitly restart the install service — RemainAfterExit keeps it "done"
-          # even after ossec.conf is removed, so systemd won't re-trigger it without this.
+          # Explicitly restart the install and enroll services — RemainAfterExit keeps
+          # them "done" even after the files are removed. After install completes,
+          # restart enroll so a fresh client.keys is registered with the manager.
           /run/current-system/sw/bin/systemctl restart wazuh-agent-install.service || true
+          /run/current-system/sw/bin/systemctl restart wazuh-agent-enroll.service || true
+        fi
+      '';
+
+      # Re-trigger enrollment whenever client.keys is empty (e.g. after fresh install).
+      # The enroll service's ConditionFileNotEmpty guard prevents double-enrollment
+      # once client.keys is populated.
+      system.activationScripts.wazuhReEnroll = lib.stringAfter [ "users" "setupSecrets" "wazuhFreshInstall" ] ''
+        if [ ! -s /var/ossec/etc/client.keys ] 2>/dev/null; then
+          echo "Restarting Wazuh enrollment (client.keys is empty)..."
+          /run/current-system/sw/bin/systemctl restart wazuh-agent-enroll.service || true
         fi
       '';
 
