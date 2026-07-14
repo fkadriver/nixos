@@ -51,20 +51,31 @@ let
         enrollmentPasswordFile = "/run/bitwarden-secrets/wazuh_agent_enrollment_password";
       };
 
-      # vm01 previously had a wazuh-agent enrolled with the old manager.
-      # Truncate client.keys so wazuh-agent-enroll re-registers with the new
-      # manager on log01 (ConditionFileNotEmpty=! passes on empty file).
-      system.activationScripts.wazuhReenroll = lib.stringAfter [ "users" "setupSecrets" ] ''
-        KEYS=/var/ossec/etc/client.keys
-        MARKER=/var/ossec/etc/.reenrolled-log01
-        if [ -f "$KEYS" ] && [ ! -f "$MARKER" ]; then
-          echo "Clearing stale Wazuh enrollment for new manager on log01..."
-          > "$KEYS"
-          /run/current-system/sw/bin/systemctl start wazuh-agent-enroll.service || true
-          /run/current-system/sw/bin/systemctl restart wazuh-agent.service || true
+      # Force fresh Wazuh install by removing stale ossec.conf from the
+      # pre-migration era. The installScript guard (ConditionPathExists=!ossec.conf)
+      # will re-extract from the 4.14.5 .deb and patch the manager address.
+      # client.keys is also wiped so re-enrollment triggers cleanly.
+      # Marker prevents this from running on every rebuild.
+      system.activationScripts.wazuhFreshInstall = lib.stringAfter [ "users" "setupSecrets" ] ''
+        CONF=/var/ossec/etc/ossec.conf
+        MARKER=/var/ossec/etc/.fresh-install-4145
+        if [ -f "$CONF" ] && [ ! -f "$MARKER" ]; then
+          echo "Forcing Wazuh fresh install for 4.14.5 agent config..."
+          # Stop all wazuh daemons first
+          /run/current-system/sw/bin/systemctl stop wazuh-agent.service 2>/dev/null || true
+          ${pkgs.procps}/bin/pkill -f 'wazuh-' 2>/dev/null || true
+          sleep 1
+          # Remove stale ossec.conf and client.keys to trigger clean reinstall+enroll
+          rm -f "$CONF" /var/ossec/etc/client.keys /var/ossec/etc/.reenrolled-log01
           touch "$MARKER"
+          # Explicitly restart the install service — RemainAfterExit keeps it "done"
+          # even after ossec.conf is removed, so systemd won't re-trigger it without this.
+          /run/current-system/sw/bin/systemctl restart wazuh-agent-install.service || true
         fi
       '';
+
+      # Add scott to wazuh group so ossec.log is readable for diagnostics
+      users.users.scott.extraGroups = [ "wazuh" ];
 
       # Fallback DNS if both piholes are unreachable (build host must resolve to deploy piholes)
       services.resolved.settings.Resolve.FallbackDNS = [ "1.1.1.3" ];
