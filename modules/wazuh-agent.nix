@@ -146,6 +146,11 @@ let
     mkdir -p /var/ossec/logs/wazuh
     chown wazuh:wazuh /var/ossec/logs /var/ossec/logs/wazuh 2>/dev/null || true
     chmod 770 /var/ossec/logs /var/ossec/logs/wazuh 2>/dev/null || true
+    # wazuh-agentd writes its PID file to var/run (CRITICAL 1212 and a start
+    # loop if the wazuh user cannot write there).
+    mkdir -p /var/ossec/var/run
+    chown root:wazuh /var/ossec/var/run 2>/dev/null || true
+    chmod 770 /var/ossec/var/run 2>/dev/null || true
   '';
 
   configureScript = pkgs.writeShellScript "wazuh-configure" ''
