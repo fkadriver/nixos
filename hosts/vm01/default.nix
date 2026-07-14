@@ -77,12 +77,14 @@ let
       '';
 
       # Re-trigger enrollment whenever client.keys is empty (e.g. after fresh install).
-      # The enroll service's ConditionFileNotEmpty guard prevents double-enrollment
-      # once client.keys is populated.
+      # systemctl restart is synchronous for oneshot services — the agent restart
+      # below sees the newly-written client.keys.
       system.activationScripts.wazuhReEnroll = lib.stringAfter [ "users" "setupSecrets" "wazuhFreshInstall" ] ''
         if [ ! -s /var/ossec/etc/client.keys ] 2>/dev/null; then
           echo "Restarting Wazuh enrollment (client.keys is empty)..."
           /run/current-system/sw/bin/systemctl restart wazuh-agent-enroll.service || true
+          echo "Restarting Wazuh agent to pick up new client.keys..."
+          /run/current-system/sw/bin/systemctl restart wazuh-agent.service || true
         fi
       '';
 
