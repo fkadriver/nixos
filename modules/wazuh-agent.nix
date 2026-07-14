@@ -128,6 +128,7 @@ let
 
   fixPermsScript = pkgs.writeShellScript "wazuh-fix-perms" ''
     set -euo pipefail
+    # Ensure /var/ossec permissions are correct before starting wazuh daemons.
     # Ensure ossec.conf and client.keys are root:wazuh readable before each start.
     # agent-auth writes client.keys as root:root on fresh enrollment; this corrects it.
     chown root:wazuh /var/ossec/etc/ossec.conf 2>/dev/null || true
