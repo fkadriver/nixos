@@ -229,7 +229,9 @@ let
             "/pool:/pool:ro"
             "/mnt:/mnt:ro"
           ];
-          extraOptions = [ "--network=host" ];
+          # --init: tini as PID 1 to reap the zombie children the vendor cron
+          # daemon leaves behind
+          extraOptions = [ "--network=host" "--init" ];
         };
       };
       # The vendor cron daemon occasionally exits 0 on its own (scheduler bug:
