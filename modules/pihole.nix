@@ -317,7 +317,8 @@
           Tag="pihole-dns"
           Facility="local3"
           Severity="info"
-          freshStartTail="on")
+          freshStartTail="on"
+          reopenOnTruncate="on")
 
         # Forward all messages (syslog + pihole DNS queries) to log01
         action(type="omfwd"
@@ -540,16 +541,19 @@
 
     # Rotate pihole's DNS query log daily — it grows quickly (1 DNS entry per line)
     # and is not rotated by the upstream pihole-ftl NixOS module.
-    # After rotation, send SIGHUP to rsyslog so imfile re-opens the new file.
+    # copytruncate is required: FTL/dnsmasq never reopens its log fd, so a
+    # rename-based rotation leaves it writing to a deleted inode until the next
+    # FTL restart (local archives silently lost days of queries). rsyslog's
+    # imfile follows the truncation via reopenOnTruncate="on".
     services.logrotate.settings.pihole-dns = {
       files = "/var/log/pihole/pihole.log";
       frequency = "daily";
       rotate = 7;
       compress = true;
+      copytruncate = true;
       dateext = true;
       missingok = true;
       notifempty = true;
-      postrotate = "systemctl kill -s HUP syslog.service 2>/dev/null || true";
     };
 
     # Expose Pi-hole web UI over Tailscale with HTTPS (tailnet-only, not public)
