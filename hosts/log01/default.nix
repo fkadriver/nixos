@@ -62,6 +62,14 @@ let
           template(name="RemoteHost" type="string"
             string="/var/log/remote/%HOSTNAME%/%PROGRAMNAME%.log")
 
+          # Wazuh-compatible syslog format: traditional timestamp + explicit colon
+          # after program name. Pi-hole sends syslogtag "pihole-dns" without a
+          # trailing colon; without the colon Wazuh's syslog pre-decoder treats
+          # everything after the hostname as the message and never extracts
+          # the program name, so our pihole-dns decoder never fires.
+          template(name="WazuhSyslog" type="string"
+            string="%TIMESTAMP% %HOSTNAME% %PROGRAMNAME%:%msg:::sp-if-no-1st-sp,drop-last-lf%\n")
+
           # Forward ALL messages (log01 local + all remote devices) to Splunk.
           # Must appear before the stop below so remote messages are also captured.
           action(type="omfwd"
@@ -82,6 +90,7 @@ let
           if $fromhost-ip != "127.0.0.1" then {
             action(type="omfile"
               dynaFile="RemoteHost"
+              template="WazuhSyslog"
               fileCreateMode="0640"
               fileOwner="root"
               fileGroup="adm"
