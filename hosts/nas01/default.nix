@@ -232,6 +232,13 @@ let
           extraOptions = [ "--network=host" ];
         };
       };
+      # The vendor cron daemon occasionally exits 0 on its own (scheduler bug:
+      # "Argument \"*\" isn't numeric" warnings, then a clean exit); the default
+      # on-failure policy leaves the service dead and the device offline.
+      systemd.services.docker-idrive360.serviceConfig = {
+        Restart = lib.mkForce "always";
+        RestartSec = lib.mkForce "60s";
+      };
 
       system = {
         stateVersion = "25.11";
