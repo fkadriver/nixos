@@ -249,7 +249,7 @@ in
     };
 
     systemd.services.wazuh-agent = {
-      description = "Wazuh security agent";
+      description = "Wazuh security agent (4.14.5)";
       wantedBy = [ "multi-user.target" ];
       after = [ "network-online.target" "wazuh-agent-install.service" ]
         ++ optional (cfg.enrollmentPasswordFile != null) "wazuh-agent-enroll.service";
