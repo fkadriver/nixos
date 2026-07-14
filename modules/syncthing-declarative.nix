@@ -41,7 +41,7 @@ in
 
     # Note: autoAcceptFolders is NOT supported when using declarative folder config
     # (overrideFolders = true), as auto-accepted folders would be deleted on rebuild.
-    # Configure auto-accept on non-NixOS devices like nas01 instead.
+    # Non-NixOS devices (airbook-darwin via Homebrew, iphone) accept shares manually.
 
     folders = mkOption {
       type = types.attrsOf (types.submodule {
