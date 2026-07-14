@@ -65,13 +65,23 @@ let
           template(name="RemoteHost" type="string"
             string="/var/log/remote/%HOSTNAME%/%PROGRAMNAME%.log")
 
-          # Wazuh-compatible syslog format: traditional timestamp + explicit colon
-          # after program name. Pi-hole sends syslogtag "pihole-dns" without a
-          # trailing colon; without the colon Wazuh's syslog pre-decoder treats
-          # everything after the hostname as the message and never extracts
-          # the program name, so our pihole-dns decoder never fires.
+          # Wazuh-compatible syslog format: traditional RFC 3164 timestamp with an
+          # explicit colon after the program name.
+          #
+          # Pi-hole sends syslogtag without a trailing colon ("pihole-dns content")
+          # instead of the RFC 3164 form ("pihole-dns: content"). When there is no
+          # colon, rsyslog puts the entire rest of the message into %syslogtag% and
+          # leaves %msg% empty. We recover the content by extracting everything after
+          # the first space from %syslogtag% (the regex ^[^ ]+( .+) skips the program
+          # name and captures the payload with its leading space). For programs that DO
+          # use proper colon-terminated tags, %syslogtag% contains no space, the regex
+          # returns BLANK, and %msg% provides the content as normal.
+          #
+          # The colon we inject after %PROGRAMNAME% causes Wazuh's syslog pre-decoder
+          # to extract program_name, which gates the pihole-dns decoder and prevents
+          # the built-in FreePBX decoder from stealing the event first.
           template(name="WazuhSyslog" type="string"
-            string="%TIMESTAMP% %HOSTNAME% %PROGRAMNAME%:%msg:::sp-if-no-1st-sp,drop-last-lf%\n")
+            string="%TIMESTAMP% %HOSTNAME% %PROGRAMNAME%:%syslogtag:R,ERE,1,BLANK:^[^ ]+( .+)%%msg:::sp-if-no-1st-sp,drop-last-lf%\n")
           # Route remote messages to per-host directories.
           # Permissions are set explicitly here — global() is not used because
           # it must appear before all other config statements, but extraConfig
