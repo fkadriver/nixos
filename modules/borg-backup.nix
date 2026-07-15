@@ -107,6 +107,75 @@ in
   config = mkIf cfg.enable {
     environment.systemPackages = with pkgs; [ borgbackup ];
 
+    # Wazuh integration: deploy status reporter script and its config.
+    # wazuh-logcollector runs the command as root (inside the wazuh FHS env,
+    # which bind-mounts the real /), so it can reach /run/current-system/sw/bin
+    # for borgbackup and read the SSH key and passphrase files.
+    systemd.tmpfiles.rules = [
+      "d /usr/local/bin 0755 root root -"
+      "L+ /usr/local/bin/wazuh-borg-status - - - - ${pkgs.writeShellScript "wazuh-borg-status" ''
+        set -euo pipefail
+        export PATH="/run/current-system/sw/bin:$PATH"
+
+        CONF=/etc/wazuh/borg.conf
+        # shellcheck source=/dev/null
+        [ -f "$CONF" ] && source "$CONF"
+
+        REPO="''${BORG_REPO:-}"
+        STALE_HOURS="''${BORG_STALE_HOURS:-25}"
+
+        if [ -z "$REPO" ]; then
+            echo "borg_backup: status=ERROR repo=unset error=BORG_REPO_not_configured"
+            exit 0
+        fi
+
+        if ! command -v borg &>/dev/null; then
+            echo "borg_backup: status=ERROR repo=''${REPO} error=borg_not_found"
+            exit 0
+        fi
+
+        LAST=$(borg list --last 1 --format '{archive}|{start}' "$REPO" 2>&1) || {
+            ERR=$(printf '%s' "$LAST" | head -1 | tr -cs '[:alnum:]_.-' '_' | cut -c1-60)
+            echo "borg_backup: status=ERROR repo=''${REPO} error=''${ERR}"
+            exit 0
+        }
+
+        if [ -z "$LAST" ]; then
+            echo "borg_backup: status=EMPTY repo=''${REPO} error=no_archives"
+            exit 0
+        fi
+
+        ARCHIVE=$(printf '%s' "$LAST" | cut -d'|' -f1)
+        START=$(printf '%s' "$LAST" | cut -d'|' -f2 | tr ' ' 'T')
+
+        START_EPOCH=$(date -d "''${START/T/ }" +%s 2>/dev/null) || START_EPOCH=0
+        AGE_H=$(( ($(date +%s) - START_EPOCH) / 3600 ))
+
+        DURATION=$(borg info "''${REPO}::''${ARCHIVE}" --format '{duration:.0f}' 2>/dev/null || echo "0")
+
+        if [ "$AGE_H" -gt "$STALE_HOURS" ]; then
+            STATUS=STALE
+        else
+            STATUS=OK
+        fi
+
+        echo "borg_backup: status=''${STATUS} repo=''${REPO} archive=''${ARCHIVE} start=''${START} duration=''${DURATION}s age=''${AGE_H}h"
+      ''}"
+    ];
+
+    environment.etc."wazuh/borg.conf" = {
+      mode = "0400";
+      text = ''
+        BORG_REPO="${cfg.repository}"
+      '' + lib.optionalString (cfg.encryption.passphraseFile != null) ''
+        BORG_PASSCOMMAND="cat ${cfg.encryption.passphraseFile}"
+      '' + lib.optionalString (cfg.sshKeyFile != null) ''
+        BORG_RSH="ssh -i ${cfg.sshKeyFile} -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=yes"
+      '' + lib.optionalString (cfg.remotePath != null) ''
+        BORG_REMOTE_PATH="${cfg.remotePath}"
+      '';
+    };
+
     # Pin the backup server's host key declaratively so rebuilds are sufficient
     # after a server reinstall — no manual ssh-keygen -R on each client. The
     # borg job's ssh ignores per-user known_hosts (stale entries would
