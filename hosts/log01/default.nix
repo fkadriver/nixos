@@ -65,16 +65,16 @@ let
           template(name="RemoteHost" type="string"
             string="/var/log/remote/%HOSTNAME%/%PROGRAMNAME%.log")
 
-          # For Pi-hole DNS logs: rsyslog puts the full payload into %syslogtag%
-          # and leaves %msg% empty because the imfile Tag has no trailing colon.
-          # %syslogtag% = "pihole-dns Jul 15 HH:MM:SS dnsmasq[PID]: ..."
-          # Content starts at char 12 (after "pihole-dns" [10] + space [1] = 11).
-          # The literal "pihole-dns:" injects the colon Wazuh's pre-decoder needs.
-          template(name="PiholeSyslog" type="string"
-            string="ST=[%syslogtag%] MSG=[%msg%] RAW=[%rawmsg-after-pri%]\n")
-
-          # For all other remote programs with properly colon-terminated syslogtags,
-          # content is in %msg% as usual.
+          # Wazuh-compatible syslog format: traditional RFC 3164 timestamp with an
+          # explicit colon after the program name. The colon causes Wazuh's syslog
+          # pre-decoder to extract program_name, which gates the pihole-dns decoder
+          # and prevents the built-in FreePBX decoder from stealing the event first.
+          #
+          # For Pi-hole messages: rsyslog parses the forwarded message so that
+          # %syslogtag% = "pihole-dns" and %msg% = " Jul 15 HH:MM:SS dnsmasq[...]"
+          # (leading space). sp-if-no-1st-sp preserves the leading space so the
+          # output is "pihole-dns: Jul 15 HH:MM:SS dnsmasq[...]" — exactly the
+          # format the Wazuh pihole-dns decoder expects.
           template(name="WazuhSyslog" type="string"
             string="%TIMESTAMP% %HOSTNAME% %PROGRAMNAME%:%msg:::sp-if-no-1st-sp,drop-last-lf%\n")
 
@@ -84,11 +84,6 @@ let
           $DirOwner root
           $DirGroup adm
           $DirCreateMode 0750
-
-          # Pi-hole rule must come first so its messages are consumed before the
-          # general remote rule runs.
-          :programname, isequal, "pihole-dns"   ?RemoteHost;PiholeSyslog
-          :programname, isequal, "pihole-dns"   ~
           :fromhost-ip, !isequal, "127.0.0.1"   ?RemoteHost;WazuhSyslog
           :fromhost-ip, !isequal, "127.0.0.1"   ~
         '';
