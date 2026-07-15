@@ -152,6 +152,15 @@ let
     mkdir -p /var/ossec/var/run
     chown root:wazuh /var/ossec/var/run 2>/dev/null || true
     chmod 770 /var/ossec/var/run 2>/dev/null || true
+    # Allow command/full_command entries from the manager's shared agent.conf.
+    # logcollector.remote_commands defaults to 0; must be set per-agent here
+    # (the manager cannot push this override for security reasons).
+    cat > /var/ossec/etc/local_internal_options.conf << 'EOF'
+logcollector.remote_commands=1
+wazuh_command.remote_commands=1
+EOF
+    chmod 640 /var/ossec/etc/local_internal_options.conf 2>/dev/null || true
+    chown root:wazuh /var/ossec/etc/local_internal_options.conf 2>/dev/null || true
   '';
 
   configureScript = pkgs.writeShellScript "wazuh-configure" ''
@@ -164,6 +173,14 @@ let
         's|</ossec_config>|  <localfile>\n    <log_format>syslog</log_format>\n    <location>/var/log/remote/*/*.log</location>\n  </localfile>\n</ossec_config>|' \
         "$CONF"
     fi
+    # Allow command/full_command entries pushed from the manager's shared agent.conf.
+    # Default is 0 (disabled for security); must be set per-agent in local_internal_options.
+    cat > /var/ossec/etc/local_internal_options.conf << 'EOF'
+logcollector.remote_commands=1
+wazuh_command.remote_commands=1
+EOF
+    chmod 640 /var/ossec/etc/local_internal_options.conf
+    chown root:wazuh /var/ossec/etc/local_internal_options.conf 2>/dev/null || true
   '';
 
 in
