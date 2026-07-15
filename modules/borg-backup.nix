@@ -118,8 +118,9 @@ in
         export PATH="/run/current-system/sw/bin:$PATH"
 
         CONF=/etc/wazuh/borg.conf
+        # set -a exports all variables defined during source so borg subprocess sees them
         # shellcheck source=/dev/null
-        [ -f "$CONF" ] && source "$CONF"
+        set -a; [ -f "$CONF" ] && source "$CONF"; set +a
 
         REPO="''${BORG_REPO:-}"
         STALE_HOURS="''${BORG_STALE_HOURS:-25}"
