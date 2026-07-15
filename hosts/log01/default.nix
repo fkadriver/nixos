@@ -71,15 +71,22 @@ let
           # and prevents the built-in FreePBX decoder from stealing the event first.
           #
           # Pi-hole forwards with the default RSYSLOG_ForwardFormat (no colon in
-          # syslogtag). log01's TCP syslog parser stops syslogtag at the first space,
-          # so %msg% arrives with the dnsmasq content and this template adds the colon.
+          # syslogtag). The %msg% recovery above populates %msg% before this
+          # template runs; the template adds the colon Wazuh's pre-decoder needs.
           template(name="WazuhSyslog" type="string"
             string="%TIMESTAMP% %HOSTNAME% %PROGRAMNAME%:%msg:::sp-if-no-1st-sp,drop-last-lf%\n")
           # Route remote messages to per-host directories.
           # Permissions are set explicitly here — global() is not used because
           # it must appear before all other config statements, but extraConfig
           # is appended after the NixOS-generated base config.
+          #
+          # In rsyslog's mixed legacy+RainerScript mode, the syslog parser puts
+          # the entire body into %syslogtag% when there is no colon after the
+          # program name (imfile tags have no colon). %msg% is empty in this
+          # context. Recover the message content from %syslogtag% when needed.
           if $fromhost-ip != "127.0.0.1" then {
+            if strlen($msg) == 0 then
+              set $msg = substr($syslogtag, strlen($programname) + 1, 0);
             action(type="omfile"
               dynaFile="RemoteHost"
               template="WazuhSyslog"
