@@ -65,26 +65,17 @@ let
           template(name="RemoteHost" type="string"
             string="/var/log/remote/%HOSTNAME%/%PROGRAMNAME%.log")
 
-          # Wazuh-compatible syslog format: traditional RFC 3164 timestamp with an
-          # explicit colon after the program name. The colon causes Wazuh's syslog
-          # pre-decoder to extract program_name, which gates the pihole-dns decoder
-          # and prevents the built-in FreePBX decoder from stealing the event first.
-          #
-          # For Pi-hole messages: rsyslog parses the forwarded message so that
-          # %syslogtag% = "pihole-dns" and %msg% = " Jul 15 HH:MM:SS dnsmasq[...]"
-          # (leading space). sp-if-no-1st-sp preserves the leading space so the
-          # output is "pihole-dns: Jul 15 HH:MM:SS dnsmasq[...]" — exactly the
-          # format the Wazuh pihole-dns decoder expects.
-          template(name="WazuhSyslog" type="string"
-            string="%TIMESTAMP% %HOSTNAME% %PROGRAMNAME%:%msg:::sp-if-no-1st-sp,drop-last-lf%\n")
-
+          # Route remote messages to per-host directories using the default
+          # RSYSLOG_FileFormat (RFC 3339 timestamp, %syslogtag%%msg%). Pi-hole
+          # sends Tag="pihole-dns:" so the colon is already in %syslogtag%,
+          # which causes Wazuh's syslog pre-decoder to extract program_name.
           $FileOwner root
           $FileGroup adm
           $FileCreateMode 0640
           $DirOwner root
           $DirGroup adm
           $DirCreateMode 0750
-          :fromhost-ip, !isequal, "127.0.0.1"   ?RemoteHost;WazuhSyslog
+          :fromhost-ip, !isequal, "127.0.0.1"   ?RemoteHost
           :fromhost-ip, !isequal, "127.0.0.1"   ~
         '';
       };

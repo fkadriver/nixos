@@ -314,17 +314,16 @@
         module(load="imfile" Mode="inotify")
         input(type="imfile"
           File="/var/log/pihole/pihole.log"
-          Tag="pihole-dns"
+          Tag="pihole-dns:"
           Facility="local3"
           Severity="info"
           freshStartTail="on"
           reopenOnTruncate="on")
 
         # Forward all messages (syslog + pihole DNS queries) to log01.
-        # Default RSYSLOG_ForwardFormat sends syslogtag without a colon; log01's
-        # syslog parser stops syslogtag at the first space, so %msg% arrives with
-        # the dnsmasq content. log01's WazuhSyslog template adds the colon that
-        # Wazuh's pre-decoder needs to extract program_name.
+        # Tag="pihole-dns:" (with colon) means syslogtag arrives at log01 as
+        # "pihole-dns:" — the colon causes Wazuh's syslog pre-decoder to extract
+        # program_name, which gates the pihole-dns decoder.
         action(type="omfwd"
           target="log01.warthog-royal.ts.net"
           port="514"
