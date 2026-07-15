@@ -71,7 +71,7 @@ let
           # Content starts at char 12 (after "pihole-dns" [10] + space [1] = 11).
           # The literal "pihole-dns:" injects the colon Wazuh's pre-decoder needs.
           template(name="PiholeSyslog" type="string"
-            string="%TIMESTAMP% %HOSTNAME% pihole-dns: %syslogtag:12:$:drop-last-lf%\n")
+            string="ST=[%syslogtag%] MSG=[%msg%] RAW=[%rawmsg-after-pri%]\n")
 
           # For all other remote programs with properly colon-terminated syslogtags,
           # content is in %msg% as usual.
