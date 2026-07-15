@@ -135,7 +135,7 @@ in
             exit 0
         fi
 
-        LAST=$(borg list --last 1 --format '{archive}|{start}' "$REPO" 2>&1) || {
+        LAST=$(borg list --last 1 --format '{archive}|{start:%Y-%m-%dT%H:%M:%S}' "$REPO" 2>&1) || {
             ERR=$(printf '%s' "$LAST" | head -1 | tr -cs '[:alnum:]_.-' '_' | cut -c1-60)
             echo "borg_backup: status=ERROR repo=''${REPO} error=''${ERR}"
             exit 0
@@ -147,7 +147,7 @@ in
         fi
 
         ARCHIVE=$(printf '%s' "$LAST" | cut -d'|' -f1)
-        START=$(printf '%s' "$LAST" | cut -d'|' -f2 | tr ' ' 'T')
+        START=$(printf '%s' "$LAST" | cut -d'|' -f2)
 
         START_EPOCH=$(date -d "''${START/T/ }" +%s 2>/dev/null) || START_EPOCH=0
         AGE_H=$(( ($(date +%s) - START_EPOCH) / 3600 ))
