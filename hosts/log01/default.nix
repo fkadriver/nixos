@@ -69,35 +69,21 @@ let
           # explicit colon after the program name. The colon causes Wazuh's syslog
           # pre-decoder to extract program_name, which gates the pihole-dns decoder
           # and prevents the built-in FreePBX decoder from stealing the event first.
-          #
-          # Pi-hole forwards with the default RSYSLOG_ForwardFormat (no colon in
-          # syslogtag). The %msg% recovery above populates %msg% before this
-          # template runs; the template adds the colon Wazuh's pre-decoder needs.
           template(name="WazuhSyslog" type="string"
             string="%TIMESTAMP% %HOSTNAME% %PROGRAMNAME%:%msg:::sp-if-no-1st-sp,drop-last-lf%\n")
           # Route remote messages to per-host directories.
-          # Permissions are set explicitly here — global() is not used because
-          # it must appear before all other config statements, but extraConfig
-          # is appended after the NixOS-generated base config.
-          #
-          # In rsyslog's mixed legacy+RainerScript mode, the syslog parser puts
-          # the entire body into %syslogtag% when there is no colon after the
-          # program name (imfile tags have no colon). %msg% is empty in this
-          # context. Recover the message content from %syslogtag% when needed.
-          if $fromhost-ip != "127.0.0.1" then {
-            if strlen($msg) == 0 then
-              set $msg = substr($syslogtag, strlen($programname) + 1, 0);
-            action(type="omfile"
-              dynaFile="RemoteHost"
-              template="WazuhSyslog"
-              fileCreateMode="0640"
-              fileOwner="root"
-              fileGroup="adm"
-              dirCreateMode="0750"
-              dirOwner="root"
-              dirGroup="adm")
-            stop
-          }
+          # Legacy filter+action syntax is used intentionally: in rsyslog's mixed
+          # legacy+RainerScript config, %msg% is empty inside RainerScript action()
+          # calls for messages whose syslogtag has no colon (e.g. Pi-hole imfile
+          # output). Legacy actions see %msg% correctly.
+          $FileOwner root
+          $FileGroup adm
+          $FileCreateMode 0640
+          $DirOwner root
+          $DirGroup adm
+          $DirCreateMode 0750
+          :fromhost-ip, !isequal, "127.0.0.1"   ?RemoteHost;WazuhSyslog
+          :fromhost-ip, !isequal, "127.0.0.1"   ~
         '';
       };
 
