@@ -154,6 +154,11 @@ in
 
         DURATION=$(borg info "''${REPO}::''${ARCHIVE}" --format '{duration:.0f}' 2>/dev/null || echo "0")
 
+        if [[ "$ARCHIVE" == *.failed ]]; then
+            echo "borg_backup: status=ERROR repo=''${REPO} archive=''${ARCHIVE} start=''${START} duration=''${DURATION}s age=''${AGE_H}h error=archive_marked_failed"
+            exit 0
+        fi
+
         if [ "$AGE_H" -gt "$STALE_HOURS" ]; then
             STATUS=STALE
         else
