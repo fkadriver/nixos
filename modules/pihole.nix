@@ -320,16 +320,11 @@
           freshStartTail="on"
           reopenOnTruncate="on")
 
-        # Wazuh-compatible forwarding template: traditional RFC 3164 timestamp with
-        # an explicit colon after the syslogtag. imfile sets Tag="pihole-dns" with
-        # no trailing colon; without the colon, log01's rsyslog puts the entire
-        # payload into %syslogtag% and leaves %msg% empty, so Wazuh's syslog
-        # pre-decoder never extracts program_name and the pihole-dns decoder never
-        # fires. The colon here fixes that at the source.
-        template(name="WazuhFwd" type="string"
-          string="<%PRI%>%TIMESTAMP% %HOSTNAME% %syslogtag%:%msg:::sp-if-no-1st-sp,drop-last-lf%\n")
-
-        # Forward all messages (syslog + pihole DNS queries) to log01
+        # Forward all messages (syslog + pihole DNS queries) to log01.
+        # Default RSYSLOG_ForwardFormat sends syslogtag without a colon; log01's
+        # syslog parser stops syslogtag at the first space, so %msg% arrives with
+        # the dnsmasq content. log01's WazuhSyslog template adds the colon that
+        # Wazuh's pre-decoder needs to extract program_name.
         action(type="omfwd"
           target="log01.warthog-royal.ts.net"
           port="514"
@@ -339,8 +334,7 @@
           queue.maxdiskspace="200m"
           queue.saveonshutdown="on"
           action.resumeRetryCount="-1"
-          action.resumeInterval="30"
-          template="WazuhFwd")
+          action.resumeInterval="30")
       '';
     };
 

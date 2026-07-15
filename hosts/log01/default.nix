@@ -70,8 +70,9 @@ let
           # pre-decoder to extract program_name, which gates the pihole-dns decoder
           # and prevents the built-in FreePBX decoder from stealing the event first.
           #
-          # Pi-hole adds the colon at the source (pihole.nix WazuhFwd template), so
-          # %msg% arrives populated here and the template is straightforward.
+          # Pi-hole forwards with the default RSYSLOG_ForwardFormat (no colon in
+          # syslogtag). log01's TCP syslog parser stops syslogtag at the first space,
+          # so %msg% arrives with the dnsmasq content and this template adds the colon.
           template(name="WazuhSyslog" type="string"
             string="%TIMESTAMP% %HOSTNAME% %PROGRAMNAME%:%msg:::sp-if-no-1st-sp,drop-last-lf%\n")
           # Route remote messages to per-host directories.
