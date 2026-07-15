@@ -68,25 +68,26 @@ let
           # Wazuh-compatible syslog format: traditional RFC 3164 timestamp with an
           # explicit colon after the program name.
           #
-          # Pi-hole sends syslogtag without a trailing colon ("pihole-dns content")
-          # instead of the RFC 3164 form ("pihole-dns: content"). When there is no
-          # colon, rsyslog puts the entire rest of the message into %syslogtag% and
-          # leaves %msg% empty. We recover the content by extracting everything after
-          # the first space from %syslogtag% (the regex ^[^ ]+( .+) skips the program
-          # name and captures the payload with its leading space). For programs that DO
-          # use proper colon-terminated tags, %syslogtag% contains no space, the regex
-          # returns BLANK, and %msg% provides the content as normal.
+          # Pi-hole FTL sends syslogtag without a trailing colon ("pihole-dns MSG")
+          # instead of the RFC 3164 form ("pihole-dns: MSG"). rsyslog then puts the
+          # entire payload into %syslogtag% and leaves %msg% empty. We detect this
+          # with strlen($msg) == 0 and reconstruct msg from syslogtag by skipping
+          # past the program name and the space that follows it. Programs that send
+          # proper colon-terminated tags leave %msg% populated, so they fall through
+          # to the else branch unchanged.
           #
           # The colon we inject after %PROGRAMNAME% causes Wazuh's syslog pre-decoder
           # to extract program_name, which gates the pihole-dns decoder and prevents
           # the built-in FreePBX decoder from stealing the event first.
           template(name="WazuhSyslog" type="string"
-            string="%TIMESTAMP% %HOSTNAME% %PROGRAMNAME%:%syslogtag:R,ERE,1,BLANK:^[^ ]+( .+)%%msg:::sp-if-no-1st-sp,drop-last-lf%\n")
+            string="%TIMESTAMP% %HOSTNAME% %PROGRAMNAME%:%msg:::drop-last-lf%\n")
           # Route remote messages to per-host directories.
           # Permissions are set explicitly here — global() is not used because
           # it must appear before all other config statements, but extraConfig
           # is appended after the NixOS-generated base config.
           if $fromhost-ip != "127.0.0.1" then {
+            if strlen($msg) == 0 then
+              set $msg = substr($syslogtag, strlen($programname) + 1, 0);
             action(type="omfile"
               dynaFile="RemoteHost"
               template="WazuhSyslog"
