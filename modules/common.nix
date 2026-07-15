@@ -274,6 +274,7 @@
 
     # Kernel audit — security event logging
     security.auditd.enable = true;
+    security.auditd.plugins.syslog.active = true;  # pipe audit records → syslog → rsyslog → log01
     security.audit.rules = [
       # Identity and credential files
       "-w /etc/passwd -p wa -k identity"
