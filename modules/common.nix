@@ -55,6 +55,9 @@
 
         # Logging
         rsyslog
+
+        # Security / vulnerability scanning
+        vulnix
       ];
     };
 
@@ -294,6 +297,51 @@
       "-a always,exit -F arch=b32 -S adjtimex,settimeofday,clock_settime -k time-change"
       # Kernel module loading/unloading
       "-a always,exit -F arch=b64 -S init_module,delete_module -k modules"
+    ];
+
+    # Wazuh vulnix scan script — deployed to /usr/local/bin/wazuh-vulnix-scan on all agents.
+    # Runs daily via agent.conf full_command; emits one line per CVE (or CLEAN/ERROR).
+    systemd.tmpfiles.rules = [
+      "d /usr/local/bin 0755 root root -"
+      "L+ /usr/local/bin/wazuh-vulnix-scan - - - - ${pkgs.writeShellScript "wazuh-vulnix-scan" ''
+        set -euo pipefail
+        export PATH="/run/current-system/sw/bin:''${PATH}"
+        export HOME=/root
+
+        if ! command -v vulnix &>/dev/null; then
+            echo "vulnix: status=ERROR error=vulnix_not_found"
+            exit 0
+        fi
+
+        RAW=$(vulnix --system --json 2>&1) || RC=''${?}
+        RC=''${RC:-0}
+
+        if [ "''${RC}" -ne 0 ] && [ "''${RC}" -ne 2 ]; then
+            ERR=$(printf '%s' "''${RAW}" | head -1 | tr -cs '[:alnum:]_.-' '_' | cut -c1-80)
+            echo "vulnix: status=ERROR error=''${ERR}"
+            exit 0
+        fi
+
+        printf '%s\n' "''${RAW}" | python3 -c '
+import json, sys
+try:
+    findings = json.load(sys.stdin)
+except Exception:
+    print("vulnix: status=ERROR error=json_parse_failed")
+    sys.exit(0)
+if not findings:
+    print("vulnix: status=CLEAN")
+    sys.exit(0)
+for pkg in findings:
+    pname = pkg.get("pname") or pkg.get("name", "unknown")
+    version = pkg.get("version") or "unknown"
+    scores = pkg.get("cvssv3_basescore") or {}
+    for cve in pkg.get("affected_by", []):
+        score = scores.get(cve)
+        suffix = " cvss={:.1f}".format(score) if score is not None else ""
+        print("vulnix: status=VULNERABLE pname={} version={} cve={}{}".format(pname, version, cve, suffix))
+'
+      ''}"
     ];
 
     # rsyslog — forward all messages to log01 via TCP (disk-assisted queue for reliability)
