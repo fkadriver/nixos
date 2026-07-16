@@ -33,7 +33,12 @@ let
       libcap
       procps  # provides ps, used by wazuh-control's pstatus() to verify daemons started
     ];
-    extraBwrapArgs = [ "--bind" "/var/ossec" "/var/ossec" ];
+    extraBwrapArgs = [
+      "--bind" "/var/ossec" "/var/ossec"
+      # Expose host /usr/local/bin so logcollector can execute scripts deployed
+      # there by NixOS tmpfiles (wazuh-borg-status, wazuh-vulnix-scan, etc.).
+      "--bind" "/usr/local/bin" "/usr/local/bin"
+    ];
   };
 
   installScript = pkgs.writeShellScript "wazuh-install" ''
