@@ -35,12 +35,6 @@ let
     ];
     extraBwrapArgs = [
       "--bind" "/var/ossec" "/var/ossec"
-      # Shadow /usr/local with a writable tmpfs so bwrap can create /usr/local/bin
-      # as a bind-mount destination (the FHS /usr/local is read-only by default).
-      "--tmpfs" "/usr/local"
-      # Expose host /usr/local/bin so logcollector can execute scripts deployed
-      # there by NixOS tmpfiles (wazuh-borg-status, wazuh-vulnix-scan, etc.).
-      "--bind" "/usr/local/bin" "/usr/local/bin"
     ];
   };
 
@@ -169,6 +163,18 @@ wazuh_command.remote_commands=1
 EOF
     chmod 640 /var/ossec/etc/local_internal_options.conf 2>/dev/null || true
     chown root:wazuh /var/ossec/etc/local_internal_options.conf 2>/dev/null || true
+    # Expose NixOS-deployed scripts to wazuh-logcollector running inside the bwrap FHS env.
+    # /usr/local/bin is inside the FHS-overlaid /usr (read-only), so it's invisible in the
+    # bwrap. /var/ossec IS bind-mounted, and /nix IS bound, so symlinks resolving to Nix
+    # store paths are followable. Use readlink -f to get the real store path (not the
+    # /usr/local/bin symlink, which points back into the invisible /usr/local).
+    mkdir -p /var/ossec/scripts
+    for script in wazuh-borg-status wazuh-vulnix-scan; do
+      src=/usr/local/bin/$script
+      if [ -e "$src" ]; then
+        ln -sf "$(readlink -f "$src")" /var/ossec/scripts/$script
+      fi
+    done
   '';
 
   configureScript = pkgs.writeShellScript "wazuh-configure" ''
