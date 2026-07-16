@@ -35,6 +35,9 @@ let
     ];
     extraBwrapArgs = [
       "--bind" "/var/ossec" "/var/ossec"
+      # Shadow /usr/local with a writable tmpfs so bwrap can create /usr/local/bin
+      # as a bind-mount destination (the FHS /usr/local is read-only by default).
+      "--tmpfs" "/usr/local"
       # Expose host /usr/local/bin so logcollector can execute scripts deployed
       # there by NixOS tmpfiles (wazuh-borg-status, wazuh-vulnix-scan, etc.).
       "--bind" "/usr/local/bin" "/usr/local/bin"
