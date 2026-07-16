@@ -343,7 +343,10 @@
     # Local DNS entries — shared across all Pi-hole instances
     networking.extraHosts = ''
       192.168.10.21 unifi
-      192.168.10.22 syslog-server
+      # OPNsense web UI FQDN: LAN-side answer so non-Tailscale clients get the
+      # LAN address and the Tailscale LE certificate still matches. Tailscale
+      # clients resolve this via MagicDNS (100.x) instead and never ask Pi-hole.
+      192.168.1.1   opnsense.warthog-royal.ts.net
       192.168.1.2   aruba2530  # HPE Aruba 2530-24G PoE+ (SW01)
       192.168.1.3   sw02  # TL-SG108E
       192.168.11.50 LBP162  # Canon LBP
