@@ -134,6 +134,7 @@ scp ~/nas01-backup/home/IDrive360_*.deb ~/nas01-backup/etc/idrive360cron.bin \
 
 Manage via the [IDrive360 web console](https://www.idrive360.com/enterprise/login).
 Logs: `journalctl -u docker-idrive360`.
+See [idrive360.md](idrive360.md) for full CLI reference (commands, stopping jobs, troubleshooting).
 
 ---
 
