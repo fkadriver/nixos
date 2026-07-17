@@ -190,6 +190,63 @@ cdp-server, cdp-client, python) but no `--backup` subprocess, nothing is running
 
 ---
 
+## Troubleshooting: backup stuck since a specific date (stale lock files)
+
+**Root cause (seen Jul 13 2026):** A backup crash leaves behind stale lock files.
+The engine sees `ENGINE_LOCKE_FILE` + a non-empty `LOGPID` pointing to a
+`Running_Scheduled` log and refuses to start any new job, forever. The web console
+shows the old date as "in progress." A corrupted config (`CONFIGURATION_FILE.corrupt-<date>`)
+in the profile directory is a telltale sign this happened.
+
+**Diagnose:**
+
+```bash
+PROFILE="/opt/IDrive360/idriveIt/user_profile/scott/yms8amixgppkylvghwrgdi7opkorvwyn3gjonvt7ditg7nu06h"
+
+# Stale engine lock — date should match when the backup last "ran"
+docker exec -u scott idrive360 ls -la "$PROFILE/Backup/DefaultBackupSet/ENGINE_LOCKE_FILE"
+
+# Stale running log reference
+docker exec -u scott idrive360 cat "$PROFILE/Backup/DefaultBackupSet/LOGPID"
+
+# Corrupted config marker
+docker exec -u scott idrive360 ls "$PROFILE/CONFIGURATION_FILE.corrupt-"* 2>/dev/null
+
+# Last backup status (should say Failure, not Running)
+docker exec -u scott idrive360 cat "$PROFILE/.userInfo/lastBackupStatus.txt"
+```
+
+**Fix — clear stale locks and restart:**
+
+```bash
+PROFILE="/opt/IDrive360/idriveIt/user_profile/scott/yms8amixgppkylvghwrgdi7opkorvwyn3gjonvt7ditg7nu06h"
+LOGS="$PROFILE/Backup/DefaultBackupSet/LOGS"
+
+docker exec -u scott idrive360 bash -c "
+  # Remove the stale engine lock
+  rm -f '$PROFILE/Backup/DefaultBackupSet/ENGINE_LOCKE_FILE'
+
+  # Clear stale PID and running-log pointer
+  echo '' > '$PROFILE/Backup/pid.txt'
+  echo '' > '$PROFILE/Backup/DefaultBackupSet/LOGPID'
+
+  # Rename any Running_Scheduled log to Failure so the dashboard reflects reality
+  for f in \$LOGS/*_Running_Scheduled; do
+    [ -f \"\$f\" ] && mv \"\$f\" \"\${f/_Running_/_Failure_}\" && echo \"Renamed: \$f\"
+  done
+"
+
+# Restart so the agent re-initializes with clean state
+sudo systemctl restart docker-idrive360
+
+# Once the container is back up (~60 s), trigger a backup manually to verify
+docker exec -u scott idrive360 \
+  /opt/IDrive360/idrive360 --backup SCHEDULED \
+  yms8amixgppkylvghwrgdi7opkorvwyn3gjonvt7ditg7nu06h
+```
+
+---
+
 ## Known log warning — not an error
 
 ```
@@ -251,3 +308,9 @@ docker exec -u scott idrive360 find /opt/IDrive360 -name '*.log' 2>/dev/null
 | — | `/opt/IDrive360/idriveIt/cache/` | PID file, user token, account JSON |
 | — | `/etc/idrive360crontab.json` | Ephemeral active job schedule |
 | — | `/opt/IDrive360/crontab.bak` | Persistent copy of job schedule |
+| — | `…/Backup/DefaultBackupSet/ENGINE_LOCKE_FILE` | Backup engine lock — if stale, delete it |
+| — | `…/Backup/DefaultBackupSet/LOGPID` | Path to active log; if stale, clear it |
+| — | `…/Backup/DefaultBackupSet/LOGS/` | Per-run logs named `<timestamp>_<Status>_<type>` |
+| — | `…/FAILED_UPLOAD/` | Failed backup reports (XML + log) |
+| — | `…/CONFIGURATION_FILE.corrupt-<date>` | Left behind on config corruption — sign of a crash |
+| — | `…/.userInfo/lastBackupStatus.txt` | JSON: last job status (Failure / Success / Running) |
