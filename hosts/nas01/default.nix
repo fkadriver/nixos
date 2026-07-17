@@ -163,6 +163,10 @@ let
         hddtemp
         smartmontools
         zfs
+        # Remote desktop session
+        openbox
+        firefox
+        xterm
       ];
       systemd.tmpfiles.rules = [
         "d /pool/borg 0750 scott users -"
@@ -200,6 +204,43 @@ let
           ];
         }
       ];
+
+      # Remote desktop (xrdp): headless — no local display manager.
+      # Connect via any RDP client to nas01:3389 (or nas01.warthog-royal.ts.net:3389).
+      # Right-click desktop for menu; use Firefox to reach the IDrive360 web console.
+      services.xserver.enable = true;
+      services.xserver.displayManager.lightdm.enable = false;
+      services.xrdp = {
+        enable = true;
+        defaultWindowManager = "${pkgs.writeShellScript "openbox-session" ''
+          exec ${pkgs.dbus}/bin/dbus-launch --exit-with-session ${pkgs.openbox}/bin/openbox-session
+        ''}";
+        openFirewall = true;
+      };
+      environment.etc."xdg/openbox/menu.xml".text = ''
+        <?xml version="1.0" encoding="UTF-8"?>
+        <openbox_menu xmlns="http://openbox.org/"
+            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:schemaLocation="http://openbox.org/ file:///usr/share/openbox/menu.xsd">
+        <menu id="root-menu" label="nas01">
+          <item label="Firefox">
+            <action name="Execute"><execute>firefox</execute></action>
+          </item>
+          <item label="Terminal">
+            <action name="Execute"><execute>xterm</execute></action>
+          </item>
+          <separator/>
+          <menu id="client-list-menu"/>
+          <separator/>
+          <item label="Reconfigure">
+            <action name="Reconfigure"/>
+          </item>
+          <item label="Log Out">
+            <action name="Exit"/>
+          </item>
+        </menu>
+        </openbox_menu>
+      '';
 
       services.wazuh-agent = {
         enable = true;
