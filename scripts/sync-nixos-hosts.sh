@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Check ~/git/nixos on every host and optionally sync with origin/main.
+# Check ~/git/nixos on every host and optionally sync with origin/main,
+# then optionally apply the NixOS/darwin configuration on each host.
 #
 # Prints a status table with working-tree cleanliness and ahead/behind
 # counts vs origin/main for each host. The current machine is checked
@@ -9,10 +10,16 @@
 # of local-ahead commits). Divergent branches prompt before rebasing.
 # Dirty working trees are always left untouched.
 #
+# With --apply, runs nixos-rebuild (or darwin-rebuild) sequentially on
+# each reachable, clean host. Hosts that are behind origin prompt first.
+# Remote apply uses an interactive TTY so sudo prompts work.
+#
 # Usage:
-#   ./scripts/sync-nixos-hosts.sh                # status only
-#   ./scripts/sync-nixos-hosts.sh --sync         # status, then sync
-#   ./scripts/sync-nixos-hosts.sh --sync --yes   # sync without prompting
+#   ./scripts/sync-nixos-hosts.sh                       # status only
+#   ./scripts/sync-nixos-hosts.sh --sync                # status, then sync
+#   ./scripts/sync-nixos-hosts.sh --apply               # status, then apply
+#   ./scripts/sync-nixos-hosts.sh --sync --apply        # sync, then apply
+#   ./scripts/sync-nixos-hosts.sh --sync --apply --yes  # no prompts
 #
 # Exit 0 if every reachable host ends in-sync (or check-only completes).
 # Exit 1 if any host was left out of sync (dirty tree, unreachable, or
@@ -30,26 +37,44 @@ HOSTS=(airbook latitude otworkstation vm01 log01)
 REPO_PATH='~/git/nixos'
 SSH_OPTS=(-o ConnectTimeout=5 -o BatchMode=yes)
 
+# Flake config name per host (only needed where it differs from the hostname)
+declare -A FLAKE_CONFIG=(
+    [airbook]="airbook-darwin"
+    [otworkstation]="OTworkstation"
+)
+
 SYNC=false
+APPLY=false
 ASSUME_YES=false
 for arg in "$@"; do
     case "$arg" in
         --sync) SYNC=true ;;
+        --apply) APPLY=true ;;
         --yes|-y) ASSUME_YES=true ;;
-        -h|--help) sed -n '2,20p' "$0" | sed 's/^# \?//'; exit 0 ;;
+        -h|--help) sed -n '2,22p' "$0" | sed 's/^# \?//'; exit 0 ;;
         *) echo "Unknown argument: $arg" >&2; exit 2 ;;
     esac
 done
 
 CURRENT_HOST="$(hostname -s | tr '[:upper:]' '[:lower:]')"
 
-# Runs a shell snippet on $host, either locally or via SSH.
+# Runs a shell snippet on $host, either locally or via SSH (BatchMode).
 run_on() {
     local host="$1"; shift
     if [[ "$host" == "$CURRENT_HOST" ]]; then
         bash -c "$*"
     else
         ssh "${SSH_OPTS[@]}" "scott@${host}" "$*"
+    fi
+}
+
+# Like run_on but allocates a TTY so sudo prompts work (used for --apply).
+run_on_tty() {
+    local host="$1"; shift
+    if [[ "$host" == "$CURRENT_HOST" ]]; then
+        bash -c "$*"
+    else
+        ssh -t -o ConnectTimeout=5 "scott@${host}" "$*"
     fi
 }
 
@@ -157,28 +182,83 @@ sync_host() {
     return $?
 }
 
+# Run nixos-rebuild switch (or darwin-rebuild) on a host.
+apply_host() {
+    local host="$1"
+    local config="${FLAKE_CONFIG[$host]:-$host}"
+    IFS='|' read -r reach tree behind ahead <<<"${STATUS[$host]}"
+
+    if [[ "$reach" != "reachable" ]]; then
+        echo -e "${RED}[$host] unreachable, skipping${NC}"
+        return 1
+    fi
+    if [[ "$tree" == "dirty" ]]; then
+        echo -e "${YELLOW}[$host] working tree dirty — resolve before applying${NC}"
+        return 1
+    fi
+    if [[ "$behind" != "0" ]]; then
+        echo -e "${YELLOW}[$host] $behind commit(s) behind origin/main${NC}"
+        if ! confirm "[$host] Apply with out-of-date repo?"; then
+            echo -e "${YELLOW}[$host] skipped${NC}"
+            return 1
+        fi
+    fi
+
+    local rebuild_cmd
+    if [[ "$host" == "airbook" ]]; then
+        rebuild_cmd="cd ${REPO_PATH} && sudo darwin-rebuild switch --flake .#${config}"
+    else
+        rebuild_cmd="cd ${REPO_PATH} && sudo nixos-rebuild switch --flake .#${config}"
+    fi
+
+    if ! confirm "Apply config on [$host]?"; then
+        echo -e "${YELLOW}[$host] skipped${NC}"
+        return 0
+    fi
+
+    echo -e "${BLUE}[$host] applying...${NC}"
+    run_on_tty "$host" "$rebuild_cmd"
+}
+
 echo "Probing hosts..."
 gather_status
 echo
 print_status_table
 echo
 
-if ! $SYNC; then
-    exit 0
+if $SYNC; then
+    echo "Syncing..."
+    echo
+    rc=0
+    for host in "${HOSTS[@]}"; do
+        if ! sync_host "$host"; then
+            rc=1
+        fi
+    done
+
+    echo
+    echo "Re-probing..."
+    gather_status
+    echo
+    print_status_table
+    echo
+
+    if [[ $rc -ne 0 ]] && ! $APPLY; then
+        exit $rc
+    fi
 fi
 
-echo "Syncing..."
-echo
-rc=0
-for host in "${HOSTS[@]}"; do
-    if ! sync_host "$host"; then
-        rc=1
-    fi
-done
+if $APPLY; then
+    echo "Applying..."
+    echo
+    rc=0
+    for host in "${HOSTS[@]}"; do
+        if ! apply_host "$host"; then
+            rc=1
+        fi
+        echo
+    done
+    exit $rc
+fi
 
-echo
-echo "Re-probing..."
-gather_status
-echo
-print_status_table
-exit $rc
+exit 0

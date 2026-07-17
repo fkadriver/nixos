@@ -107,6 +107,28 @@ in
   config = mkIf cfg.enable {
     environment.systemPackages = with pkgs; [ borgbackup ];
 
+    environment.shellAliases =
+      let
+        borgEnvStr = concatStringsSep " " (filter (s: s != "") [
+          (optionalString (cfg.sshKeyFile != null)
+            ''BORG_RSH="ssh -i ${cfg.sshKeyFile} -o StrictHostKeyChecking=accept-new"'')
+          (optionalString (cfg.encryption.passphraseFile != null)
+            ''BORG_PASSCOMMAND="cat ${cfg.encryption.passphraseFile}"'')
+          (optionalString (cfg.remotePath != null)
+            ''BORG_REMOTE_PATH=${cfg.remotePath}'')
+        ]);
+        borgCmd = op: "sudo env ${borgEnvStr} borg ${op} ${cfg.repository}";
+      in {
+        borg-status = "sudo systemctl status borgbackup-job-system.service";
+        borg-logs   = "sudo journalctl -u borgbackup-job-system.service -n 50";
+        borg-timer  = "systemctl list-timers | grep borg";
+        borg-run    = "sudo systemctl start borgbackup-job-system.service";
+        borg-list   = borgCmd "list";
+        borg-info   = borgCmd "info";
+        borg-check  = borgCmd "check";
+        borg-unlock = borgCmd "break-lock";
+      };
+
     # Wazuh integration: deploy status reporter script and its config.
     # wazuh-logcollector runs the command as root (inside the wazuh FHS env,
     # which bind-mounts the real /), so it can reach /run/current-system/sw/bin

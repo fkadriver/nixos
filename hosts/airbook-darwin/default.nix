@@ -62,6 +62,9 @@ let
       # Backup
       borgbackup
 
+      # MCP server for Claude Code (NixOS/nix-darwin package/option queries)
+      uv
+
     ];
 
     # Craft / decorative fonts (matches craftFonts in font.nix)

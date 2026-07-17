@@ -36,6 +36,22 @@ in
       fi
     '';
 
+    # Wire up mcp-nixos MCP server for Claude Code
+    activation.mcp-nixos = lib.hm.dag.entryAfter ["writeBoundary"] ''
+      CLAUDE_DIR="$HOME/.claude"
+      SETTINGS="$CLAUDE_DIR/settings.json"
+      mkdir -p "$CLAUDE_DIR"
+
+      if [ ! -f "$SETTINGS" ]; then
+        printf '{}' > "$SETTINGS"
+      fi
+
+      UPDATED=$(${pkgs.jq}/bin/jq \
+        '.mcpServers.nixos = {"command": "uvx", "args": ["mcp-nixos"]}' \
+        "$SETTINGS")
+      printf '%s\n' "$UPDATED" > "$SETTINGS"
+    '';
+
     # Set Geany as default for .txt and .conf files via duti
     activation.geanyDefaultEditor = lib.hm.dag.entryAfter ["writeBoundary"] ''
       if command -v duti >/dev/null 2>&1; then

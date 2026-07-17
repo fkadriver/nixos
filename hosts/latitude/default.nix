@@ -16,6 +16,7 @@ let
       inputs.self.nixosModules.distributed-builds
       inputs.self.nixosModules.screen-recording
       inputs.self.nixosModules.forscan
+      inputs.self.nixosModules.mcp-nixos
     ];
     config = {
       networking = {
@@ -23,6 +24,7 @@ let
       };
 
       services.forscan.enable = true;
+      programs.mcp-nixos.enable = true;
 
       # NFS mounts for nas01 shares via Tailscale
       fileSystems."/mnt/nas01/SANS" = {
