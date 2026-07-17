@@ -33,7 +33,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-HOSTS=(airbook latitude otworkstation vm01 log01)
+HOSTS=(latitude otworkstation vm01 log01)
 REPO_PATH='~/git/nixos'
 SSH_OPTS=(-o ConnectTimeout=5 -o BatchMode=yes)
 
