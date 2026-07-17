@@ -209,6 +209,7 @@ in
         })
       ];
       compression = "auto,zstd";
+      failOnWarnings = false;
       startAt = cfg.schedule;
       prune.keep = {
         daily = cfg.prune.keep.daily;

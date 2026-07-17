@@ -322,7 +322,7 @@
             exit 0
         fi
 
-        printf '%s\n' "''${RAW}" | python3 -c '
+        printf '%s\n' "''${RAW}" | ${pkgs.python3}/bin/python3 -c '
 import json, sys
 try:
     findings = json.load(sys.stdin)
