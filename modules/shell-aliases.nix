@@ -64,6 +64,7 @@
         grs = "git restore --staged";
 
         # Nix shortcuts
+	nix = "cd ~/git/nixos";
         nix-build-test = "nix flake check";
         nix-update = "nix flake update";
         nix-search = "nix search nixpkgs";
