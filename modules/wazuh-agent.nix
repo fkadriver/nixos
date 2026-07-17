@@ -177,6 +177,11 @@ EOF
     done
   '';
 
+  # Sed-safe XML fragment for extra localfiles: \n is literal (GNU sed newline escape)
+  extraLocalFilesSed = lib.concatMapStrings (lf:
+    "  <localfile>\\n    <log_format>${lf.logFormat}</log_format>\\n    <location>${lf.location}</location>\\n  </localfile>\\n"
+  ) cfg.extraLocalFiles;
+
   configureScript = pkgs.writeShellScript "wazuh-configure" ''
     set -euo pipefail
     CONF=/var/ossec/etc/ossec.conf
@@ -187,6 +192,14 @@ EOF
         's|</ossec_config>|  <localfile>\n    <log_format>syslog</log_format>\n    <location>/var/log/remote/*/*.log</location>\n  </localfile>\n</ossec_config>|' \
         "$CONF"
     fi
+    # Extra localfiles declared via services.wazuh-agent.extraLocalFiles (idempotent)
+    ${lib.optionalString (cfg.extraLocalFiles != []) ''
+      if ! ${pkgs.gnugrep}/bin/grep -q 'nixos-extra-localfiles' "$CONF"; then
+        ${pkgs.gnused}/bin/sed -i \
+          's|</ossec_config>|<!-- nixos-extra-localfiles -->\n${extraLocalFilesSed}</ossec_config>|' \
+          "$CONF"
+      fi
+    ''}
     # Allow command/full_command entries pushed from the manager's shared agent.conf.
     # Default is 0 (disabled for security); must be set per-agent in local_internal_options.
     cat > /var/ossec/etc/local_internal_options.conf << 'EOF'
@@ -212,6 +225,17 @@ in
       type = types.nullOr types.path;
       default = null;
       description = "Path to file containing the agent enrollment password";
+    };
+
+    extraLocalFiles = mkOption {
+      type = types.listOf (types.submodule {
+        options = {
+          location = mkOption { type = types.str; };
+          logFormat = mkOption { type = types.str; default = "syslog"; };
+        };
+      });
+      default = [];
+      description = "Additional localfile stanzas appended to ossec.conf by the configure script.";
     };
   };
 

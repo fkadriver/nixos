@@ -1,5 +1,24 @@
 { inputs, ... }@flakeContext:
 let
+  # Writes one syslog-format line to /var/log/idrive360-status.log every run.
+  # Uses a glob for the device hash so it survives re-registration.
+  idrive360StatusScript = pkgs: pkgs.writeShellScript "idrive360-status" ''
+    set -euo pipefail
+    STATUS_FILE=$(${pkgs.findutils}/bin/find /var/lib/idrive360/opt/idriveIt/user_profile/scott \
+      -name "lastBackupStatus.txt" 2>/dev/null | head -1)
+    LOG=/var/log/idrive360-status.log
+
+    if [ -z "$STATUS_FILE" ]; then
+      echo "$(date '+%b %d %H:%M:%S') nas01 idrive360-status: ERROR no status file found" >> "$LOG"
+      exit 0
+    fi
+
+    STATUS=$(${pkgs.jq}/bin/jq -r '.last_backup_status.status // "unknown"' "$STATUS_FILE")
+    FILENAME=$(${pkgs.jq}/bin/jq -r '.last_backup_status.filename // "unknown"' "$STATUS_FILE")
+    JOBTYPE=$(${pkgs.jq}/bin/jq -r '.last_backup_status.jobType // "unknown"' "$STATUS_FILE")
+    echo "$(date '+%b %d %H:%M:%S') nas01 idrive360-status: status=$STATUS job=$FILENAME type=$JOBTYPE" >> "$LOG"
+  '';
+
   nixosModule = { config, lib, pkgs, ... }: {
     imports = [
       ./hardware.nix
@@ -246,6 +265,27 @@ let
         enable = true;
         manager = "wazuh.warthog-royal.ts.net";
         enrollmentPasswordFile = "/run/bitwarden-secrets/wazuh_agent_enrollment_password";
+        extraLocalFiles = [
+          { location = "/var/log/idrive360-status.log"; logFormat = "syslog"; }
+        ];
+      };
+
+      # IDrive360 backup status logger — writes one syslog line every 15 min so
+      # Wazuh can alert on status=Failure without reading inside the container.
+      systemd.services.idrive360-status = {
+        description = "Log IDrive360 backup status for Wazuh";
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = idrive360StatusScript pkgs;
+        };
+      };
+      systemd.timers.idrive360-status = {
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          OnBootSec = "5min";
+          OnUnitActiveSec = "15min";
+          Persistent = true;
+        };
       };
 
       # IDrive360 cloud backup: vendor .deb self-updates and downloads its engine
