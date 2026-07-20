@@ -14,6 +14,7 @@
     inputs.self.nixosModules.iphone
     inputs.self.nixosModules.syncthing-declarative
     inputs.self.nixosModules.vscode
+    inputs.self.nixosModules.pdf
     inputs.home-manager.nixosModules.home-manager
     (inputs.self.homeConfigurations.scott).nixosModule
   ];
