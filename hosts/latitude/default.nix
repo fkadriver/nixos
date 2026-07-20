@@ -5,8 +5,6 @@ let
       ./hardware.nix
       ./syncthing.nix
       inputs.self.nixosModules.common
-      inputs.self.nixosModules.bitwarden
-      inputs.self.nixosModules.bitwarden-scott
       inputs.self.nixosModules.tsauth
       inputs.self.nixosModules.wazuh-agent
       inputs.self.nixosModules.laptop-kde
