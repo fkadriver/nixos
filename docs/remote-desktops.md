@@ -21,6 +21,8 @@ needed, sessions are general desktop / admin work.
 
 ## Alternatives Evaluated (2026-07)
 
+Reference: [Linux Unplugged ep. 676](https://www.jupiterbroadcasting.com/show/linux-unplugged/676/) covers RustDesk, NoMachine, Sunshine/Moonlight, Apollo, and Artemis Qt.
+
 ### Sunshine + Moonlight
 
 **What it is:** Sunshine is the open-source host-side GameStream server;

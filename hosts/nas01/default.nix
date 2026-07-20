@@ -19,6 +19,40 @@ let
     echo "$(date '+%b %d %H:%M:%S') nas01 idrive360-status: status=$STATUS job=$FILENAME type=$JOBTYPE" >> "$LOG"
   '';
 
+  # Called by smartd via -M exec when a SMART failure is detected.
+  smartdAlertScript = pkgs: pkgs.writeShellScript "smartd-alert" ''
+    LOG=/var/log/smartd-alerts.log
+    echo "$(date '+%b %d %H:%M:%S') nas01 smartd: ALERT device=''${SMARTD_DEVICE:-unknown} type=''${SMARTD_FAILTYPE:-unknown} msg=''${SMARTD_MESSAGE:-}" >> "$LOG"
+  '';
+
+  # Checks each borg repo's index mtime; logs OK or STALE for Wazuh.
+  borgStatusScript = pkgs: pkgs.writeShellScript "borg-status" ''
+    LOG=/var/log/borg-status.log
+    REPOS_DIR=/pool/borg
+    STALE_HOURS=48
+    if [ ! -d "$REPOS_DIR" ]; then
+      echo "$(date '+%b %d %H:%M:%S') nas01 borg-status: ERROR repos_dir not found" >> "$LOG"
+      exit 0
+    fi
+    for repo in "$REPOS_DIR"/*/; do
+      [ -d "$repo" ] || continue
+      host=$(basename "$repo")
+      mod=$(${pkgs.coreutils}/bin/stat -c "%Y" "$repo"index.* 2>/dev/null | sort -n | tail -1)
+      if [ -z "$mod" ]; then
+        echo "$(date '+%b %d %H:%M:%S') nas01 borg-status: host=$host status=NOINDEX" >> "$LOG"
+        continue
+      fi
+      now=$(${pkgs.coreutils}/bin/date +%s)
+      age_h=$(( (now - mod) / 3600 ))
+      if [ "$age_h" -ge "$STALE_HOURS" ]; then
+        status=STALE
+      else
+        status=OK
+      fi
+      echo "$(date '+%b %d %H:%M:%S') nas01 borg-status: host=$host status=$status age_hours=$age_h" >> "$LOG"
+    done
+  '';
+
   nixosModule = { config, lib, pkgs, ... }: {
     imports = [
       ./hardware.nix
@@ -57,7 +91,7 @@ let
           zdr   = "zfs destroy -r";
 
           # Temperature monitoring
-          temps = "echo '=== CPU Temps ===' && sensors 2>/dev/null || echo '(run: sudo sensors-detect)'; echo ''; echo '=== Drive Temps ===' && for d in /dev/sd?; do echo -n \"$d: \"; sudo hddtemp -u C $d 2>/dev/null || sudo smartctl -A $d | grep -i 'temperature\\|194'; done";
+          temps = "echo '=== CPU Temps ===' && sensors 2>/dev/null || echo '(run: sudo sensors-detect)'; echo ''; echo '=== Drive Temps ===' && for d in /dev/sd?; do echo -n \"$d: \"; sudo smartctl -A $d 2>/dev/null | grep -i 'temperature\\|194'; done";
         };
         programs.bash.initExtra = ''
           # Borg server functions — take hostname as argument
@@ -92,6 +126,13 @@ let
       boot.zfs.extraPools = [ "pool" ];
       services.zfs.autoScrub.enable = true;
       services.zfs.trim.enable = true;
+      services.zfs.zed = {
+        enableMail = false;
+        settings = {
+          ZED_NOTIFY_VERBOSE = 1;
+          ZED_SYSLOG_PRI = "daemon.notice";
+        };
+      };
 
       # WD 18TB drive — FAILING as of 2026-07 (kernel dropped both mounts on the
       # old Ubuntu install). Kept with nofail for salvage attempts; borg repos
@@ -179,7 +220,6 @@ let
       environment.systemPackages = with pkgs; [
         borgbackup
         hd-idle
-        hddtemp
         smartmontools
         zfs
         # Remote desktop session
@@ -211,14 +251,16 @@ let
         };
       };
 
-      services.smartd.enable = true;
+      services.smartd = {
+        enable = true;
+        defaults.monitored = "-a -M exec ${smartdAlertScript pkgs}";
+      };
 
       # Drive temperature tools without password (temps alias)
       security.sudo.extraRules = [
         {
           users = [ "scott" ];
           commands = [
-            { command = "/run/current-system/sw/bin/hddtemp"; options = [ "NOPASSWD" ]; }
             { command = "/run/current-system/sw/bin/smartctl"; options = [ "NOPASSWD" ]; }
           ];
         }
@@ -267,6 +309,8 @@ let
         enrollmentPasswordFile = "/run/bitwarden-secrets/wazuh_agent_enrollment_password";
         extraLocalFiles = [
           { location = "/var/log/idrive360-status.log"; logFormat = "syslog"; }
+          { location = "/var/log/smartd-alerts.log"; logFormat = "syslog"; }
+          { location = "/var/log/borg-status.log"; logFormat = "syslog"; }
         ];
       };
 
@@ -284,6 +328,22 @@ let
         timerConfig = {
           OnBootSec = "5min";
           OnUnitActiveSec = "15min";
+          Persistent = true;
+        };
+      };
+
+      systemd.services.borg-status = {
+        description = "Log Borg backup staleness for Wazuh";
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = borgStatusScript pkgs;
+        };
+      };
+      systemd.timers.borg-status = {
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          OnBootSec = "10min";
+          OnUnitActiveSec = "6h";
           Persistent = true;
         };
       };
