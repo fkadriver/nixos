@@ -61,21 +61,25 @@ let
           input(type="imudp" port="514")
           input(type="imtcp" port="514")
 
-          # Per-host log file template
+          # Per-host log file path template
           template(name="RemoteHost" type="string"
             string="/var/log/remote/%HOSTNAME%/%PROGRAMNAME%.log")
 
-          # Route remote messages to per-host directories using the default
-          # RSYSLOG_FileFormat (RFC 3339 timestamp, %syslogtag%%msg%). Pi-hole
-          # sends Tag="pihole-dns:" so the colon is already in %syslogtag%,
-          # which causes Wazuh's syslog pre-decoder to extract program_name.
+          # Per-host log message format: RFC 3164 (traditional syslog) timestamp so
+          # Wazuh's syslog pre-decoder extracts hostname and program_name correctly.
+          # RFC 3339 (ISO) timestamps cause Wazuh to skip hostname extraction, breaking
+          # predecoder.hostname and making it impossible to filter by source host in OSD.
+          # Pi-hole sends Tag="pihole-dns:" (colon included) so %syslogtag% already
+          # satisfies Wazuh's requirement for a colon after the program name.
+          $template WazuhSyslog,"%TIMESTAMP:::date-rfc3164% %HOSTNAME% %syslogtag%%msg%\n"
+
           $FileOwner root
           $FileGroup adm
           $FileCreateMode 0640
           $DirOwner root
           $DirGroup adm
           $DirCreateMode 0750
-          :fromhost-ip, !isequal, "127.0.0.1"   ?RemoteHost
+          :fromhost-ip, !isequal, "127.0.0.1"   ?RemoteHost;WazuhSyslog
           :fromhost-ip, !isequal, "127.0.0.1"   ~
         '';
       };

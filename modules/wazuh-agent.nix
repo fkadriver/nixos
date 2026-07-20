@@ -169,12 +169,10 @@ EOF
     # store paths are followable. Use readlink -f to get the real store path (not the
     # /usr/local/bin symlink, which points back into the invisible /usr/local).
     mkdir -p /var/ossec/scripts
-    for script in wazuh-borg-status wazuh-vulnix-scan; do
-      src=/usr/local/bin/$script
-      if [ -e "$src" ]; then
-        ln -sf "$(readlink -f "$src")" /var/ossec/scripts/$script
-      fi
-    done
+    src=/usr/local/bin/wazuh-borg-status
+    if [ -e "$src" ]; then
+      ln -sf "$(readlink -f "$src")" /var/ossec/scripts/wazuh-borg-status
+    fi
   '';
 
   # Sed-safe XML fragment for extra localfiles: \n is literal (GNU sed newline escape)
