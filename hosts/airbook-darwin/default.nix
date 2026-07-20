@@ -462,10 +462,14 @@ AUTOFSMAP
           fi
 
           # --- Service ---
-          # The .pkg installs /Library/LaunchDaemons/com.wazuh.agent.plist; load it if not running.
+          # The .pkg installs /Library/LaunchDaemons/com.wazuh.agent.plist. `launchctl list`
+          # only sees the current user's domain, so it always reports missing here and the
+          # old `load` path silently no-op'd. Enable + bootstrap into the system domain
+          # instead, and check via `launchctl print` (same pattern as sshd fix above).
           if [ -f /Library/LaunchDaemons/com.wazuh.agent.plist ]; then
-            /bin/launchctl list com.wazuh.agent >/dev/null 2>&1 || \
-              /bin/launchctl load /Library/LaunchDaemons/com.wazuh.agent.plist 2>/dev/null || true
+            /bin/launchctl enable system/com.wazuh.agent 2>/dev/null || true
+            /bin/launchctl print system/com.wazuh.agent >/dev/null 2>&1 || \
+              /bin/launchctl bootstrap system /Library/LaunchDaemons/com.wazuh.agent.plist 2>/dev/null || true
           fi
         ) || true
       ''
@@ -527,6 +531,9 @@ AUTOFSMAP
             --exclude "*/Cache" \
             --exclude "*/Library/Caches" \
             --exclude "*/Library/Application Support/*/Cache" \
+            --exclude "*/Library/Mobile Documents" \
+            --exclude "*/Library/CloudStorage" \
+            --exclude "*/Library/Containers/com.apple.CloudDocs*" \
             --exclude "*.pyc" \
             --exclude "*/__pycache__" \
             "''${REPO}::airbook-darwin-$(date +%Y-%m-%dT%H:%M:%S)" \
