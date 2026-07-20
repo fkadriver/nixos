@@ -52,6 +52,20 @@ in
       printf '%s\n' "$UPDATED" > "$SETTINGS"
     '';
 
+    # Populate ~/.ssh/authorized_keys with the shared pubkey used across all Scott's
+    # machines (deployed via sops as id_ed25519 / id_ed25519_legacy). Written as a real
+    # file (not a nix-store symlink) so sshd StrictModes accepts it.
+    activation.authorizedKeys = lib.hm.dag.entryAfter ["writeBoundary"] ''
+      SSH_DIR="$HOME/.ssh"
+      AK="$SSH_DIR/authorized_keys"
+      mkdir -p "$SSH_DIR"
+      chmod 700 "$SSH_DIR"
+      cat > "$AK" <<'EOF'
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIL4f/6/X75c3fXiXWdLLsJtWyEPxEnwCV7QqjFDLlRk7 scott@scott-ThinkPadT450S
+EOF
+      chmod 600 "$AK"
+    '';
+
     # Set Geany as default for .txt and .conf files via duti
     activation.geanyDefaultEditor = lib.hm.dag.entryAfter ["writeBoundary"] ''
       if command -v duti >/dev/null 2>&1; then
