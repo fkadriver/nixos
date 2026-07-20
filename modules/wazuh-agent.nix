@@ -38,6 +38,9 @@ let
       # Expose NixOS /etc/wazuh/ (e.g. borg.conf written by borg-backup module)
       # --ro-bind-try silently skips if the path doesn't exist on this host.
       "--ro-bind-try" "/etc/wazuh" "/etc/wazuh"
+      # Expose the global SSH known_hosts so borg's StrictHostKeyChecking=yes
+      # can verify nas01's host key (programs.ssh.knownHosts writes it here).
+      "--ro-bind-try" "/etc/ssh/ssh_known_hosts" "/etc/ssh/ssh_known_hosts"
     ];
   };
 
