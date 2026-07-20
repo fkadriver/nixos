@@ -11,7 +11,7 @@ if ! command -v curl >/dev/null 2>&1; then
     apt-get update
     apt-get install -y --no-install-recommends \
         libnss3 curl ca-certificates debianutils tar cron libnotify-bin \
-        libexpat1
+        libexpat1 libpopt0
     rm -rf /var/lib/apt/lists/*
 fi
 
