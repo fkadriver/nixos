@@ -35,6 +35,9 @@ let
     ];
     extraBwrapArgs = [
       "--bind" "/var/ossec" "/var/ossec"
+      # Expose NixOS /etc/wazuh/ (e.g. borg.conf written by borg-backup module)
+      # --ro-bind-try silently skips if the path doesn't exist on this host.
+      "--ro-bind-try" "/etc/wazuh" "/etc/wazuh"
     ];
   };
 
