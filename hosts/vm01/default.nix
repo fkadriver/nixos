@@ -196,26 +196,6 @@ EOF
         };
       };
 
-      # Immich Machine Learning Docker Compose stack
-      systemd.services.immich-ml-docker = {
-        description = "Immich Machine Learning Docker Compose Stack";
-        wantedBy = [ "multi-user.target" ];
-        after = [ "bitwarden-secrets-sync.service" "docker.service" "network-online.target" ];
-        wants = [ "network-online.target" ];
-        requires = [ "bitwarden-secrets-sync.service" "docker.service" ];
-        serviceConfig = {
-          Type = "oneshot";
-          RemainAfterExit = true;
-          WorkingDirectory = "/home/scott/git/immich_machine_learning";
-          ExecStart = pkgs.writeShellScript "immich-ml-docker-start" ''
-            set -euo pipefail
-            export TS_AUTHKEY=$(cat /run/bitwarden-secrets/container_ts_authkey)
-            exec ${pkgs.docker}/bin/docker compose up -d
-          '';
-          ExecStop = "${pkgs.docker}/bin/docker compose down";
-        };
-      };
-
       # Borg backup to nas01
       # Passphrase comes from bitwarden-scott.nix -> /run/bitwarden-secrets/borg_passphrase
       services.borg-backup = {
