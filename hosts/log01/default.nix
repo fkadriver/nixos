@@ -6,6 +6,7 @@ let
       inputs.self.nixosModules.common
       inputs.self.nixosModules.bitwarden
       inputs.self.nixosModules.bitwarden-scott
+      inputs.self.nixosModules.tsauth
       inputs.self.nixosModules.borg-backup
       inputs.self.nixosModules.vscode-server
       inputs.self.nixosModules.wazuh-agent
@@ -85,12 +86,6 @@ let
       };
 
       # Wazuh Docker Compose stack — all secrets fetched from Bitwarden at boot
-      services.bitwarden.secrets.wazuh_ts_authkey = {
-        name = "wazuh_ts_authkey";
-        itemId = "c6077703-deef-4684-bb9d-b48601451e64";
-        field = "tskey";
-        mode = "0400";
-      };
       services.bitwarden.secrets.wazuh_username = {
         name = "wazuh_username";
         itemId = "c6077703-deef-4684-bb9d-b48601451e64";
@@ -121,11 +116,6 @@ let
               set -euo pipefail
               REPO=/home/scott/git/wazuh-tailscale
 
-              # .env — Tailscale auth key
-              printf 'TS_AUTHKEY=%s\n' "$(cat /run/bitwarden-secrets/wazuh_ts_authkey)" \
-                > "$REPO/.env"
-              chmod 600 "$REPO/.env"
-
               # authd.pass — agent enrollment password
               rm -rf "$REPO/config/wazuh_cluster/authd.pass"
               cp /run/bitwarden-secrets/wazuh_agent_enrollment_password \
@@ -147,7 +137,11 @@ let
                 >> "$REPO/config/wazuh_indexer/internal_users.yml"
               chmod 600 "$REPO/config/wazuh_indexer/internal_users.yml"
             '';
-          ExecStart = "${pkgs.docker}/bin/docker compose up -d";
+          ExecStart = pkgs.writeShellScript "wazuh-docker-start" ''
+            set -euo pipefail
+            export TS_AUTHKEY=$(cat /run/bitwarden-secrets/container_ts_authkey)
+            exec ${pkgs.docker}/bin/docker compose up -d
+          '';
           ExecStop = "${pkgs.docker}/bin/docker compose down";
         };
       };

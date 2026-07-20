@@ -5,6 +5,9 @@ let
       ./hardware.nix
       ./syncthing.nix
       inputs.self.nixosModules.common
+      inputs.self.nixosModules.bitwarden
+      inputs.self.nixosModules.bitwarden-scott
+      inputs.self.nixosModules.tsauth
       inputs.self.nixosModules.wazuh-agent
       inputs.self.nixosModules.laptop-kde
       inputs.self.nixosModules.logitech
@@ -134,6 +137,26 @@ let
       #     RestartSec = 3;
       #   };
       # };
+
+      # Immich Machine Learning Docker Compose stack
+      systemd.services.immich-ml-docker = {
+        description = "Immich Machine Learning Docker Compose Stack";
+        wantedBy = [ "multi-user.target" ];
+        after = [ "bitwarden-secrets-sync.service" "docker.service" "network-online.target" ];
+        wants = [ "network-online.target" ];
+        requires = [ "bitwarden-secrets-sync.service" "docker.service" ];
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+          WorkingDirectory = "/home/scott/git/immich_machine_learning";
+          ExecStart = pkgs.writeShellScript "immich-ml-docker-start" ''
+            set -euo pipefail
+            export TS_AUTHKEY=$(cat /run/bitwarden-secrets/container_ts_authkey)
+            exec ${pkgs.docker}/bin/docker compose up -d
+          '';
+          ExecStop = "${pkgs.docker}/bin/docker compose down";
+        };
+      };
 
       system = {
         stateVersion = "25.11";
