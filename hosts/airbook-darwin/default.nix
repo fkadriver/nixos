@@ -444,11 +444,20 @@ AUTOFSMAP
             /bin/launchctl setenv WAZUH_MANAGER "$WAZUH_MANAGER"
             /usr/sbin/installer -pkg "$TMPDIR/wazuh-agent.pkg" -target /
             /bin/launchctl unsetenv WAZUH_MANAGER
-            # Belt-and-suspenders: patch ossec.conf directly in case setenv wasn't picked up
-            ${pkgs.gnused}/bin/sed -i \
-              "s|<address>.*</address>|<address>$WAZUH_MANAGER</address>|" \
-              /Library/Ossec/etc/ossec.conf
             echo "Wazuh agent installed."
+          fi
+
+          # --- Patch ossec.conf (idempotent, always runs) ---
+          # The pkg installs ossec.conf with a literal `MANAGER_IP` placeholder that the
+          # WAZUH_MANAGER launchctl env var is supposed to substitute — but it doesn't
+          # reliably. If a prior install stranded the config with the placeholder, the
+          # daemon crashes with "Invalid server address 'MANAGER_IP'" every start. Running
+          # this every activation heals that state; if the address is already correct it's
+          # a no-op rewrite. `[^<]*` avoids greedy cross-tag matches.
+          if [ -f /Library/Ossec/etc/ossec.conf ]; then
+            ${pkgs.gnused}/bin/sed -i \
+              "s|<address>[^<]*</address>|<address>$WAZUH_MANAGER</address>|" \
+              /Library/Ossec/etc/ossec.conf
           fi
 
           # --- Enroll ---
