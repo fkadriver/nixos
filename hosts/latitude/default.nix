@@ -96,6 +96,7 @@ let
       # VMware Workstation for SANS ICS310 RELICS VM (VMware .vmx format)
       # git-lfs for GRFICSv3 OT lab (large Docker image assets)
       environment.systemPackages = [
+        pkgs.anki
         pkgs.geany
         pkgs.gimp
         pkgs.git-lfs

@@ -188,6 +188,9 @@ let
         # Security
         "osquery"          # Endpoint telemetry — installs LaunchDaemon for continuous monitoring
 
+        # Flashcards / spaced repetition
+        "anki"
+
         # Video conferencing
         "zoom"
       ];
