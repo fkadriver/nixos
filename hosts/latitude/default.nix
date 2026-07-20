@@ -69,7 +69,7 @@ let
       services.borg-backup = {
         enable = true;
         repository = "ssh://scott@nas01.warthog-royal.ts.net/pool/borg/latitude";
-        encryption.passphraseFile = "/etc/borg-passphrase";
+        encryption.passphraseFile = "/run/bitwarden-secrets/borg_passphrase";
         sshKeyFile = "/home/scott/.ssh/id_ed25519_legacy";
       };
 
