@@ -38,7 +38,12 @@ let
     "$BW" login --apikey --quiet 2>/dev/null || true
     BW_SESSION="$("$BW" unlock --passwordenv BW_PASSWORD --raw)"
     export BW_SESSION
-    PASS="$("$BW" get item "$BW_BORG_ITEM_ID" | ${pkgs.jq}/bin/jq -r '.login.password')"
+    # Passphrase lives in the item's custom `Passphrase` field, not `.login.password`
+    # (which holds an unrelated GUI-login value). Same fix applied to the borg-backup
+    # daemon below — historically it was reading the wrong field, which is the real
+    # reason the nightly job never completed a successful archive.
+    PASS="$("$BW" get item "$BW_BORG_ITEM_ID" \
+      | ${pkgs.jq}/bin/jq -r '.fields[] | select(.name=="Passphrase") | .value')"
     "$BW" lock --quiet || true
 
     mkdir -p /etc/wazuh
@@ -695,8 +700,10 @@ wazuh_command.remote_commands=1'
           BW="/usr/local/bin/bw"
           "$BW" login --apikey --quiet 2>/dev/null || true
           BW_SESSION="$("$BW" unlock --passwordenv BW_PASSWORD --raw)"
+          # Read from the item's custom `Passphrase` field (see wazuh-borg-passsync
+          # comment for why: `.login.password` on this item is a stale GUI value).
           export BORG_PASSPHRASE="$("$BW" get item "$BW_BORG_ITEM_ID" \
-            | ${pkgs.jq}/bin/jq -r '.login.password' )"
+            | ${pkgs.jq}/bin/jq -r '.fields[] | select(.name=="Passphrase") | .value')"
           "$BW" lock --quiet || true
 
           export BORG_RSH="${pkgs.openssh}/bin/ssh -i /Users/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new"
