@@ -91,7 +91,11 @@ let
           zdr   = "zfs destroy -r";
 
           # Temperature monitoring
-          temps = "echo '=== CPU Temps ===' && sensors 2>/dev/null || echo '(run: sudo sensors-detect)'; echo ''; echo '=== Drive Temps ===' && for d in /dev/sd?; do echo -n \"$d: \"; sudo smartctl -A $d 2>/dev/null | grep -i 'temperature\\|194'; done";
+          temps = ''echo '=== CPU Temps (°F) ===' && sensors -f 2>/dev/null | grep -E ':.*°F' || echo '(run: sudo sensors-detect)'; echo ""; echo '=== Drive Temps (°F) ==='; for d in /dev/sd?; do C=$(sudo smartctl -A "$d" 2>/dev/null | awk '/^[[:space:]]*19[04] /{print $10}' | head -1); if [ -n "$C" ]; then printf "%s: %d°F\n" "$d" "$((C * 9 / 5 + 32))"; else printf "%s: N/A\n" "$d"; fi; done'';
+
+          # IDrive360 monitoring
+          idrive-docker = "journalctl -u docker-idrive360 -f";
+          idrive-log    = ''tail -f "$(ls -t /var/lib/idrive360/opt/idriveIt/user_profile/scott/*/Backup/DefaultBackupSet/LOGS/* 2>/dev/null | head -1)"'';
         };
         programs.bash.initExtra = ''
           # Borg server functions — take hostname as argument
