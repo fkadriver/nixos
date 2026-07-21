@@ -138,6 +138,8 @@ let
         "bitwarden-cli"  # nix version requires xcodebuild, use homebrew instead
         "duti"           # Set default file type associations on macOS
         "clamav"         # Antivirus — clamscan + freshclam for signature updates
+        "tailscale"      # Standalone tailscaled daemon — needed for Tailscale SSH server
+                         # (the App Store cask is sandboxed and can't host SSH)
       ];
       casks = [
         "balenaetcher"       # USB image writer
@@ -179,7 +181,6 @@ let
         "diffusionbee"     # Stable Diffusion GUI — Intel Mac compatible, manages models itself
 
         # Utilities
-        "tailscale-app"    # VPN with tray icon (replaces nix-darwin service; renamed from tailscale)
         "caffeine"         # Prevent Mac from sleeping (menubar app)
         "xquartz"          # X11 server required by x2goclient on macOS
         "microsoft-remote-desktop"  # RDP client for OTworkstation xrdp sessions
