@@ -101,6 +101,70 @@ EOF
     ];
   };
 
+  # SwiftBar plugin — Syncthing status in the macOS menubar. Talks to the brew-managed
+  # syncthing daemon via its REST API; keeps the daemon out of the app bundle so it
+  # survives `brew upgrade syncthing` cleanly (unlike the `syncthing-app` cask which
+  # embeds its own daemon and would fight the brew one for the config directory).
+  # Filename `.30s.` = refresh every 30 seconds. On SwiftBar first launch, point it at
+  # `~/Library/Application Support/SwiftBar/Plugins/` (this directory).
+  home.file."Library/Application Support/SwiftBar/Plugins/syncthing.30s.sh" = {
+    executable = true;
+    text = ''
+      #!/usr/bin/env bash
+      # <xbar.title>Syncthing</xbar.title>
+      # <xbar.version>v1.0</xbar.version>
+      # <xbar.author>Scott</xbar.author>
+      # <xbar.desc>Local Syncthing daemon status via REST API.</xbar.desc>
+      # <xbar.dependencies>bash,curl,jq,xmllint</xbar.dependencies>
+      # <swiftbar.hideAbout>true</swiftbar.hideAbout>
+      # <swiftbar.hideRunInTerminal>true</swiftbar.hideRunInTerminal>
+      # <swiftbar.hideDisablePlugin>true</swiftbar.hideDisablePlugin>
+
+      set -eu
+      # SwiftBar-invoked scripts inherit a minimal PATH; add the nix profile so jq is found.
+      export PATH="/run/current-system/sw/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
+
+      CONFIG="$HOME/Library/Application Support/Syncthing/config.xml"
+      API_URL="http://127.0.0.1:8384"
+
+      if [ ! -f "$CONFIG" ]; then
+        echo "ST off"; echo "---"; echo "config.xml not found"; exit 0
+      fi
+
+      API_KEY=$(/usr/bin/xmllint --xpath 'string(/configuration/gui/apikey)' "$CONFIG" 2>/dev/null || true)
+      if [ -z "$API_KEY" ]; then
+        echo "ST ?"; echo "---"; echo "API key not found in config.xml"; exit 0
+      fi
+
+      api() { curl -sS --connect-timeout 2 --max-time 5 -H "X-API-Key: $API_KEY" "$API_URL/rest/$1" 2>/dev/null; }
+
+      if ! api system/ping >/dev/null 2>&1; then
+        echo "ST × | color=red"; echo "---"
+        echo "daemon unreachable"
+        echo "Open Web UI | href=$API_URL"
+        exit 0
+      fi
+
+      status=$(api system/status || echo '{}')
+      conns=$(api system/connections || echo '{}')
+      ver=$(api system/version || echo '{}')
+
+      peers_up=$(echo "$conns" | jq -r '[.connections // {} | to_entries[] | select(.value.connected==true)] | length' 2>/dev/null || echo "?")
+      peers_all=$(echo "$conns" | jq -r '[.connections // {} | to_entries[]] | length' 2>/dev/null || echo "?")
+      version=$(echo "$ver" | jq -r '.version // "?"')
+      uptime=$(echo "$status" | jq -r '.uptime // 0')
+      uptime_h=$(( uptime / 3600 ))
+
+      echo "ST $peers_up/$peers_all"
+      echo "---"
+      echo "Syncthing $version"
+      echo "Peers connected: $peers_up of $peers_all"
+      echo "Uptime: ''${uptime_h}h"
+      echo "---"
+      echo "Open Web UI | href=$API_URL"
+    '';
+  };
+
   # iTerm2 Dracula color theme (auto-loaded as a Dynamic Profile)
   home.file."Library/Application Support/iTerm2/DynamicProfiles/dracula.json".text = builtins.toJSON {
     Profiles = [
