@@ -12,6 +12,96 @@ let
 
   wazuhVersion = "4.14.5";
 
+  # Wazuh borg-status telemetry: caches the borg passphrase from Bitwarden into a root-
+  # only file so the status probe (below) can query the repo without an interactive bw
+  # unlock every run. Mirrors the NixOS pattern where bitwarden-secrets-sync writes
+  # /run/bitwarden-secrets/borg_passphrase at boot.
+  wazuhBorgPasssync = pkgs.writeShellScript "wazuh-borg-passsync" ''
+    set -euo pipefail
+    BW_SECRETS="/Users/scott/.local/share/bitwarden-secrets"
+    BW_BORG_ITEM_ID="91db7811-ddf1-49aa-8a42-b3d60188a6e6"
+
+    # First-boot race: sops-nix may not have deployed the bitwarden secrets yet.
+    for _ in $(seq 1 30); do
+      [ -r "$BW_SECRETS/client_id" ] && break
+      sleep 2
+    done
+
+    export BW_CLIENTID="$(cat "$BW_SECRETS/client_id")"
+    export BW_CLIENTSECRET="$(cat "$BW_SECRETS/client_secret")"
+    export BW_PASSWORD="$(cat "$BW_SECRETS/master_password")"
+    # Isolate bw state to a tempdir so we don't leak session material into /var/root.
+    HOME="$(mktemp -d)"; export HOME
+    trap 'rm -rf "$HOME"' EXIT
+
+    BW="/usr/local/bin/bw"
+    "$BW" login --apikey --quiet 2>/dev/null || true
+    BW_SESSION="$("$BW" unlock --passwordenv BW_PASSWORD --raw)"
+    export BW_SESSION
+    PASS="$("$BW" get item "$BW_BORG_ITEM_ID" | ${pkgs.jq}/bin/jq -r '.login.password')"
+    "$BW" lock --quiet || true
+
+    mkdir -p /etc/wazuh
+    umask 077
+    tmp="$(mktemp /etc/wazuh/borg.pass.XXXXXX)"
+    printf '%s' "$PASS" > "$tmp"
+    chmod 400 "$tmp"
+    chown root:wheel "$tmp"
+    mv -f "$tmp" /etc/wazuh/borg.pass
+  '';
+
+  # Wazuh logcollector runs this periodically; output is shipped to the manager as
+  # `borg_backup: status=… repo=… archive=… start=… duration=…s age=…h`. Same format
+  # as modules/borg-backup.nix so the manager's existing decoder/rule applies.
+  wazuhBorgStatus = pkgs.writeShellScript "wazuh-borg-status" ''
+    set -euo pipefail
+    # borg lives in the current-system profile; PATH is minimal when logcollector invokes us.
+    export PATH="/run/current-system/sw/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
+
+    CONF=/etc/wazuh/borg.conf
+    set -a; [ -f "$CONF" ] && . "$CONF"; set +a
+
+    REPO="''${BORG_REPO:-}"
+    STALE_HOURS="''${BORG_STALE_HOURS:-25}"
+
+    if [ -z "$REPO" ]; then
+      echo "borg_backup: status=ERROR repo=unset error=BORG_REPO_not_configured"
+      exit 0
+    fi
+    if ! command -v borg >/dev/null 2>&1; then
+      echo "borg_backup: status=ERROR repo=''${REPO} error=borg_not_found"
+      exit 0
+    fi
+
+    LAST=$(borg list --last 1 --format '{archive}|{start:%Y-%m-%dT%H:%M:%S}' "$REPO" 2>&1) || {
+      ERR=$(printf '%s' "$LAST" | head -1 | tr -cs '[:alnum:]_.-' '_' | cut -c1-60)
+      echo "borg_backup: status=ERROR repo=''${REPO} error=''${ERR}"
+      exit 0
+    }
+    if [ -z "$LAST" ]; then
+      echo "borg_backup: status=EMPTY repo=''${REPO} error=no_archives"
+      exit 0
+    fi
+
+    ARCHIVE=$(printf '%s' "$LAST" | cut -d'|' -f1)
+    START=$(printf '%s' "$LAST" | cut -d'|' -f2)
+
+    # macOS `date` uses -j -f; GNU `date -d` is unavailable.
+    START_EPOCH=$(/bin/date -j -f '%Y-%m-%dT%H:%M:%S' "$START" +%s 2>/dev/null) || START_EPOCH=0
+    AGE_H=$(( ($(/bin/date +%s) - START_EPOCH) / 3600 ))
+
+    DURATION=$(borg info "''${REPO}::''${ARCHIVE}" --format '{duration:.0f}' 2>/dev/null || echo "0")
+
+    if [[ "$ARCHIVE" == *.failed ]]; then
+      echo "borg_backup: status=ERROR repo=''${REPO} archive=''${ARCHIVE} start=''${START} duration=''${DURATION}s age=''${AGE_H}h error=archive_marked_failed"
+      exit 0
+    fi
+
+    STATUS=OK
+    [ "$AGE_H" -gt "$STALE_HOURS" ] && STATUS=STALE
+    echo "borg_backup: status=''${STATUS} repo=''${REPO} archive=''${ARCHIVE} start=''${START} duration=''${DURATION}s age=''${AGE_H}h"
+  '';
+
   darwinModule = { config, lib, pkgs, ... }: {
     # Nix configuration
     nix = {
@@ -481,6 +571,43 @@ AUTOFSMAP
             /bin/launchctl print system/com.wazuh.agent >/dev/null 2>&1 || \
               /bin/launchctl bootstrap system /Library/LaunchDaemons/com.wazuh.agent.plist 2>/dev/null || true
           fi
+
+          # --- Borg-status telemetry integration ---
+          # Same pattern as modules/borg-backup.nix on NixOS: install a status probe at
+          # /usr/local/bin/wazuh-borg-status, enable remote command execution so the
+          # manager's shared agent.conf command entry takes effect, and add a local
+          # `full_command` localfile stanza so this works even without a group push.
+          NEED_KICKSTART=0
+
+          # Install the status script (symlink to nix store)
+          mkdir -p /usr/local/bin
+          ln -sfn ${wazuhBorgStatus} /usr/local/bin/wazuh-borg-status
+
+          # Enable remote_commands (default is 0 for security). Only write on change so
+          # we don't kickstart wazuh needlessly.
+          DESIRED_LIO='logcollector.remote_commands=1
+wazuh_command.remote_commands=1'
+          if [ -f /Library/Ossec/etc/ossec.conf ]; then
+            CURRENT_LIO="$(cat /Library/Ossec/etc/local_internal_options.conf 2>/dev/null || true)"
+            if [ "$DESIRED_LIO" != "$CURRENT_LIO" ]; then
+              printf '%s\n' "$DESIRED_LIO" > /Library/Ossec/etc/local_internal_options.conf
+              chmod 640 /Library/Ossec/etc/local_internal_options.conf
+              NEED_KICKSTART=1
+            fi
+
+            # Add a local `full_command` localfile so the probe runs even if the manager
+            # hasn't pushed a shared agent.conf entry for this host. Idempotent grep-guard.
+            if ! ${pkgs.gnugrep}/bin/grep -q 'wazuh-borg-status' /Library/Ossec/etc/ossec.conf; then
+              ${pkgs.gnused}/bin/sed -i \
+                's|</ossec_config>|  <localfile>\n    <log_format>full_command</log_format>\n    <command>/usr/local/bin/wazuh-borg-status</command>\n    <alias>borg_backup</alias>\n    <frequency>3600</frequency>\n  </localfile>\n</ossec_config>|' \
+                /Library/Ossec/etc/ossec.conf
+              NEED_KICKSTART=1
+            fi
+          fi
+
+          if [ "$NEED_KICKSTART" = "1" ]; then
+            /bin/launchctl kickstart -k system/com.wazuh.agent 2>/dev/null || true
+          fi
         ) || true
       ''
 
@@ -515,6 +642,30 @@ AUTOFSMAP
         fi
       ''
     ];
+
+    # Wazuh borg-status telemetry — repo/env for the status probe. Declarative so
+    # `darwin-rebuild switch` reproduces the same config on any fresh install.
+    environment.etc."wazuh/borg.conf" = {
+      text = ''
+        BORG_REPO="ssh://scott@nas01.warthog-royal.ts.net/pool/borg/airbook-darwin"
+        BORG_PASSCOMMAND="cat /etc/wazuh/borg.pass"
+        BORG_RSH="ssh -i /Users/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new"
+        BORG_REMOTE_PATH=/run/current-system/sw/bin/borg
+      '';
+    };
+
+    # Sync the borg passphrase from Bitwarden into /etc/wazuh/borg.pass so the
+    # status probe can non-interactively query the repo. Runs at boot and every 6h.
+    launchd.daemons.wazuh-borg-passsync = {
+      serviceConfig = {
+        Label = "com.local.wazuh-borg-passsync";
+        ProgramArguments = [ "${wazuhBorgPasssync}" ];
+        RunAtLoad = true;
+        StartInterval = 21600;
+        StandardOutPath = "/var/log/wazuh-borg-passsync.log";
+        StandardErrorPath = "/var/log/wazuh-borg-passsync.error.log";
+      };
+    };
 
     # Borg backup to nas01 via launchd (macOS equivalent of systemd)
     launchd.daemons.borg-backup =
