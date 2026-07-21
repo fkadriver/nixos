@@ -117,9 +117,51 @@ let
       };
 
       # xrdp — new X11 KDE session per connection, Tailscale-only
+      # xrdp-sesman embeds the startwm.sh path in sesman.ini at build time, so it
+      # must be restarted on every rebuild or it keeps running the old session script.
+      systemd.services.xrdp-sesman.restartIfChanged = lib.mkForce true;
+
       services.xrdp = {
         enable = true;
-        defaultWindowManager = "startplasma-x11";
+        defaultWindowManager =
+          let
+            xrdpSession = pkgs.writeShellScript "xrdp-kde-session" ''
+              export XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+              export XDG_SESSION_TYPE=x11
+              export DESKTOP_SESSION=plasma
+              export XDG_CURRENT_DESKTOP=KDE
+
+              # Collapse extra XRDP virtual monitors to a single display
+              skip_first=false
+              for output in $(${pkgs.xrandr}/bin/xrandr --query 2>/dev/null \
+                  | ${pkgs.gawk}/bin/awk '/^XRDP/ {print $1}'); do
+                if [ "$skip_first" = "false" ]; then
+                  skip_first=true
+                else
+                  ${pkgs.xrandr}/bin/xrandr --output "$output" --off 2>/dev/null || true
+                fi
+              done
+
+              # plasma-kwin_x11.service is managed by the shared systemd user session.
+              # If it's restarting from a previous xrdp session death it will time out
+              # (~90s) and SIGTERM our kwin, blanking the desktop. Stop it first.
+              ${pkgs.systemd}/bin/systemctl --user stop plasma-kwin_x11.service 2>/dev/null || true
+
+              # startplasma-x11 uses `systemctl --user start` which sees the Wayland
+              # session's plasma-plasmashell.service as already active, so plasmashell
+              # never starts for the xrdp session.
+              # Fix: start kwin_x11 and plasmashell directly inside a private D-Bus
+              # session so they don't collide with the Wayland session's registrations.
+              ${pkgs.dbus}/bin/dbus-run-session -- sh -c '
+                kwin_x11 --replace &
+                exec plasmashell
+              '
+
+              # Reset service so it can start normally in future Wayland sessions
+              ${pkgs.systemd}/bin/systemctl --user reset-failed plasma-kwin_x11.service 2>/dev/null || true
+            '';
+          in
+          "${xrdpSession}";
       };
       networking.firewall.interfaces."tailscale0".allowedTCPPorts = [ 3389 ];
 
