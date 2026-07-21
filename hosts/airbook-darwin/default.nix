@@ -702,6 +702,13 @@ wazuh_command.remote_commands=1'
           export BORG_RSH="${pkgs.openssh}/bin/ssh -i /Users/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new"
           export BORG_REMOTE_PATH="/run/current-system/sw/bin/borg"
 
+          # Auto-init if the repo is absent (e.g. after a deliberate `rm -rf` on nas01
+          # when the passphrase diverges from the canonical Bitwarden one). Uses the
+          # same repokey-blake2 mode as NixOS's services.borgbackup default. Errors
+          # (including "repo already exists") are ignored — a real failure surfaces at
+          # borg create below.
+          ${pkgs.borgbackup}/bin/borg init --encryption=repokey-blake2 "$REPO" 2>/dev/null || true
+
           ${pkgs.borgbackup}/bin/borg create \
             --stats \
             --compression auto,zstd \
