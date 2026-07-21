@@ -498,6 +498,22 @@ AUTOFSMAP
         /bin/launchctl print system/com.openssh.sshd >/dev/null 2>&1 || \
           /bin/launchctl bootstrap system /System/Library/LaunchDaemons/ssh.plist 2>/dev/null || true
       ''
+
+      # MagicDNS resolver for tailnet warthog-royal.ts.net.
+      # The standalone brew tailscaled (we use it instead of the sandboxed App Store cask
+      # so Tailscale SSH server works) writes /etc/resolver/search.tailscale with only a
+      # `search` line — no `nameserver 100.100.100.100`. Result: `dig @100.100.100.100`
+      # resolves tailnet hosts but plain `ssh nas01.warthog-royal.ts.net` fails because
+      # macOS never forwards those queries to the tailnet resolver. The App Store app
+      # writes this file via its helper; the brew daemon does not. Fix it declaratively.
+      ''
+        if [ ! -f /etc/resolver/warthog-royal.ts.net ] || \
+           ! grep -q '^nameserver 100.100.100.100$' /etc/resolver/warthog-royal.ts.net; then
+          mkdir -p /etc/resolver
+          printf 'nameserver 100.100.100.100\n' > /etc/resolver/warthog-royal.ts.net
+          /usr/bin/killall -HUP mDNSResponder 2>/dev/null || true
+        fi
+      ''
     ];
 
     # Borg backup to nas01 via launchd (macOS equivalent of systemd)
