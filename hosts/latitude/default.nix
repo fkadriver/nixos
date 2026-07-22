@@ -107,23 +107,45 @@ let
         pkgs.x2goclient  # remote X sessions to OTworkstation
       ];
 
+      sops.secrets."syncthing_nas01_apikey" = {
+        owner = "scott";
+      };
+
       systemd.user.services.syncthingtray = {
         description = "Syncthing Tray";
         wantedBy = [ "graphical-session.target" ];
         after = [ "graphical-session.target" ];
         serviceConfig = {
           ExecStartPre = pkgs.writeShellScript "syncthingtray-configure" ''
-            API_KEY=$(${pkgs.gnugrep}/bin/grep -oP '(?<=<apikey>)[^<]+' \
+            LOCAL_KEY=$(${pkgs.gnugrep}/bin/grep -oP '(?<=<apikey>)[^<]+' \
               "$HOME/.config/syncthing/config.xml")
-            CONFIG="$HOME/.config/syncthingtray.ini"
-            if [ ! -f "$CONFIG" ]; then
-              printf '[tray]\nconnections\\1\\apiKey=@ByteArray(%s)\nconnections\\1\\syncthingUrl=http://localhost:8384\nconnections\\1\\autoConnect=true\nconnections\\size=1\n' \
-                "$API_KEY" > "$CONFIG"
-            else
-              ${pkgs.gnused}/bin/sed -i \
-                "s|connections\\\\1\\\\apiKey=@ByteArray([^)]*)|connections\\\\1\\\\apiKey=@ByteArray($API_KEY)|" \
-                "$CONFIG"
-            fi
+            NAS01_KEY=$(cat /run/secrets/syncthing_nas01_apikey)
+
+            ${pkgs.python3}/bin/python3 - "$LOCAL_KEY" "$NAS01_KEY" <<'PYEOF'
+import configparser, sys, os
+local_key, nas01_key = sys.argv[1], sys.argv[2]
+path = os.path.join(os.environ['HOME'], '.config', 'syncthingtray.ini')
+config = configparser.RawConfigParser()
+config.optionxform = str
+if os.path.exists(path):
+    config.read(path)
+if not config.has_section('tray'):
+    config.add_section('tray')
+for key, val in [
+    (r'connections\1\apiKey',       f'@ByteArray({local_key})'),
+    (r'connections\1\syncthingUrl', 'http://localhost:8384'),
+    (r'connections\1\autoConnect',  'true'),
+    (r'connections\1\label',        'latitude'),
+    (r'connections\2\apiKey',       f'@ByteArray({nas01_key})'),
+    (r'connections\2\syncthingUrl', 'http://nas01.warthog-royal.ts.net:8384'),
+    (r'connections\2\autoConnect',  'true'),
+    (r'connections\2\label',        'nas01'),
+    (r'connections\size',           '2'),
+]:
+    config.set('tray', key, val)
+with open(path, 'w') as f:
+    config.write(f, space_around_delimiters=False)
+PYEOF
           '';
           ExecStart = "${pkgs.syncthingtray}/bin/syncthingtray --wait";
           Restart = "on-failure";
