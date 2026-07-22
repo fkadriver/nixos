@@ -50,10 +50,14 @@ fi
 
 # The daemon's job schedule lives at /etc/idrive360crontab.json (ephemeral,
 # recreated empty on container start); the app maintains a copy in the
-# persistent volume — without it no jobs run and the console shows offline
+# persistent volume — without it no jobs run and the console shows offline.
+# Must be owned by scott: the Python scheduler agent runs as uid 1000 and
+# needs write access to update nextschedule timestamps.
 if [ -s /opt/IDrive360/crontab.bak ] && [ ! -s /etc/idrive360crontab.json ]; then
     cp /opt/IDrive360/crontab.bak /etc/idrive360crontab.json
 fi
+chown scott:scott /etc/idrive360crontab.json
+chmod 664 /etc/idrive360crontab.json
 
 # Electron CDP server requires a display; start a virtual framebuffer so
 # cdp-client/server can connect and the Perl scripts can save config.
