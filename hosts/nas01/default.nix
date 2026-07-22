@@ -378,8 +378,8 @@ let
             "/var/lib/idrive360/seed:/seed:ro"
             # rslave: ZFS mount events at /pool and /mnt propagate into the
             # container after the pool imports, even if the container started first
-            "/pool:/pool:ro:rslave"
-            "/mnt:/mnt:ro:rslave"
+            "/pool:/pool:ro,rslave"
+            "/mnt:/mnt:ro,rslave"
           ];
           # --init: tini as PID 1 to reap the zombie children the vendor cron
           # daemon leaves behind
