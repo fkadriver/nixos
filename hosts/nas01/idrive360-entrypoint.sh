@@ -8,11 +8,20 @@ set -e
 export DEBIAN_FRONTEND=noninteractive
 
 if ! command -v curl >/dev/null 2>&1; then
-    apt-get update
+    # Cache apt lists in the persistent volume so the 25 MB index isn't
+    # re-downloaded on every container restart (ubuntu:24.04 is ephemeral).
+    APT_CACHE=/opt/IDrive360/.apt-cache
+    mkdir -p "$APT_CACHE/lists" "$APT_CACHE/debs"
+    if ls "$APT_CACHE/lists/"InRelease >/dev/null 2>&1; then
+        cp -r "$APT_CACHE/lists/." /var/lib/apt/lists/
+    else
+        apt-get update
+        cp -r /var/lib/apt/lists/. "$APT_CACHE/lists/" 2>/dev/null || true
+    fi
     apt-get install -y --no-install-recommends \
+        -o Dir::Cache::Archives="$APT_CACHE/debs" \
         libnss3 curl ca-certificates debianutils tar cron libnotify-bin \
-        libexpat1 libpopt0
-    rm -rf /var/lib/apt/lists/*
+        libexpat1 libpopt0 xvfb
 fi
 
 # The seeded profile is uid 1000 and the agent resolves user "scott" by name
@@ -45,5 +54,11 @@ fi
 if [ -s /opt/IDrive360/crontab.bak ] && [ ! -s /etc/idrive360crontab.json ]; then
     cp /opt/IDrive360/crontab.bak /etc/idrive360crontab.json
 fi
+
+# Electron CDP server requires a display; start a virtual framebuffer so
+# cdp-client/server can connect and the Perl scripts can save config.
+# Without this, every CDP attempt leaks a D-state process until OOM.
+export DISPLAY=:99
+Xvfb :99 -screen 0 1024x768x16 -nolisten tcp &
 
 exec /etc/idrive360cron --cron
