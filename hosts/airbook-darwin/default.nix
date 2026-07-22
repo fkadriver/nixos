@@ -285,7 +285,7 @@ let
         # an OS update. It also drops the two LaunchDaemons bootstrapped in postActivation below.
         # After a brew upgrade of this cask, open the app once and re-run "Install AutoPatcher"
         # so the copy under /Library/Application Support/Dortania stays in sync.
-        "opencore-legacy-patcher"
+        "opencore-patcher"
 
         # Flashcards / spaced repetition
         "anki"
