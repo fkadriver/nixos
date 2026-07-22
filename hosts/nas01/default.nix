@@ -97,6 +97,12 @@ let
           idrive-docker  = "journalctl -u docker-idrive360 -f";
           idrive-log     = ''tail -f "$(ls -t /var/lib/idrive360/opt/idriveIt/user_profile/scott/*/Backup/DefaultBackupSet/LOGS/* 2>/dev/null | head -1)"'';
           idrive-restart = "sudo systemctl restart docker-idrive360";
+          idrive-status  = ''
+            echo "=== Container ===" && docker ps --filter name=idrive360 --format "{{.Status}}" | grep . || echo "NOT RUNNING";
+            LATEST=$(ls -t /var/lib/idrive360/opt/idriveIt/user_profile/scott/*/Backup/DefaultBackupSet/LOGS/* 2>/dev/null | head -1);
+            echo "=== Latest log: $(basename "$LATEST") ($(stat -c '%y' "$LATEST" 2>/dev/null | cut -d. -f1)) ===";
+            tail -6 "$LATEST" 2>/dev/null
+          '';
         };
         programs.bash.initExtra = ''
           # Borg server functions — take hostname as argument
