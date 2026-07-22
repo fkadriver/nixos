@@ -279,6 +279,14 @@ let
         # Security
         "osquery"          # Endpoint telemetry — installs LaunchDaemon for continuous monitoring
 
+        # macOS legacy hardware support — needed on MacBookAir7,2 for Sequoia (BDW iGPU + WiFi/BT).
+        # Brew keeps /Applications/OpenCore-Patcher.app updated; the app installs the AutoPatcher
+        # LaunchAgent (com.dortania.*.auto-patch) which prompts to re-apply root patches after
+        # an OS update. It also drops the two LaunchDaemons bootstrapped in postActivation below.
+        # After a brew upgrade of this cask, open the app once and re-run "Install AutoPatcher"
+        # so the copy under /Library/Application Support/Dortania stays in sync.
+        "opencore-legacy-patcher"
+
         # Flashcards / spaced repetition
         "anki"
 
@@ -520,6 +528,23 @@ AUTOFSMAP
         ) || true
       ''
 
+      # OpenCore Legacy Patcher — bootstrap the two WatchPath LaunchDaemons the OCLP.app
+      # drops into /Library/LaunchDaemons. They are event-triggered, not RunAtLoad, so if
+      # they aren't bootstrapped they silently do nothing when an OS update or RSR fires:
+      #   macos-update  → runs OCLP --prepare_for_update when Update.plist appears
+      #   rsr-monitor   → deletes AppleIntelBDWGraphics.kext before an RSR cryptex loads
+      # (The user-session AutoPatcher LaunchAgent already RunAtLoads via loginwindow, so
+      # no bootstrap needed for it.) `bootstrap` is idempotent with `|| true` — the second
+      # run errors with "already loaded" which we ignore.
+      ''
+        for plist in \
+          /Library/LaunchDaemons/com.dortania.opencore-legacy-patcher.macos-update.plist \
+          /Library/LaunchDaemons/com.dortania.opencore-legacy-patcher.rsr-monitor.plist; do
+          [ -f "$plist" ] || continue
+          launchctl bootstrap system "$plist" 2>/dev/null || true
+        done
+      ''
+
       # Wazuh security agent — install .pkg, enroll, and start LaunchDaemon.
       # Wrapped in a subshell so its `set -euo pipefail` + `trap EXIT` stay scoped,
       # and `|| true` so an offline/install failure can't abort activation (retries next rebuild).
@@ -712,6 +737,7 @@ wazuh_command.remote_commands=1'
           ${pkgs.borgbackup}/bin/borg create \
             --stats \
             --compression auto,zstd \
+            --checkpoint-interval 1800 \
             --exclude-caches \
             --exclude "*/node_modules" \
             --exclude "*/.npm" \
