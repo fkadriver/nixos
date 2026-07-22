@@ -651,16 +651,6 @@ wazuh_command.remote_commands=1'
         /usr/sbin/softwareupdate --ignore "macOS Tahoe" 2>/dev/null || true
       ''
 
-      # Enable SSH server (Remote Login).
-      # `systemsetup -setremotelogin on` requires Full Disk Access for the calling process
-      # on macOS Ventura+; darwin-rebuild doesn't have it, so the command silently no-ops.
-      # Enable + bootstrap the LaunchDaemon directly instead — works from activation.
-      ''
-        /bin/launchctl enable system/com.openssh.sshd 2>/dev/null || true
-        /bin/launchctl print system/com.openssh.sshd >/dev/null 2>&1 || \
-          /bin/launchctl bootstrap system /System/Library/LaunchDaemons/ssh.plist 2>/dev/null || true
-      ''
-
       # MagicDNS resolver: the App Store macsys Tailscale.app writes
       # /etc/resolver/warthog-royal.ts.net itself via its helper — no manual
       # activation needed. (Only the brew tailscaled required the workaround.)
