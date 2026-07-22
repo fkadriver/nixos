@@ -7,7 +7,7 @@
 set -e
 export DEBIAN_FRONTEND=noninteractive
 
-if ! command -v curl >/dev/null 2>&1; then
+if ! command -v curl >/dev/null 2>&1 || ! dpkg -s libdbus-1-3 >/dev/null 2>&1; then
     # Cache apt lists in the persistent volume so the 25 MB index isn't
     # re-downloaded on every container restart (ubuntu:24.04 is ephemeral).
     APT_CACHE=/opt/IDrive360/.apt-cache
@@ -21,7 +21,10 @@ if ! command -v curl >/dev/null 2>&1; then
     apt-get install -y --no-install-recommends \
         -o Dir::Cache::Archives="$APT_CACHE/debs" \
         libnss3 curl ca-certificates debianutils tar cron libnotify-bin \
-        libexpat1 libpopt0 xvfb net-tools
+        libexpat1 libpopt0 xvfb net-tools \
+        libdbus-1-3 libatk1.0-0t64 libatk-bridge2.0-0t64 libcups2t64 \
+        libgtk-3-0t64 libpango-1.0-0 libcairo2 libxcomposite1 libxdamage1 \
+        libxfixes3 libxkbcommon0 libasound2t64 libatspi2.0-0t64
 fi
 
 # The seeded profile is uid 1000 and the agent resolves user "scott" by name
@@ -58,6 +61,15 @@ if [ -s /opt/IDrive360/crontab.bak ] && [ ! -s /etc/idrive360crontab.json ]; the
 fi
 chown scott:scott /etc/idrive360crontab.json
 chmod 664 /etc/idrive360crontab.json
+
+# Electron refuses to run as root without --no-sandbox; wrap the binary once in
+# the persistent volume so Common.pm's auto-start picks up the flag transparently.
+if [ -x /opt/IDrive360/idrive360-client ] && [ ! -f /opt/IDrive360/idrive360-client.real ]; then
+    mv /opt/IDrive360/idrive360-client /opt/IDrive360/idrive360-client.real
+    printf '#!/bin/bash\nexec /opt/IDrive360/idrive360-client.real --no-sandbox "$@"\n' \
+        > /opt/IDrive360/idrive360-client
+    chmod +x /opt/IDrive360/idrive360-client
+fi
 
 # Electron CDP server requires a display; start a virtual framebuffer so
 # cdp-client/server can connect and the Perl scripts can save config.
