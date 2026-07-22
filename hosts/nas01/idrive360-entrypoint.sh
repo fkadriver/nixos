@@ -12,7 +12,7 @@ if ! command -v curl >/dev/null 2>&1; then
     # re-downloaded on every container restart (ubuntu:24.04 is ephemeral).
     APT_CACHE=/opt/IDrive360/.apt-cache
     mkdir -p "$APT_CACHE/lists" "$APT_CACHE/debs"
-    if ls "$APT_CACHE/lists/"InRelease >/dev/null 2>&1; then
+    if ls "$APT_CACHE/lists/"*InRelease >/dev/null 2>&1; then
         cp -r "$APT_CACHE/lists/." /var/lib/apt/lists/
     else
         apt-get update
