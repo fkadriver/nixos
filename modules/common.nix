@@ -88,12 +88,12 @@
     nix = {
       settings = {
         experimental-features = [ "nix-command" "flakes" ];
+        auto-optimise-store = true;
       };
-      # Garbage collection - keep 5-10 generations
       gc = {
         automatic = true;
         dates = "weekly";
-        options = "--delete-older-than 30d";
+        options = "--delete-older-than 7d";
       };
     };
 

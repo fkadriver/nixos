@@ -294,9 +294,6 @@ let
         # Flashcards / spaced repetition
         "anki"
 
-        # Video conferencing
-        "zoom"
-
         # Menubar plugin framework — hosts the syncthing status plugin declared via
         # home-manager (see hosts/airbook-darwin/home.nix). Keep-the-brew-daemon model,
         # unlike the `syncthing-app` cask which bundles its own daemon and would fight

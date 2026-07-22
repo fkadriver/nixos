@@ -69,7 +69,6 @@
       shotwell
       mpv
       handbrake  # Video transcoding
-      zoom-us
 
       libreoffice
       thunderbird
