@@ -228,8 +228,12 @@ let
         "bitwarden-cli"  # nix version requires xcodebuild, use homebrew instead
         "duti"           # Set default file type associations on macOS
         "clamav"         # Antivirus — clamscan + freshclam for signature updates
-        "tailscale"      # Standalone tailscaled daemon — needed for Tailscale SSH server
-                         # (the App Store cask is sandboxed and can't host SSH)
+        # NOTE: no brew `tailscale`. The App Store macsys Tailscale.app (System Network
+        # Extension) is the sole tailnet endpoint on this box — running two tailscaleds
+        # side-by-side flapped DERP negotiation and killed long-running TCP sessions
+        # (borg 30-min upload to nas01 was reset mid-transfer). Trade-off: no Tailscale
+        # SSH server hosting from this Mac (the sandboxed extension can't); standard sshd
+        # over the tailnet still works fine.
       ];
       casks = [
         "balenaetcher"       # USB image writer
@@ -657,21 +661,9 @@ wazuh_command.remote_commands=1'
           /bin/launchctl bootstrap system /System/Library/LaunchDaemons/ssh.plist 2>/dev/null || true
       ''
 
-      # MagicDNS resolver for tailnet warthog-royal.ts.net.
-      # The standalone brew tailscaled (we use it instead of the sandboxed App Store cask
-      # so Tailscale SSH server works) writes /etc/resolver/search.tailscale with only a
-      # `search` line — no `nameserver 100.100.100.100`. Result: `dig @100.100.100.100`
-      # resolves tailnet hosts but plain `ssh nas01.warthog-royal.ts.net` fails because
-      # macOS never forwards those queries to the tailnet resolver. The App Store app
-      # writes this file via its helper; the brew daemon does not. Fix it declaratively.
-      ''
-        if [ ! -f /etc/resolver/warthog-royal.ts.net ] || \
-           ! grep -q '^nameserver 100.100.100.100$' /etc/resolver/warthog-royal.ts.net; then
-          mkdir -p /etc/resolver
-          printf 'nameserver 100.100.100.100\n' > /etc/resolver/warthog-royal.ts.net
-          /usr/bin/killall -HUP mDNSResponder 2>/dev/null || true
-        fi
-      ''
+      # MagicDNS resolver: the App Store macsys Tailscale.app writes
+      # /etc/resolver/warthog-royal.ts.net itself via its helper — no manual
+      # activation needed. (Only the brew tailscaled required the workaround.)
     ];
 
     # Wazuh borg-status telemetry — repo/env for the status probe. Declarative so
