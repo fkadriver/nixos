@@ -120,8 +120,12 @@ let
           # tailscale0 is trusted via modules/tailscale.nix
           allowedTCPPorts = [ 111 139 445 2049 4000 4001 20048 ];
           allowedUDPPorts = [ 111 137 138 2049 4000 4001 20048 ];
+          interfaces."tailscale0".allowedTCPPorts = [ 8384 ];
         };
       };
+
+      # Syncthing GUI reachable over Tailscale (firewall restricts 8384 to tailscale0)
+      services.syncthing.guiAddress = lib.mkForce "0.0.0.0:8384";
 
       # ZFS: pool "pool" (raidz1, 3x HGST 4TB) created on Ubuntu, re-imported here.
       # First boot after reinstall needs a manual `zpool import -f pool`.

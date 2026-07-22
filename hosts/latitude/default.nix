@@ -112,6 +112,19 @@ let
         wantedBy = [ "graphical-session.target" ];
         after = [ "graphical-session.target" ];
         serviceConfig = {
+          ExecStartPre = pkgs.writeShellScript "syncthingtray-configure" ''
+            API_KEY=$(${pkgs.gnugrep}/bin/grep -oP '(?<=<apikey>)[^<]+' \
+              "$HOME/.config/syncthing/config.xml")
+            CONFIG="$HOME/.config/syncthingtray.ini"
+            if [ ! -f "$CONFIG" ]; then
+              printf '[tray]\nconnections\\1\\apiKey=@ByteArray(%s)\nconnections\\1\\syncthingUrl=http://localhost:8384\nconnections\\1\\autoConnect=true\nconnections\\size=1\n' \
+                "$API_KEY" > "$CONFIG"
+            else
+              ${pkgs.gnused}/bin/sed -i \
+                "s|connections\\\\1\\\\apiKey=@ByteArray([^)]*)|connections\\\\1\\\\apiKey=@ByteArray($API_KEY)|" \
+                "$CONFIG"
+            fi
+          '';
           ExecStart = "${pkgs.syncthingtray}/bin/syncthingtray --wait";
           Restart = "on-failure";
           RestartSec = 3;
