@@ -376,8 +376,10 @@ let
             "/etc/idrive360/entrypoint.sh:/entrypoint.sh:ro"
             "/var/lib/idrive360/opt:/opt/IDrive360"
             "/var/lib/idrive360/seed:/seed:ro"
-            "/pool:/pool:ro"
-            "/mnt:/mnt:ro"
+            # rslave: ZFS mount events at /pool and /mnt propagate into the
+            # container after the pool imports, even if the container started first
+            "/pool:/pool:ro:rslave"
+            "/mnt:/mnt:ro:rslave"
           ];
           # --init: tini as PID 1 to reap the zombie children the vendor cron
           # daemon leaves behind
@@ -387,9 +389,14 @@ let
       # The vendor cron daemon occasionally exits 0 on its own (scheduler bug:
       # "Argument \"*\" isn't numeric" warnings, then a clean exit); the default
       # on-failure policy leaves the service dead and the device offline.
-      systemd.services.docker-idrive360.serviceConfig = {
-        Restart = lib.mkForce "always";
-        RestartSec = lib.mkForce "60s";
+      # Start after ZFS so the pool is mounted before the container binds /pool.
+      systemd.services.docker-idrive360 = {
+        after = [ "zfs-import-pool.service" ];
+        requires = [ "zfs-import-pool.service" ];
+        serviceConfig = {
+          Restart = lib.mkForce "always";
+          RestartSec = lib.mkForce "60s";
+        };
       };
 
       system = {
