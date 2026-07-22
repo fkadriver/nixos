@@ -107,6 +107,17 @@ let
         pkgs.x2goclient  # remote X sessions to OTworkstation
       ];
 
+      systemd.user.services.syncthingtray = {
+        description = "Syncthing Tray";
+        wantedBy = [ "graphical-session.target" ];
+        after = [ "graphical-session.target" ];
+        serviceConfig = {
+          ExecStart = "${pkgs.syncthingtray}/bin/syncthingtray --wait";
+          Restart = "on-failure";
+          RestartSec = 3;
+        };
+      };
+
       # # Input Leap server: allow connections on LAN and via Tailscale
       # # Port 24800 is the default Input Leap/Barrier port
       # networking.firewall.allowedTCPPorts = [ 24800 ];
