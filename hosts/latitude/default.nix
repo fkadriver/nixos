@@ -103,7 +103,7 @@ let
         pkgs.git-lfs
         # pkgs.input-leap
         pkgs.stable-diffusion-cpp-vulkan
-        pkgs.syncthingtray
+        pkgs.syncthingtray-minimal
         pkgs.x2goclient  # remote X sessions to OTworkstation
       ];
 
@@ -147,7 +147,7 @@ with open(path, 'w') as f:
     config.write(f, space_around_delimiters=False)
 PYEOF
           '';
-          ExecStart = "${pkgs.syncthingtray}/bin/syncthingtray --wait";
+          ExecStart = "${pkgs.syncthingtray-minimal}/bin/syncthingtray --wait";
           Restart = "on-failure";
           RestartSec = 3;
         };
