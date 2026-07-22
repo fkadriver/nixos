@@ -102,7 +102,6 @@ let
         pkgs.gimp
         pkgs.git-lfs
         # pkgs.input-leap
-        pkgs.stable-diffusion-cpp-vulkan
         pkgs.syncthingtray-minimal
         pkgs.x2goclient  # remote X sessions to OTworkstation
       ];
