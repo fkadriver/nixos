@@ -21,7 +21,7 @@ if ! command -v curl >/dev/null 2>&1; then
     apt-get install -y --no-install-recommends \
         -o Dir::Cache::Archives="$APT_CACHE/debs" \
         libnss3 curl ca-certificates debianutils tar cron libnotify-bin \
-        libexpat1 libpopt0 xvfb
+        libexpat1 libpopt0 xvfb net-tools
 fi
 
 # The seeded profile is uid 1000 and the agent resolves user "scott" by name
