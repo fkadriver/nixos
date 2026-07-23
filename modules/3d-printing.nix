@@ -107,7 +107,7 @@ union() {
 }
 EOF
 
-    ${pkgs.openscad-unstable}/bin/openscad -o font_plate.stl font_plate.scad
+    ${pkgs.openscad}/bin/openscad -o font_plate.stl font_plate.scad
     echo "Generated: $WORKDIR/font_plate.stl"
   '';
 
@@ -171,7 +171,7 @@ translate([12, tag_h/2, tag_t])
     text("$SAFE_TEXT", size=9, font="$font", halign="left", valign="center");
 EOF
 
-      ${pkgs.openscad-unstable}/bin/openscad -o "$stl" "$scad"
+      ${pkgs.openscad}/bin/openscad -o "$stl" "$scad"
       i=$((i+1))
     done < fonts.txt
 
@@ -199,7 +199,7 @@ in
     environment.systemPackages =
       [ freecad ] ++  # FreeCAD 1.1.0 from nixpkgs 25.11
       (with pkgs; [
-        openscad-unstable
+        openscad
         orca-slicer
         prusa-slicer
         blender
