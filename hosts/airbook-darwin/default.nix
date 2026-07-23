@@ -703,7 +703,16 @@ wazuh_command.remote_commands=1'
             | ${pkgs.jq}/bin/jq -r '.login.password' )"
           "$BW" lock --quiet || true
 
-          export BORG_RSH="${pkgs.openssh}/bin/ssh -i /Users/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new"
+          # SSH keepalives: prevent NAT/router middleware from silently RST'ing what it
+          # thinks is an idle flow across multi-hour uploads, and detect a genuinely dead
+          # session in ~3 min instead of hours. TCPKeepAlive=yes belt-and-suspenders for
+          # kernel-level probes. Repeat drops on the first ~35GB upload to nas01 traced
+          # back to the connection dying with no sshd log on either end.
+          export BORG_RSH="${pkgs.openssh}/bin/ssh -i /Users/scott/.ssh/id_ed25519_legacy \
+            -o StrictHostKeyChecking=accept-new \
+            -o ServerAliveInterval=30 \
+            -o ServerAliveCountMax=6 \
+            -o TCPKeepAlive=yes"
           export BORG_REMOTE_PATH="/run/current-system/sw/bin/borg"
 
           # Auto-init if the repo is absent (e.g. after a deliberate `rm -rf` on nas01
@@ -713,7 +722,12 @@ wazuh_command.remote_commands=1'
           # borg create below.
           ${pkgs.borgbackup}/bin/borg init --encryption=repokey-blake2 "$REPO" 2>/dev/null || true
 
-          ${pkgs.borgbackup}/bin/borg create \
+          # `caffeinate -i` holds an IdleSleepAssertion for the whole borg run so macOS
+          # won't sleep mid-upload. `pmset -g` shows sleep assertions cycle in and out
+          # (AddressBookSourceSync, etc.); we can't rely on someone else holding it.
+          # `-v` from borg logs each file/phase so a future drop tells us WHERE it died.
+          /usr/bin/caffeinate -i ${pkgs.borgbackup}/bin/borg create \
+            --verbose \
             --stats \
             --compression auto,zstd \
             --checkpoint-interval 1800 \
