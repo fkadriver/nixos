@@ -18,6 +18,9 @@ in
     username = "scott";
     homeDirectory = "/Users/scott";
     stateVersion = "24.11";
+    # home-manager (unstable, shared with NixOS hosts) doesn't strictly need to
+    # match nixpkgs-26.05-darwin — silence the release-check assertion.
+    enableNixpkgsReleaseCheck = false;
 
     # Add ~/.local/bin to PATH
     sessionPath = [ "$HOME/.local/bin" "$HOME/go/bin" ];

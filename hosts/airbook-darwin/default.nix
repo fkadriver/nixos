@@ -1,7 +1,9 @@
 { inputs, ... }@flakeContext:
 let
   system = "x86_64-darwin";  # MacBook Air 7,2 is Intel
-  pkgs = inputs.nixpkgs.legacyPackages.${system};
+  # nixpkgs-unstable dropped x86_64-darwin at 26.11; pin darwin to nixpkgs-26.05-darwin
+  # (last branch that supports Intel Macs, through end of 2026).
+  pkgs = inputs.nixpkgs-darwin.legacyPackages.${system};
 
   bosl2 = pkgs.fetchFromGitHub {
     owner = "BelfrySCAD";
