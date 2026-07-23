@@ -588,10 +588,13 @@ in
       '';
     };
 
+    # SSH *client* config — used for outbound git, borg (nas01), and tailscale ssh.
+    # No sshd server on this box (removed 11ecf08). home-manager 26.05 renamed
+    # `matchBlocks` → `settings`; each attr name becomes a `Host` block.
     ssh = {
       enable = true;
-      enableDefaultConfig = false;  # Disable default config to avoid warnings
-      matchBlocks = {
+      enableDefaultConfig = false;  # opt out of hm's implicit `Host *` defaults
+      settings = {
         "*" = {
           addKeysToAgent = "yes";
           identityFile = "~/.ssh/id_ed25519";
