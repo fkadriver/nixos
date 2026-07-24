@@ -122,7 +122,7 @@ It runs in an `ubuntu:24.04` Docker container instead:
 
 - **State**: `/var/lib/idrive360/opt` → `/opt/IDrive360` in-container (persistent volume; holds device registration + engine)
 - **Seed**: `/var/lib/idrive360/seed` — installer `.deb` (token in filename) + rescued `idrive360cron` binary
-- **Data mounts**: `/pool` and `/mnt` read-only (backup set covers /pool, /mnt, /opt)
+- **Data mounts**: `/pool` and `/mnt` read-only (bind-mounted into container; backup set configured in web console — currently covers /home, /var, /mnt; **/pool is NOT included** — must be added via web console → Backup Settings)
 - **Entrypoint**: [hosts/nas01/idrive360-entrypoint.sh](../hosts/nas01/idrive360-entrypoint.sh) — restores deps/cron binary on container recreation, falls back to full `dpkg -i` bootstrap, then runs `/etc/idrive360cron --cron`
 
 Seeding after a rebuild (from the latitude backup):

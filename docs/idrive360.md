@@ -247,6 +247,30 @@ docker exec -u scott idrive360 \
 
 ---
 
+## Troubleshooting: device shows offline, PermissionError in dashboard.log
+
+**Symptom**: `dashboard.log` contains `PermissionError(13, 'Permission denied'): '/etc/idrive360crontab.json'`
+and the device goes offline shortly after each container start.
+
+**Root cause**: The Python scheduler (`idrivescheduler.py`) runs as `scott` (uid 1000) and
+needs write access to `/etc/idrive360crontab.json` to update `nextschedule` timestamps.
+If the file is root-owned (happens after a fresh `dpkg -i` bootstrap), the write fails,
+the WebSocket connection closes, and the device shows offline.
+
+**Fix** (already in the entrypoint): The entrypoint runs `chown scott:scott /etc/idrive360crontab.json && chmod 664`
+before starting the cron daemon. If you see this error, verify the entrypoint has those lines
+or run them manually:
+
+```bash
+docker exec idrive360 sh -c "
+  chown scott:scott /etc/idrive360crontab.json
+  chmod 664 /etc/idrive360crontab.json
+"
+sudo systemctl restart docker-idrive360
+```
+
+---
+
 ## Known log warning — not an error
 
 ```
@@ -254,8 +278,9 @@ Argument "*" isn't numeric in subroutine entry at &cron line 1.
 ```
 
 This warning appears every scheduled interval and is harmless — it's a Perl
-cron-parsing quirk in the IDrive360 vendor code. It does NOT mean the backup
-failed. If the daemon exits after this warning, systemd restarts it within 60 s.
+cron-parsing quirk in the IDrive360 vendor code when job schedules use `h: "*"`.
+It does NOT mean the backup failed. If the daemon exits after this warning,
+systemd restarts it within 60 s.
 
 ---
 
@@ -279,8 +304,12 @@ docker exec idrive360 cat /etc/idrive360crontab.json
 docker exec idrive360 cat /opt/IDrive360/crontab.bak
 ```
 
-**Backup schedule** (from current crontab): runs **hourly**, every `*/42` minutes,
+**Backup schedule** (from current crontab): runs **hourly at minute :42** (i.e., `42 * * * *`),
 status: `enabled`. Cancel job is configured but `disabled`.
+
+**Backup set** (from `BackupsetFile.enc.json` as of 2026-07): `/home/`, `/var/`, `/mnt/` (empty — WD drives),
+`/opt/` (empty — IDrive volume itself). **/pool is NOT included** — the ZFS pool data
+(Borg repos, Syncthing) must be added via web console → Backup Settings.
 
 ---
 
