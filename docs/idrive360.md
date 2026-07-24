@@ -304,12 +304,35 @@ docker exec idrive360 cat /etc/idrive360crontab.json
 docker exec idrive360 cat /opt/IDrive360/crontab.bak
 ```
 
-**Backup schedule** (from current crontab): runs **hourly at minute :42** (i.e., `42 * * * *`),
-status: `enabled`. Cancel job is configured but `disabled`.
+**Backup schedule** (from current crontab): configured as **hourly at minute :42** in the web console,
+status: `enabled`. **However, this schedule never runs** — see the known bug below.
 
 **Backup set** (from `BackupsetFile.enc.json` as of 2026-07): `/home/`, `/var/`, `/mnt/` (empty — WD drives),
 `/opt/` (empty — IDrive volume itself). **/pool is NOT included** — the ZFS pool data
 (Borg repos, Syncthing) must be added via web console → Backup Settings.
+
+---
+
+## Known bug: hourly schedule crashes the cron daemon — backups never run
+
+**Symptom**: the container restarts every ~59 minutes; no backup logs newer than the last
+successful run; web console shows the device online but jobs stuck or stale.
+
+**Root cause**: the vendor Perl cron daemon crashes with `Argument "*" isn't numeric`
+when it tries to fire a job whose `h` field is `"*"` (the value set by the "hourly"
+frequency). The crash happens at minute :42 (the scheduled minute) of the first hour
+after container startup, killing the entire container.
+
+**Fix: change the schedule to daily** in the IDrive360 web console:
+
+1. Log in → **Backup** → **Schedule** for the default backup set
+2. Change frequency from **Hourly** to **Daily** and pick a specific time (e.g., 8:00 PM)
+3. Save — the web console pushes the change to the agent, which writes `h: "20"` (numeric)
+   into `crontab.bak`. On the next restart the numeric hour is loaded and the Perl
+   scheduler no longer crashes.
+
+> Do NOT try to patch `crontab.bak` manually while the container is running — the cron
+> daemon overwrites it on exit. Change it via the web console or stop the container first.
 
 ---
 
