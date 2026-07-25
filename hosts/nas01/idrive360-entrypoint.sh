@@ -54,7 +54,9 @@ if [ ! -x /etc/idrive360cron ]; then
     elif ls /seed/IDrive360_*.deb >/dev/null 2>&1; then
         # Fresh bootstrap: postinst registers the device with the token embedded
         # in the .deb filename and downloads the backup engine into /opt/IDrive360.
-        dpkg -i /seed/IDrive360_*.deb
+        # Set SUDO_USER so the vendor installer picks scott instead of falling
+        # back to root (which would create user_profile/root instead of /scott).
+        SUDO_USER=scott dpkg -i /seed/IDrive360_*.deb
         # Rescue the cron binary into the persistent volume so future container
         # restarts use the fast path without re-running dpkg or re-registering.
         # /seed is read-only, so we store it in /opt/IDrive360 instead — the
