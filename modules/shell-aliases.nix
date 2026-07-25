@@ -90,6 +90,14 @@
         # Temperature monitoring
         temps = ''echo '=== CPU Temps (°F) ===' && sensors -f 2>/dev/null | grep -E ':.*°F' || echo '(run: sudo sensors-detect)'; echo ""; echo '=== Drive Temps (°F) ==='; for d in /dev/sd?; do C=$(sudo smartctl -A "$d" 2>/dev/null | awk '/^[[:space:]]*19[04] /{print $10}' | head -1); if [ -n "$C" ]; then printf "%s: %d°F\n" "$d" "$((C * 9 / 5 + 32))"; else printf "%s: N/A\n" "$d"; fi; done'';
 
+        # IDrive360 (nas01 Docker container)
+        idrive-log = "ssh nas01 journalctl -u docker-idrive360 -f";
+        idrive-ps = "ssh nas01 docker exec idrive360 ps aux";
+        idrive-stop = "ssh nas01 sudo systemctl stop docker-idrive360";
+        idrive-start = "ssh nas01 sudo systemctl start docker-idrive360";
+        idrive-restart = "ssh nas01 sudo systemctl restart docker-idrive360";
+        idrive-kill = "ssh nas01 \"docker exec -u scott idrive360 /opt/IDrive360/idrive360 --terminate-job backup - 2\"";
+
         # Kubernetes
         k = "kubectl";
 
