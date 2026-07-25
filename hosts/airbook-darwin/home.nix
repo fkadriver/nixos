@@ -18,6 +18,9 @@ in
     username = "scott";
     homeDirectory = "/Users/scott";
     stateVersion = "24.11";
+    # home-manager (unstable, shared with NixOS hosts) doesn't strictly need to
+    # match nixpkgs-26.05-darwin — silence the release-check assertion.
+    enableNixpkgsReleaseCheck = false;
 
     # Add ~/.local/bin to PATH
     sessionPath = [ "$HOME/.local/bin" "$HOME/go/bin" ];
@@ -585,29 +588,59 @@ in
       '';
     };
 
-    ssh = {
-      enable = true;
-      enableDefaultConfig = false;  # Disable default config to avoid warnings
-      matchBlocks = {
-        "*" = {
-          addKeysToAgent = "yes";
-          identityFile = "~/.ssh/id_ed25519";
-        };
-        "nas01" = {
-          hostname = "nas01.warthog-royal.ts.net";
-          user = "scott";
-        };
-        "latitude" = {
-          hostname = "latitude.warthog-royal.ts.net";
-          user = "scott";
-        };
-        "github.com" = {
-          hostname = "github.com";
-          user = "git";
-          identityFile = "~/.ssh/id_ed25519_github";
-        };
-      };
-    };
+    # SSH *client* config lives in ~/.ssh/config.d/home-manager.conf (see the
+    # home.file entry below), NOT in ~/.ssh/config directly. If home-manager
+    # owned ~/.ssh/config it would install it as a read-only nix-store symlink,
+    # and tools that *write* to it — the VS Code Tailscale extension's
+    # `openRemoteCode`, plain `ssh-copy-id`, etc. — fail with EACCES. Instead
+    # the top-level ~/.ssh/config is a writable stub that `Include`s our managed
+    # file (created by the writableSshConfig activation script).
+    ssh.enable = false;
   };
+
+  # Managed SSH client hosts — used for outbound git, borg (nas01), and
+  # tailscale ssh. No sshd server on this box (removed 11ecf08). This file is
+  # store-backed (read-only) and pulled in via `Include` from the writable
+  # ~/.ssh/config stub, so `Host *` here still wins (Include sits at the top and
+  # ssh takes the first value seen for each option).
+  home.file.".ssh/config.d/home-manager.conf".text = ''
+    Host *
+      AddKeysToAgent yes
+      IdentityFile ~/.ssh/id_ed25519
+
+    Host nas01
+      HostName nas01.warthog-royal.ts.net
+      User scott
+
+    Host latitude
+      HostName latitude.warthog-royal.ts.net
+      User scott
+
+    Host github.com
+      HostName github.com
+      User git
+      IdentityFile ~/.ssh/id_ed25519_github
+  '';
+
+  # Ensure ~/.ssh/config is a *writable* real file (not a nix-store symlink)
+  # that Includes the managed hosts above. Tools like the VS Code Tailscale
+  # extension append their own Host/ProxyCommand blocks here; those survive
+  # rebuilds because we only touch the file when the Include line is missing.
+  home.activation.writableSshConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    cfg="$HOME/.ssh/config"
+    inc="Include config.d/home-manager.conf"
+    mkdir -p "$HOME/.ssh"
+    chmod 700 "$HOME/.ssh"
+    if [ -L "$cfg" ] || [ ! -e "$cfg" ]; then
+      # Missing, or a stale home-manager-owned symlink from a prior generation.
+      rm -f "$cfg"
+      printf '%s\n' "$inc" > "$cfg"
+    elif ! grep -qxF "$inc" "$cfg"; then
+      # Pre-existing writable config: prepend the Include if it's not there yet.
+      printf '%s\n%s\n' "$inc" "$(cat "$cfg")" > "$cfg.hm-tmp"
+      mv "$cfg.hm-tmp" "$cfg"
+    fi
+    chmod 600 "$cfg"
+  '';
 
 }

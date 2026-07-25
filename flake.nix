@@ -3,6 +3,9 @@
   inputs = {
     nixpkgs.url = "flake:nixpkgs/nixpkgs-unstable";
     nixpkgs-2511.url = "github:NixOS/nixpkgs/nixos-25.11";
+    # Darwin-specific: nixpkgs-unstable moved to 26.11pre and dropped x86_64-darwin.
+    # 26.05 is the last supported branch (through end of 2026) for MacBookAir7,2.
+    nixpkgs-darwin.url = "github:NixOS/nixpkgs/nixpkgs-26.05-darwin";
     home-manager.url = "flake:home-manager";
     nixos-hardware.url = "flake:nixos-hardware";
     disko = {
@@ -26,8 +29,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     nix-darwin = {
-      url = "github:LnL7/nix-darwin";
-      inputs.nixpkgs.follows = "nixpkgs";
+      # Track nix-darwin-26.05 to match nixpkgs-26.05-darwin (branches must line up
+      # or the "nix-darwin YY.MM with Nixpkgs YY.MM" assertion aborts activation).
+      url = "github:nix-darwin/nix-darwin/nix-darwin-26.05";
+      inputs.nixpkgs.follows = "nixpkgs-darwin";
     };
   };
   outputs = inputs:
