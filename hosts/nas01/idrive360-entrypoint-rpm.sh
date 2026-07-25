@@ -84,7 +84,9 @@ if [ -x /opt/IDrive360/idrive360-client ] && [ ! -f /opt/IDrive360/idrive360-cli
     chmod +x /opt/IDrive360/idrive360-client
 fi
 
-export DISPLAY=:99
-Xvfb :99 -screen 0 1024x768x16 -nolisten tcp &
+export DISPLAY=:98
+pkill Xvfb 2>/dev/null || true
+rm -f /tmp/.X98-lock /tmp/.X11-unix/X98
+Xvfb :98 -screen 0 1024x768x16 -nolisten tcp &
 
 exec /etc/idrive360cron --cron
