@@ -421,8 +421,7 @@ let
         after = [ "zfs-import-pool.service" ];
         requires = [ "zfs-import-pool.service" ];
         serviceConfig = {
-          Restart = lib.mkForce "always";
-          RestartSec = lib.mkForce "60s";
+          Restart = lib.mkForce "no";
         };
       };
       systemd.services.docker-idrive360-rpm = {
