@@ -395,6 +395,7 @@ let
         backend = "docker";
         containers.idrive360-deb = {
           image = "ubuntu:24.04";
+          autoStart = false;
           entrypoint = "/entrypoint.sh";
           volumes = [
             "/etc/idrive360-deb/entrypoint.sh:/entrypoint.sh:ro"
