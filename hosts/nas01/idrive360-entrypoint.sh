@@ -1,9 +1,14 @@
 #!/bin/bash
 # IDrive360 container entrypoint.
-# /opt/IDrive360 is a persistent volume (seeded from the pre-rebuild backup, so
-# the device registration survives). /seed holds the installer .deb and the
-# rescued /etc/idrive360cron binary. The container filesystem is ephemeral, so
-# runtime deps and the cron binary are restored on every container recreation.
+# /opt/IDrive360 is a persistent volume; /seed holds the installer .deb and
+# the rescued idrive360cron binary.  Container filesystem is ephemeral, so
+# runtime deps and the cron binary are restored on every restart.
+#
+# First-boot flow (fresh registration):
+#   1. Place IDrive360_<token>.deb in /seed (no idrive360cron.bin)
+#   2. dpkg -i registers the device and downloads the engine into /opt/IDrive360
+#   3. Entrypoint rescues the cron binary to /opt/IDrive360/idrive360cron.bin
+#   4. All subsequent restarts use the rescued binary — no re-registration
 set -e
 export DEBIAN_FRONTEND=noninteractive
 
@@ -36,15 +41,28 @@ if ! id scott >/dev/null 2>&1; then
 fi
 
 if [ ! -x /etc/idrive360cron ]; then
-    if [ -f /seed/idrive360cron.bin ]; then
-        # The binary refuses to run unless $0 is a symlink (vendor packaging
-        # check: unless(-l $0){ saferetreat('you_cant_run_supporting_service') })
+    # The binary refuses to run unless $0 is a symlink (vendor packaging check:
+    # unless(-l $0){ saferetreat('you_cant_run_supporting_service') })
+    if [ -f /opt/IDrive360/idrive360cron.bin ]; then
+        # Fast path: binary was rescued here after the first dpkg install
+        install -m 755 /opt/IDrive360/idrive360cron.bin /usr/local/lib/idrive360cron
+        ln -sf /usr/local/lib/idrive360cron /etc/idrive360cron
+    elif [ -f /seed/idrive360cron.bin ]; then
+        # Legacy path: binary was placed directly in seed
         install -m 755 /seed/idrive360cron.bin /usr/local/lib/idrive360cron
         ln -sf /usr/local/lib/idrive360cron /etc/idrive360cron
     elif ls /seed/IDrive360_*.deb >/dev/null 2>&1; then
         # Fresh bootstrap: postinst registers the device with the token embedded
-        # in the .deb filename and downloads the backup engine into /opt/IDrive360
+        # in the .deb filename and downloads the backup engine into /opt/IDrive360.
         dpkg -i /seed/IDrive360_*.deb
+        # Rescue the cron binary into the persistent volume so future container
+        # restarts use the fast path without re-running dpkg or re-registering.
+        # /seed is read-only, so we store it in /opt/IDrive360 instead — the
+        # entrypoint checks that path in the fast-path branch above.
+        if [ -x /etc/idrive360cron ]; then
+            REAL_BIN=$(readlink -f /etc/idrive360cron 2>/dev/null || echo /etc/idrive360cron)
+            install -m 755 "$REAL_BIN" /opt/IDrive360/idrive360cron.bin
+        fi
     else
         echo "ERROR: no idrive360cron binary and no installer .deb in /seed" >&2
         exit 1
@@ -59,6 +77,7 @@ fi
 if [ -s /opt/IDrive360/crontab.bak ] && [ ! -s /etc/idrive360crontab.json ]; then
     cp /opt/IDrive360/crontab.bak /etc/idrive360crontab.json
 fi
+touch /etc/idrive360crontab.json
 chown scott:scott /etc/idrive360crontab.json
 chmod 664 /etc/idrive360crontab.json
 

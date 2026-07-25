@@ -366,9 +366,13 @@ let
       # IDrive360 cloud backup: vendor .deb self-updates and downloads its engine
       # at runtime, so it runs in an Ubuntu container instead of a Nix package
       # (prior packaging attempt archived in archive/pkgs/idrive-e360/).
-      # State lives in /var/lib/idrive360/opt (seeded from the pre-rebuild backup);
-      # /var/lib/idrive360/seed holds the installer .deb and rescued cron binary.
-      # Backup set (web console) covers /pool, /mnt, /opt.
+      # State lives in /var/lib/idrive360/opt; /var/lib/idrive360/seed holds the
+      # installer .deb and (after first boot) the rescued idrive360cron binary.
+      # Fresh-registration flow: place IDrive360_<token>.deb in seed (no .bin),
+      # start container — dpkg -i registers the device, rescues the binary, then
+      # exits so the cron daemon takes over on the next restart.
+      # TODO: re-add /pool and /mnt bind-mounts once registration is stable and
+      # backup set is configured via web console.
       environment.etc."idrive360/entrypoint.sh" = {
         source = ./idrive360-entrypoint.sh;
         mode = "0755";
@@ -382,23 +386,15 @@ let
             "/etc/idrive360/entrypoint.sh:/entrypoint.sh:ro"
             "/var/lib/idrive360/opt:/opt/IDrive360"
             "/var/lib/idrive360/seed:/seed:ro"
-            # rslave: ZFS mount events at /pool and /mnt propagate into the
-            # container after the pool imports, even if the container started first
-            "/pool:/pool:ro,rslave"
-            "/mnt:/mnt:ro,rslave"
           ];
           # --init: tini as PID 1 to reap the zombie children the vendor cron
           # daemon leaves behind
           extraOptions = [ "--network=host" "--init" ];
         };
       };
-      # The vendor cron daemon occasionally exits 0 on its own (scheduler bug:
-      # "Argument \"*\" isn't numeric" warnings, then a clean exit); the default
-      # on-failure policy leaves the service dead and the device offline.
-      # Start after ZFS so the pool is mounted before the container binds /pool.
+      # The vendor cron daemon occasionally exits 0 on its own (scheduler bug);
+      # always restart so the device stays online.
       systemd.services.docker-idrive360 = {
-        after = [ "zfs-import-pool.service" ];
-        requires = [ "zfs-import-pool.service" ];
         serviceConfig = {
           Restart = lib.mkForce "always";
           RestartSec = lib.mkForce "60s";
