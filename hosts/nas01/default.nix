@@ -367,12 +367,10 @@ let
       # at runtime, so it runs in an Ubuntu container instead of a Nix package
       # (prior packaging attempt archived in archive/pkgs/idrive-e360/).
       # State lives in /var/lib/idrive360/opt; /var/lib/idrive360/seed holds the
-      # installer .deb and (after first boot) the rescued idrive360cron binary.
-      # Fresh-registration flow: place IDrive360_<token>.deb in seed (no .bin),
-      # start container — dpkg -i registers the device, rescues the binary, then
+      # installer .rpm and (after first boot) the rescued idrive360cron binary.
+      # Fresh-registration flow: place IDrive360_<token>.rpm in seed (no .bin),
+      # start container — rpm -i registers the device, rescues the binary, then
       # exits so the cron daemon takes over on the next restart.
-      # TODO: re-add /pool and /mnt bind-mounts once registration is stable and
-      # backup set is configured via web console.
       environment.etc."idrive360/entrypoint.sh" = {
         source = ./idrive360-entrypoint.sh;
         mode = "0755";
@@ -380,7 +378,7 @@ let
       virtualisation.oci-containers = {
         backend = "docker";
         containers.idrive360 = {
-          image = "ubuntu:24.04";
+          image = "rockylinux:9";
           entrypoint = "/entrypoint.sh";
           volumes = [
             "/etc/idrive360/entrypoint.sh:/entrypoint.sh:ro"

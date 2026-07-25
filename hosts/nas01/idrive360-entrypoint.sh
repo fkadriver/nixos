@@ -1,81 +1,73 @@
 #!/bin/bash
-# IDrive360 container entrypoint.
-# /opt/IDrive360 is a persistent volume; /seed holds the installer .deb and
+# IDrive360 container entrypoint (Rocky Linux 9 / RPM variant).
+# /opt/IDrive360 is a persistent volume; /seed holds the installer .rpm and
 # the rescued idrive360cron binary.  Container filesystem is ephemeral, so
 # runtime deps and the cron binary are restored on every restart.
 #
 # First-boot flow (fresh registration):
-#   1. Place IDrive360_<token>.deb in /seed (no idrive360cron.bin)
-#   2. dpkg -i registers the device and downloads the engine into /opt/IDrive360
+#   1. Place IDrive360_<token>.rpm in /seed (no idrive360cron.bin)
+#   2. rpm -i registers the device and downloads the engine into /opt/IDrive360
 #   3. Entrypoint rescues the cron binary to /opt/IDrive360/idrive360cron.bin
 #   4. All subsequent restarts use the rescued binary — no re-registration
 set -e
-export DEBIAN_FRONTEND=noninteractive
 
-if ! command -v curl >/dev/null 2>&1 || ! dpkg -s libdbus-1-3 >/dev/null 2>&1; then
-    # Cache apt lists in the persistent volume so the 25 MB index isn't
-    # re-downloaded on every container restart (ubuntu:24.04 is ephemeral).
-    APT_CACHE=/opt/IDrive360/.apt-cache
-    mkdir -p "$APT_CACHE/lists" "$APT_CACHE/debs"
-    if ls "$APT_CACHE/lists/"*InRelease >/dev/null 2>&1; then
-        cp -r "$APT_CACHE/lists/." /var/lib/apt/lists/
-    else
-        apt-get update
-        cp -r /var/lib/apt/lists/. "$APT_CACHE/lists/" 2>/dev/null || true
-    fi
-    apt-get install -y --no-install-recommends \
-        -o Dir::Cache::Archives="$APT_CACHE/debs" \
-        libnss3 curl ca-certificates debianutils tar cron libnotify-bin \
-        libexpat1 libpopt0 xvfb net-tools \
-        libdbus-1-3 libatk1.0-0t64 libatk-bridge2.0-0t64 libcups2t64 \
-        libgtk-3-0t64 libpango-1.0-0 libcairo2 libxcomposite1 libxdamage1 \
-        libxfixes3 libxkbcommon0 libasound2t64 libatspi2.0-0t64
+if ! rpm -q dbus-libs >/dev/null 2>&1; then
+    DNF_CACHE=/opt/IDrive360/.dnf-cache
+    mkdir -p "$DNF_CACHE"
+    dnf install -y \
+        --setopt=cachedir="$DNF_CACHE" \
+        --setopt=keepcache=1 \
+        --setopt=install_weak_deps=False \
+        nss curl ca-certificates which tar cronie libnotify \
+        expat popt xorg-x11-server-Xvfb net-tools \
+        dbus-libs atk at-spi2-atk cups-libs gtk3 pango cairo \
+        libXcomposite libXdamage libXfixes libxkbcommon \
+        alsa-lib at-spi2-core
 fi
 
-# The seeded profile is uid 1000 and the agent resolves user "scott" by name
-# (fails with "Failed to save user configuration" otherwise); ubuntu:24.04
-# ships uid 1000 as "ubuntu", so replace it
+# Rocky Linux 9 has no default UID 1000 user; just create scott directly.
 if ! id scott >/dev/null 2>&1; then
-    userdel -r ubuntu 2>/dev/null || true
     useradd -u 1000 -m -s /bin/bash scott
 fi
 
 if [ ! -x /etc/idrive360cron ]; then
-    # The binary refuses to run unless $0 is a symlink (vendor packaging check:
-    # unless(-l $0){ saferetreat('you_cant_run_supporting_service') })
+    # The binary refuses to run unless $0 is a symlink (vendor check).
     if [ -f /opt/IDrive360/idrive360cron.bin ]; then
-        # Fast path: binary was rescued here after the first dpkg install
+        # Fast path: binary was rescued here after the first rpm install
         install -m 755 /opt/IDrive360/idrive360cron.bin /usr/local/lib/idrive360cron
         ln -sf /usr/local/lib/idrive360cron /etc/idrive360cron
     elif [ -f /seed/idrive360cron.bin ]; then
-        # Legacy path: binary was placed directly in seed
+        # Legacy path: binary placed directly in seed
         install -m 755 /seed/idrive360cron.bin /usr/local/lib/idrive360cron
         ln -sf /usr/local/lib/idrive360cron /etc/idrive360cron
-    elif ls /seed/IDrive360_*.deb >/dev/null 2>&1; then
-        # Fresh bootstrap: postinst registers the device with the token embedded
-        # in the .deb filename and downloads the backup engine into /opt/IDrive360.
-        # Set SUDO_USER so the vendor installer picks scott instead of falling
-        # back to root (which would create user_profile/root instead of /scott).
-        SUDO_USER=scott dpkg -i /seed/IDrive360_*.deb
-        # Rescue the cron binary into the persistent volume so future container
-        # restarts use the fast path without re-running dpkg or re-registering.
-        # /seed is read-only, so we store it in /opt/IDrive360 instead — the
-        # entrypoint checks that path in the fast-path branch above.
+    elif ls /seed/IDrive360_*.rpm >/dev/null 2>&1; then
+        # Fresh bootstrap: %post registers the device with the embedded token
+        # and downloads the backup engine into /opt/IDrive360.
+        # Set SUDO_USER so the installer picks scott; RPM %post may not inherit
+        # the env, so we rename root->scott as a fallback.
+        SUDO_USER=scott rpm -i /seed/IDrive360_*.rpm
+        if [ -d /opt/IDrive360/idriveIt/user_profile/root ] && \
+           [ ! -d /opt/IDrive360/idriveIt/user_profile/scott ]; then
+            mv /opt/IDrive360/idriveIt/user_profile/root \
+               /opt/IDrive360/idriveIt/user_profile/scott
+            chown -R 1000:1000 /opt/IDrive360/idriveIt/user_profile/scott
+        fi
+        CACHE_FILE=/opt/IDrive360/idriveIt/cache/idriveuser.txt
+        if [ -f "$CACHE_FILE" ] && grep -q '"root"' "$CACHE_FILE"; then
+            sed -i 's/"root":/"scott":/g' "$CACHE_FILE"
+        fi
         if [ -x /etc/idrive360cron ]; then
             REAL_BIN=$(readlink -f /etc/idrive360cron 2>/dev/null || echo /etc/idrive360cron)
             install -m 755 "$REAL_BIN" /opt/IDrive360/idrive360cron.bin
         fi
     else
-        echo "ERROR: no idrive360cron binary and no installer .deb in /seed" >&2
+        echo "ERROR: no idrive360cron binary and no installer .rpm in /seed" >&2
         exit 1
     fi
 fi
 
-# The daemon's job schedule lives at /etc/idrive360crontab.json (ephemeral,
-# recreated empty on container start); the app maintains a copy in the
-# persistent volume — without it no jobs run and the console shows offline.
-# Must be owned by scott: the Python scheduler agent runs as uid 1000 and
-# needs write access to update nextschedule timestamps.
+# Restore persistent schedule backup; must be scott-owned so the Python
+# scheduler (uid 1000) can update nextschedule timestamps.
 if [ -s /opt/IDrive360/crontab.bak ] && [ ! -s /etc/idrive360crontab.json ]; then
     cp /opt/IDrive360/crontab.bak /etc/idrive360crontab.json
 fi
@@ -83,8 +75,7 @@ touch /etc/idrive360crontab.json
 chown scott:scott /etc/idrive360crontab.json
 chmod 664 /etc/idrive360crontab.json
 
-# Electron refuses to run as root without --no-sandbox; wrap the binary once in
-# the persistent volume so Common.pm's auto-start picks up the flag transparently.
+# Electron refuses to run as root without --no-sandbox; wrap the binary once.
 if [ -x /opt/IDrive360/idrive360-client ] && [ ! -f /opt/IDrive360/idrive360-client.real ]; then
     mv /opt/IDrive360/idrive360-client /opt/IDrive360/idrive360-client.real
     printf '#!/bin/bash\nexec /opt/IDrive360/idrive360-client.real --no-sandbox "$@"\n' \
@@ -92,9 +83,6 @@ if [ -x /opt/IDrive360/idrive360-client ] && [ ! -f /opt/IDrive360/idrive360-cli
     chmod +x /opt/IDrive360/idrive360-client
 fi
 
-# Electron CDP server requires a display; start a virtual framebuffer so
-# cdp-client/server can connect and the Perl scripts can save config.
-# Without this, every CDP attempt leaks a D-state process until OOM.
 export DISPLAY=:99
 Xvfb :99 -screen 0 1024x768x16 -nolisten tcp &
 
