@@ -19,7 +19,7 @@ if ! rpm -q dbus-libs >/dev/null 2>&1; then
         --setopt=cachedir="$DNF_CACHE" \
         --setopt=keepcache=1 \
         --setopt=install_weak_deps=False \
-        nss curl ca-certificates which tar cronie libnotify \
+        nss curl ca-certificates which tar cronie procps-ng libnotify \
         expat popt xorg-x11-server-Xvfb net-tools \
         dbus-libs atk at-spi2-atk cups-libs gtk3 pango cairo \
         libXcomposite libXdamage libXfixes libxkbcommon \
