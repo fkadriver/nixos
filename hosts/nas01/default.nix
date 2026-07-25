@@ -93,15 +93,26 @@ let
           # Temperature monitoring
           temps = ''echo '=== CPU Temps (°F) ===' && sensors -f 2>/dev/null | grep -E ':.*°F' || echo '(run: sudo sensors-detect)'; echo ""; echo '=== Drive Temps (°F) ==='; for d in /dev/sd?; do C=$(sudo smartctl -A "$d" 2>/dev/null | awk '/^[[:space:]]*19[04] /{print $10}' | head -1); if [ -n "$C" ]; then printf "%s: %d°F\n" "$d" "$((C * 9 / 5 + 32))"; else printf "%s: N/A\n" "$d"; fi; done'';
 
-          # IDrive360 monitoring
-          idrive-docker  = "journalctl -u docker-idrive360 -f";
-          idrive-log     = ''tail -f "$(ls -t /var/lib/idrive360/opt/idriveIt/user_profile/scott/*/Backup/DefaultBackupSet/LOGS/* 2>/dev/null | head -1)"'';
-          idrive-restart = "sudo systemctl restart docker-idrive360";
-          idrive-status  = ''
-            echo "=== Container ===" && docker ps --filter name=idrive360 --format "{{.Status}}" | grep . || echo "NOT RUNNING";
+          # IDrive360 — DEB container (Ubuntu)
+          idrive-deb-log     = "journalctl -u docker-idrive360-deb -f";
+          idrive-deb-restart = "sudo systemctl restart docker-idrive360-deb";
+          idrive-deb-stop    = "sudo systemctl stop docker-idrive360-deb";
+          idrive-deb-ps      = "docker exec idrive360-deb ps aux";
+          idrive-deb-status  = ''
+            echo "=== DEB Container ===" && docker ps --filter name=idrive360-deb --format "{{.Status}}" | grep . || echo "NOT RUNNING";
             LATEST=$(ls -t /var/lib/idrive360/opt/idriveIt/user_profile/scott/*/Backup/DefaultBackupSet/LOGS/* 2>/dev/null | head -1);
-            echo "=== Latest log: $(basename "$LATEST") ($(stat -c '%y' "$LATEST" 2>/dev/null | cut -d. -f1)) ===";
-            tail -6 "$LATEST" 2>/dev/null
+            [ -n "$LATEST" ] && echo "=== Latest log: $(basename "$LATEST") ===" && tail -6 "$LATEST"
+          '';
+
+          # IDrive360 — RPM container (Rocky Linux)
+          idrive-rpm-log     = "journalctl -u docker-idrive360-rpm -f";
+          idrive-rpm-restart = "sudo systemctl restart docker-idrive360-rpm";
+          idrive-rpm-stop    = "sudo systemctl stop docker-idrive360-rpm";
+          idrive-rpm-ps      = "docker exec idrive360-rpm ps aux";
+          idrive-rpm-status  = ''
+            echo "=== RPM Container ===" && docker ps --filter name=idrive360-rpm --format "{{.Status}}" | grep . || echo "NOT RUNNING";
+            LATEST=$(ls -t /var/lib/idrive360-rpm/opt/idriveIt/user_profile/scott/*/Backup/DefaultBackupSet/LOGS/* 2>/dev/null | head -1);
+            [ -n "$LATEST" ] && echo "=== Latest log: $(basename "$LATEST") ===" && tail -6 "$LATEST"
           '';
         };
         programs.bash.initExtra = ''
@@ -244,8 +255,10 @@ let
       ];
       systemd.tmpfiles.rules = [
         "d /pool/borg 0750 scott users -"
-        "d /var/lib/idrive360/opt  0755 root root -"
-        "d /var/lib/idrive360/seed 0755 root root -"
+        "d /var/lib/idrive360/opt      0755 root root -"
+        "d /var/lib/idrive360/seed     0755 root root -"
+        "d /var/lib/idrive360-rpm/opt  0755 root root -"
+        "d /var/lib/idrive360-rpm/seed 0755 root root -"
       ];
 
       # Drive spindown. by-id paths instead of sdX (assignments shift on reboot).
@@ -366,37 +379,52 @@ let
       # IDrive360 cloud backup: vendor .deb self-updates and downloads its engine
       # at runtime, so it runs in an Ubuntu container instead of a Nix package
       # (prior packaging attempt archived in archive/pkgs/idrive-e360/).
-      # State lives in /var/lib/idrive360/opt; /var/lib/idrive360/seed holds the
-      # installer .rpm and (after first boot) the rescued idrive360cron binary.
-      # Fresh-registration flow: place IDrive360_<token>.rpm in seed (no .bin),
-      # start container — rpm -i registers the device, rescues the binary, then
-      # exits so the cron daemon takes over on the next restart.
-      environment.etc."idrive360/entrypoint.sh" = {
-        source = ./idrive360-entrypoint.sh;
+      # Two parallel IDrive360 containers:
+      #   idrive360-deb — Ubuntu 24.04, existing registration, /var/lib/idrive360/{opt,seed}
+      #   idrive360-rpm — Rocky Linux 9,  fresh registration,  /var/lib/idrive360-rpm/{opt,seed}
+      # Only one should run at a time to avoid port conflicts (--network=host).
+      environment.etc."idrive360-deb/entrypoint.sh" = {
+        source = ./idrive360-entrypoint-deb.sh;
+        mode = "0755";
+      };
+      environment.etc."idrive360-rpm/entrypoint.sh" = {
+        source = ./idrive360-entrypoint-rpm.sh;
         mode = "0755";
       };
       virtualisation.oci-containers = {
         backend = "docker";
-        containers.idrive360 = {
+        containers.idrive360-deb = {
+          image = "ubuntu:24.04";
+          entrypoint = "/entrypoint.sh";
+          volumes = [
+            "/etc/idrive360-deb/entrypoint.sh:/entrypoint.sh:ro"
+            "/var/lib/idrive360/opt:/opt/IDrive360"
+            "/var/lib/idrive360/seed:/seed:ro"
+            "/pool:/pool:ro,rslave"
+          ];
+          extraOptions = [ "--network=host" "--init" ];
+        };
+        containers.idrive360-rpm = {
           image = "rockylinux:9";
           entrypoint = "/entrypoint.sh";
           volumes = [
-            "/etc/idrive360/entrypoint.sh:/entrypoint.sh:ro"
-            "/var/lib/idrive360/opt:/opt/IDrive360"
-            "/var/lib/idrive360/seed:/seed:ro"
-            # rslave: ZFS mount events propagate into the container even if it
-            # started before the pool imported
+            "/etc/idrive360-rpm/entrypoint.sh:/entrypoint.sh:ro"
+            "/var/lib/idrive360-rpm/opt:/opt/IDrive360"
+            "/var/lib/idrive360-rpm/seed:/seed:ro"
             "/pool:/pool:ro,rslave"
           ];
-          # --init: tini as PID 1 to reap the zombie children the vendor cron
-          # daemon leaves behind
           extraOptions = [ "--network=host" "--init" ];
         };
       };
-      # The vendor cron daemon occasionally exits 0 on its own (scheduler bug);
-      # always restart so the device stays online.
-      # Start after ZFS so /pool is mounted before the container binds it.
-      systemd.services.docker-idrive360 = {
+      systemd.services.docker-idrive360-deb = {
+        after = [ "zfs-import-pool.service" ];
+        requires = [ "zfs-import-pool.service" ];
+        serviceConfig = {
+          Restart = lib.mkForce "always";
+          RestartSec = lib.mkForce "60s";
+        };
+      };
+      systemd.services.docker-idrive360-rpm = {
         after = [ "zfs-import-pool.service" ];
         requires = [ "zfs-import-pool.service" ];
         serviceConfig = {
