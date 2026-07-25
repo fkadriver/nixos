@@ -15,6 +15,7 @@ if ! rpm -q dbus-libs >/dev/null 2>&1; then
     DNF_CACHE=/opt/IDrive360/.dnf-cache
     mkdir -p "$DNF_CACHE"
     dnf install -y \
+        --allowerasing \
         --setopt=cachedir="$DNF_CACHE" \
         --setopt=keepcache=1 \
         --setopt=install_weak_deps=False \
