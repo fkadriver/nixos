@@ -406,7 +406,7 @@ let
           extraOptions = [ "--network=host" "--init" ];
         };
         containers.idrive360-rpm = {
-          image = "rockylinux:9";
+          image = "idrive360-rocky9:latest";
           entrypoint = "/entrypoint.sh";
           volumes = [
             "/etc/idrive360-rpm/entrypoint.sh:/entrypoint.sh:ro"
