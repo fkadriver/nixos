@@ -15,6 +15,8 @@
 #   - Binary is extracted from rpm payload via rpm2cpio as fallback
 set -e
 
+# Install runtime deps if not already present (skipped when using the
+# pre-built idrive360-rocky9 image which has them baked in).
 if ! rpm -q dbus-libs >/dev/null 2>&1; then
     DNF_CACHE=/opt/IDrive360/.dnf-cache
     mkdir -p "$DNF_CACHE"
@@ -112,7 +114,11 @@ pkill Xvfb 2>/dev/null || true
 rm -f /tmp/.X98-lock /tmp/.X11-unix/X98
 Xvfb :98 -screen 0 1024x768x16 -nolisten tcp &
 
+# Remove stale lock files so the cron daemon doesn't exit thinking another
+# instance is running (lock PIDs from prior container boots are always stale).
+rm -f /opt/IDrive360/idriveIt/user_profile/cron.lock
+find /opt/IDrive360/idriveIt/user_profile -name "*.pid" -delete 2>/dev/null || true
+
 # Run cron as scott so the daemon finds the scott user profile.
-# The RPM installer detects root; we patch idriveuser.txt root→scott above,
-# and run as scott so the daemon's user lookup matches.
-exec su -s /bin/bash scott -c "exec /etc/idrive360cron --cron"
+# su resets the environment, so DISPLAY and HOME must be passed explicitly.
+exec su -s /bin/bash scott -c "export DISPLAY=:98; export HOME=/home/scott; exec /etc/idrive360cron --cron"
