@@ -23,7 +23,7 @@ if ! rpm -q dbus-libs >/dev/null 2>&1; then
         --setopt=cachedir="$DNF_CACHE" \
         --setopt=keepcache=1 \
         --setopt=install_weak_deps=False \
-        nss curl ca-certificates which tar cpio cronie procps-ng libnotify \
+        nss curl ca-certificates which tar cronie procps-ng libnotify \
         expat popt xorg-x11-server-Xvfb net-tools \
         dbus-libs atk at-spi2-atk cups-libs gtk3 pango cairo \
         libXcomposite libXdamage libXfixes libxkbcommon \
@@ -65,23 +65,13 @@ if [ ! -x /etc/idrive360cron ]; then
         fi
 
         # Rescue the cron binary from wherever the installer put it.
+        # NOTE: the cron binary is downloaded from IDrive360 servers during
+        # %post — it is NOT in the rpm payload and cannot be extracted from
+        # the rpm.  If rpm -i fails (already registered), idrive360cron.bin
+        # must already exist on the persistent volume from a prior install.
         if [ -x /etc/idrive360cron ]; then
             REAL_BIN=$(readlink -f /etc/idrive360cron 2>/dev/null || echo /etc/idrive360cron)
             install -m 755 "$REAL_BIN" /opt/IDrive360/idrive360cron.bin
-        fi
-
-        # Fallback: extract cron binary directly from the rpm payload.
-        # This handles the case where the device is already registered (rpm -i
-        # skipped) but idrive360cron.bin was lost from the persistent volume.
-        if [ ! -x /opt/IDrive360/idrive360cron.bin ]; then
-            echo "rpm -i skipped or failed; extracting cron binary from rpm payload..." >&2
-            TMP_EXTRACT=$(mktemp -d)
-            (cd "$TMP_EXTRACT" && rpm2cpio /seed/IDrive360_*.rpm | cpio -idm 2>/dev/null) || true
-            RPM_CRON=$(find "$TMP_EXTRACT" -name "idrive360cron" -not -name "*.bin" -type f | head -1)
-            if [ -n "$RPM_CRON" ] && [ -x "$RPM_CRON" ]; then
-                install -m 755 "$RPM_CRON" /opt/IDrive360/idrive360cron.bin
-            fi
-            rm -rf "$TMP_EXTRACT"
         fi
 
         # Wire up /etc/idrive360cron from the rescued binary.
