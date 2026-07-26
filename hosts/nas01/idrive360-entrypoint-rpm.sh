@@ -89,4 +89,7 @@ pkill Xvfb 2>/dev/null || true
 rm -f /tmp/.X98-lock /tmp/.X11-unix/X98
 Xvfb :98 -screen 0 1024x768x16 -nolisten tcp &
 
-exec /etc/idrive360cron --cron
+# Run cron as scott so the daemon finds the scott user profile in idriveuser.txt.
+# The installer detected root; running as scott aligns with the profile the
+# registration wrote (and which our entrypoint patched root→scott).
+exec su -s /bin/bash scott -c "exec /etc/idrive360cron --cron"
