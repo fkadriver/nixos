@@ -1,5 +1,6 @@
 <domain type='kvm'>
   <name>nas01-backup</name>
+  <uuid>843679ec-786b-42fc-87eb-868a66bb4dc4</uuid>
   <memory unit='MiB'>2048</memory>
   <currentMemory unit='MiB'>2048</currentMemory>
   <vcpu placement='static'>2</vcpu>
@@ -47,6 +48,15 @@
     <channel type='unix'>
       <target type='virtio' name='org.qemu.guest_agent.0'/>
     </channel>
+    <!-- Serial console for virsh console -->
+    <serial type='pty'>
+      <target type='isa-serial' port='0'>
+        <model name='isa-serial'/>
+      </target>
+    </serial>
+    <console type='pty'>
+      <target type='serial' port='0'/>
+    </console>
     <!-- VNC bound to localhost; access via SSH tunnel or from nas01 RDP session -->
     <graphics type='vnc' port='-1' autoport='yes' listen='127.0.0.1'>
       <listen type='address' address='127.0.0.1'/>

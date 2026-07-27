@@ -58,11 +58,12 @@ fi
 if [ ! -f "$CIDATA_ISO" ]; then
     echo "[3/6] Building cloud-init ISO..."
 
-    # Grab scott's first SSH public key so we can log in without a password
-    SCOTT_PUBKEY=$(grep -v '^#' /home/scott/.ssh/authorized_keys 2>/dev/null | head -1 || true)
+    # Derive scott's SSH public key from the Bitwarden-installed private key
+    # (nas01 has no authorized_keys; keys come from Bitwarden via bitwarden-scott module)
+    SCOTT_PUBKEY=$(ssh-keygen -y -f /home/scott/.ssh/id_ed25519_github 2>/dev/null || \
+                   ssh-keygen -y -f /home/scott/.ssh/id_ed25519_legacy 2>/dev/null || true)
     if [ -z "$SCOTT_PUBKEY" ]; then
-        echo "      WARNING: no SSH public key found in /home/scott/.ssh/authorized_keys"
-        echo "               You'll need to log in with the 'changeme' password"
+        echo "      WARNING: could not derive SSH public key — password auth only (changeme)"
     fi
 
     TMPDIR=$(mktemp -d)
@@ -77,6 +78,7 @@ META
 #cloud-config
 hostname: nas01-backup
 manage_etc_hosts: true
+ssh_pwauth: true
 
 users:
   - name: scott
