@@ -13,15 +13,15 @@ All CLI access goes through SSH into the VM. The web console is at
 
 ```bash
 # SSH into the VM (from nas01)
-idrive-vm-ssh          # alias: ssh scott@$(virsh domifaddr nas01-backup | awk '/ipv4/{print $4}' | cut -d/ -f1)
+idrive-ssh          # alias: ssh scott@$(virsh domifaddr nas01-backup | awk '/ipv4/{print $4}' | cut -d/ -f1)
 
 # Serial console (Ctrl+] to exit)
-idrive-vm-console
+idrive-console
 
 # VM status / power
-idrive-vm-status       # virsh domstate nas01-backup
-idrive-vm-start        # sudo virsh start nas01-backup
-idrive-vm-stop         # sudo virsh shutdown nas01-backup
+idrive-status       # virsh domstate nas01-backup
+idrive-start        # sudo virsh start nas01-backup
+idrive-stop         # sudo virsh shutdown nas01-backup
 ```
 
 VNC from a remote Tailscale machine (e.g. Remmina):
@@ -51,7 +51,7 @@ sudo systemctl stop   idrive360cron
 sudo systemctl start  idrive360cron
 
 # Drop into a shell
-ssh scott@<VM-IP>       # or: idrive-vm-ssh from nas01
+ssh scott@<VM-IP>       # or: idrive-ssh from nas01
 sudo -i                 # root shell if needed
 ```
 

@@ -193,8 +193,9 @@ Logitech devices on `latitude` are managed by [Solaar](https://github.com/pwr-So
 
 Defined in `modules/shell-aliases.nix`:
 - `nix-rebuild` - Pull latest and rebuild current host (NixOS) or darwin (airbook)
-- `nos-test` - `sudo nixos-rebuild test --flake .`
-- `nos-boot` - `sudo nixos-rebuild boot --flake .`
+- `nix-sync` - Run `scripts/sync-nixos-hosts.sh`
+- `smart [drive]` - Full SMART report for all drives, or just one (e.g. `smart sda`)
+- `ts-info [host]` - Show enabled Tailscale features (SSH, exit-node option, routes, tags) for self, or a peer by hostname
 
 ## Acknowledgments
 

@@ -228,8 +228,9 @@ in
         ts-netcheck = "tailscale netcheck";
         ts-ip = "tailscale ip";
         ts-peers = "tailscale status --peers";
-        ts-self = "tailscale status --self";
         ts-debug = "tailscale debug";
+        # Enabled features for a node: no arg = self, or pass a hostname for a peer
+        ts-info = ''f(){ if [ -z "$1" ]; then tailscale status --json | jq '.Self | {Host: .HostName, OS, Tags, ExitNodeOption, Routes: .PrimaryRoutes, Relay, Online, KeyExpiry, SSH: ((.Capabilities // []) | any(. == "https://tailscale.com/cap/ssh"))}'; else out=$(tailscale status --json | jq --arg h "$1" '.Peer[] | select((.HostName|ascii_downcase) == ($h|ascii_downcase)) | {Host: .HostName, OS, Tags, ExitNodeOption, Routes: .PrimaryRoutes, Relay, Online, KeyExpiry}'); if [ -z "$out" ]; then echo "ts-info: no peer matching '$1'" >&2; else echo "$out"; fi; fi; }; f'';
 
         # Grep with color
         gpc = "grep --color=always";
@@ -256,10 +257,7 @@ in
 
         # Nix shortcuts
         nixdir = "cd ~/git/nixos";
-        nix-build-test = "nix flake check";
         nix-update = "nix flake update";
-        nix-search = "nix search nixpkgs";
-        nix-shell-python = "nix-shell -p python3 python3Packages.pip";
 
         # Common utilities
         ll = "ls -lah";
@@ -341,8 +339,9 @@ in
         ts-netcheck = "tailscale netcheck";
         ts-ip = "tailscale ip";
         ts-peers = "tailscale status --peers";
-        ts-self = "tailscale status --self";
         ts-debug = "tailscale debug";
+        # Enabled features for a node: no arg = self, or pass a hostname for a peer
+        ts-info = ''f(){ if [ -z "$1" ]; then tailscale status --json | jq '.Self | {Host: .HostName, OS, Tags, ExitNodeOption, Routes: .PrimaryRoutes, Relay, Online, KeyExpiry, SSH: ((.Capabilities // []) | any(. == "https://tailscale.com/cap/ssh"))}'; else out=$(tailscale status --json | jq --arg h "$1" '.Peer[] | select((.HostName|ascii_downcase) == ($h|ascii_downcase)) | {Host: .HostName, OS, Tags, ExitNodeOption, Routes: .PrimaryRoutes, Relay, Online, KeyExpiry}'); if [ -z "$out" ]; then echo "ts-info: no peer matching '$1'" >&2; else echo "$out"; fi; fi; }; f'';
 
         # Grep with color
         gpc = "grep --color=always";
@@ -369,10 +368,7 @@ in
 
         # Nix shortcuts
         nixdir = "cd ~/git/nixos";
-        nix-build-test = "nix flake check";
         nix-update = "nix flake update";
-        nix-search = "nix search nixpkgs";
-        nix-shell-python = "nix-shell -p python3 python3Packages.pip";
 
         # Common utilities
         ll = "ls -lah";

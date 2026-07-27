@@ -3,6 +3,8 @@
 # MAINTENANCE: When updating aliases here, also update:
 #   - Darwin: hosts/airbook-darwin/home.nix
 #             (programs.bash.shellAliases / programs.zsh.shellAliases)
+#   - Standalone home-manager: homeConfigurations/scott.nix
+#             (shares the tailscale/git/tmux/util aliases, not the nix-*/idrive/temps ones)
 # Rebuild aliases by host:
 #   nix-rebuild  → latitude, vm01 (nixos-rebuild), airbook (darwin-rebuild)
 {
@@ -18,7 +20,7 @@
         cyberchef = "docker run -d -p 8080:8080 humangod/cyberchef";
 
         # Tailscale SSH shortcuts
-        airbook = "tailscale ssh airbook";
+        # (airbook has no sshd — see hosts/airbook-darwin/home.nix)
         nas01 = "tailscale ssh nas01";
         log01 = "tailscale ssh log01";
         pihole01 = "tailscale ssh pihole01";
@@ -37,8 +39,9 @@
         ts-netcheck = "tailscale netcheck";
         ts-ip = "tailscale ip";
         ts-peers = "tailscale status --peers";
-        ts-self = "tailscale status --self";
         ts-debug = "tailscale debug";
+        # Enabled features for a node: no arg = self, or pass a hostname for a peer
+        ts-info = ''f(){ if [ -z "$1" ]; then tailscale status --json | jq '.Self | {Host: .HostName, OS, Tags, ExitNodeOption, Routes: .PrimaryRoutes, Relay, Online, KeyExpiry, SSH: ((.Capabilities // []) | any(. == "https://tailscale.com/cap/ssh"))}'; else out=$(tailscale status --json | jq --arg h "$1" '.Peer[] | select((.HostName|ascii_downcase) == ($h|ascii_downcase)) | {Host: .HostName, OS, Tags, ExitNodeOption, Routes: .PrimaryRoutes, Relay, Online, KeyExpiry}'); if [ -z "$out" ]; then echo "ts-info: no peer matching '$1'" >&2; else echo "$out"; fi; fi; }; f'';
 
         # Grep with color
         gpc = "grep --color=always";
@@ -65,20 +68,11 @@
 
         # Nix shortcuts
 	nixdir = "cd ~/git/nixos";
-        nix-build-test = "nix flake check";
         nix-update = "nix flake update";
-        nix-search = "nix search nixpkgs";
-        nix-shell-python = "nix-shell -p python3 python3Packages.pip";
 
         # NixOS system shortcuts with automatic hostname detection
         nix-rebuild = "_d=$PWD; [ \"$_d\" != \"$HOME/git/nixos\" ] && cd ~/git/nixos; GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=accept-new' git pull && sudo nixos-rebuild switch --flake ~/git/nixos#$(hostname); [ \"$_d\" != \"$HOME/git/nixos\" ] && cd -; unset _d; source ~/.bashrc";
         nix-sync = "~/git/nixos/scripts/sync-nixos-hosts.sh";
-        nos-rebuild = "sudo nixos-rebuild switch --flake .";
-        nos-test = "sudo nixos-rebuild test --flake .";
-        nos-boot = "sudo nixos-rebuild boot --flake .";
-        nos-clean = "sudo nix-collect-garbage -d";
-        nos-optimize = "sudo nix-store --optimize";
-        nos-list-gens = "sudo nix-env --list-generations --profile /nix/var/nix/profiles/system";
 
         # Tmux shortcuts
         t = "tmux attach-session -t default 2>/dev/null || tmux new-session -s default";
@@ -90,21 +84,8 @@
         # Temperature monitoring
         temps = ''echo '=== CPU Temps (°F) ===' && sensors -f 2>/dev/null | grep -E ':.*°F' || echo '(run: sudo sensors-detect)'; echo ""; echo '=== Drive Temps (°F) ==='; for d in /dev/sd?; do C=$(sudo smartctl -A "$d" 2>/dev/null | awk '/^[[:space:]]*19[04] /{print $10}' | head -1); if [ -n "$C" ]; then printf "%s: %d°F\n" "$d" "$((C * 9 / 5 + 32))"; else printf "%s: N/A\n" "$d"; fi; done'';
 
-        # IDrive360 — DEB container (Ubuntu, nas01)
-        idrive-deb-log     = "ssh nas01 journalctl -u docker-idrive360-deb -f";
-        idrive-deb-ps      = "ssh nas01 docker exec idrive360-deb ps aux";
-        idrive-deb-stop    = "ssh nas01 sudo systemctl stop docker-idrive360-deb";
-        idrive-deb-start   = "ssh nas01 sudo systemctl start docker-idrive360-deb";
-        idrive-deb-restart = "ssh nas01 sudo systemctl restart docker-idrive360-deb";
-        idrive-deb-kill    = "ssh nas01 \"docker exec -u scott idrive360-deb /opt/IDrive360/idrive360 --terminate-job backup - 2\"";
-
-        # IDrive360 — RPM container (Rocky Linux, nas01)
-        idrive-rpm-log     = "ssh nas01 journalctl -u docker-idrive360-rpm -f";
-        idrive-rpm-ps      = "ssh nas01 docker exec idrive360-rpm ps aux";
-        idrive-rpm-stop    = "ssh nas01 sudo systemctl stop docker-idrive360-rpm";
-        idrive-rpm-start   = "ssh nas01 sudo systemctl start docker-idrive360-rpm";
-        idrive-rpm-restart = "ssh nas01 sudo systemctl restart docker-idrive360-rpm";
-        idrive-rpm-kill    = "ssh nas01 \"docker exec -u scott idrive360-rpm /opt/IDrive360/idrive360 --terminate-job backup - 2\"";
+        # Full SMART report: all drives by default, or one (e.g. `smart sda`)
+        smart = ''f(){ if [ -n "$1" ]; then d="$1"; case "$d" in /dev/*) ;; *) d="/dev/$d";; esac; sudo smartctl -a "$d"; else for d in $(lsblk -dn -o NAME 2>/dev/null | grep -v '^loop'); do echo "=== /dev/$d ==="; sudo smartctl -a "/dev/$d"; echo; done; fi; }; f'';
 
         # Kubernetes
         k = "kubectl";

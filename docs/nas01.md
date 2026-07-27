@@ -133,11 +133,11 @@ sudo bash /etc/nas01-backup/setup.sh
 
 Useful aliases (available in scott's shell on nas01):
 ```bash
-idrive-vm-status    # virsh domstate nas01-backup
-idrive-vm-start     # sudo virsh start nas01-backup
-idrive-vm-stop      # sudo virsh shutdown nas01-backup
-idrive-vm-ssh       # ssh directly into the VM
-idrive-vm-console   # serial console (Ctrl+] to exit)
+idrive-status    # virsh domstate nas01-backup
+idrive-start     # sudo virsh start nas01-backup
+idrive-stop      # sudo virsh shutdown nas01-backup
+idrive-ssh       # ssh directly into the VM
+idrive-console   # serial console (Ctrl+] to exit)
 ```
 
 VNC access from a remote machine (e.g. Remmina on Tailscale):
@@ -248,10 +248,12 @@ sudo chown -R scott /pool/borg
 If the drive is gone, clients simply init fresh repos on their first backup
 (history lost; the IDrive360 cloud copy of `/mnt` may also hold the old repos).
 
-### IDrive360 container
+### IDrive360 VM
 
 ```bash
-docker ps                            # container running?
-journalctl -u docker-idrive360 -n 50
-docker exec -it idrive360 bash       # poke inside
+idrive-status    # virsh domstate nas01-backup — VM running?
+idrive-ssh       # ssh into the VM
 ```
+
+See `docs/idrive360.md` for full IDrive360 operations (VM-based since the
+Docker containers were removed — see commit b20740e).
