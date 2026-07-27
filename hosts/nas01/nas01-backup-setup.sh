@@ -127,7 +127,7 @@ write_files:
       sleep 3
 
       # Expose via VNC (reads ~/.vnc/passwd for password)
-      exec x11vnc -display :1 -forever -rfbport 5901 -usepw -shared
+      exec x11vnc -display :1 -forever -rfbport 5901 -usepw -shared -nows
 
   - path: /etc/systemd/system/vnc-desktop.service
     content: |
