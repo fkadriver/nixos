@@ -93,7 +93,7 @@ users:
 
 packages:
   - lxde-core
-  - lxterm
+  - lxterminal
   - x11vnc
   - xvfb
   - dbus-x11
