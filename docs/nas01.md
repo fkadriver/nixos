@@ -110,31 +110,47 @@ All declared in [hosts/nas01/default.nix](../hosts/nas01/default.nix):
 | smartd | `services.smartd` | drive health monitoring |
 | Wazuh agent | `services.wazuh-agent` | manager: wazuh.warthog-royal.ts.net |
 | rsyslog → log01 | `logging.forwardToLog01` (common.nix) | on by default |
-| IDrive360 | `virtualisation.oci-containers.containers.idrive360` | see below |
+| IDrive360 | `virtualisation.libvirtd` (nas01-backup VM) | see below |
 
 ---
 
-## IDrive360 (cloud backup, containerized)
+## IDrive360 (cloud backup, QEMU/KVM VM)
 
 IDrive360's installer self-updates and downloads its backup engine at runtime,
-which is incompatible with Nix packaging (prior attempt: `archive/pkgs/idrive-e360/`).
-It runs in an `ubuntu:24.04` Docker container instead:
+which is incompatible with Nix packaging. It runs in a persistent Ubuntu 24.04
+QEMU/KVM VM named `nas01-backup` instead of a Docker container.
 
-- **State**: `/var/lib/idrive360/opt` → `/opt/IDrive360` in-container (persistent volume; holds device registration + engine)
-- **Seed**: `/var/lib/idrive360/seed` — installer `.deb` (token in filename) + rescued `idrive360cron` binary
-- **Data mounts**: `/pool` and `/mnt` read-only (bind-mounted into container; backup set configured in web console — currently covers /home, /var, /mnt; **/pool is NOT included** — must be added via web console → Backup Settings)
-- **Entrypoint**: [hosts/nas01/idrive360-entrypoint.sh](../hosts/nas01/idrive360-entrypoint.sh) — restores deps/cron binary on container recreation, falls back to full `dpkg -i` bootstrap, then runs `/etc/idrive360cron --cron`
+- **VM disk**: `/var/lib/libvirt/images/nas01-backup.qcow2` (20 GB, persists across reboots)
+- **Data access**: `/pool` and `/mnt` mounted via virtiofs into the VM
+- **Desktop**: LXDE + x11vnc on port 5901 (bound to VM NAT IP, not nas01 localhost)
+- **VM definition**: `hosts/nas01/nas01-backup-domain.xml` deployed to `/etc/nas01-backup/domain.xml`
+- **Setup script**: `hosts/nas01/nas01-backup-setup.sh` deployed to `/etc/nas01-backup/setup.sh`
 
-Seeding after a rebuild (from the latitude backup):
+One-time setup (already done — the VM is registered and running):
 ```bash
-rsync -a ~/nas01-backup/opt-IDrive360/ nas01:/var/lib/idrive360/opt/
-scp ~/nas01-backup/home/IDrive360_*.deb ~/nas01-backup/etc/idrive360cron.bin \
-    nas01:/var/lib/idrive360/seed/
+sudo bash /etc/nas01-backup/setup.sh
 ```
 
-Manage via the [IDrive360 web console](https://www.idrive360.com/enterprise/login).
-Logs: `journalctl -u docker-idrive360`.
-See [idrive360.md](idrive360.md) for full CLI reference (commands, stopping jobs, troubleshooting).
+Useful aliases (available in scott's shell on nas01):
+```bash
+idrive-vm-status    # virsh domstate nas01-backup
+idrive-vm-start     # sudo virsh start nas01-backup
+idrive-vm-stop      # sudo virsh shutdown nas01-backup
+idrive-vm-ssh       # ssh directly into the VM
+idrive-vm-console   # serial console (Ctrl+] to exit)
+```
+
+VNC access from a remote machine (e.g. Remmina on Tailscale):
+```bash
+# Open SSH tunnel on the remote machine (keep open while using VNC):
+ssh -L 5901:192.168.122.54:5901 -N scott@nas01.warthog-royal.ts.net
+
+# Connect Remmina to localhost:5901, password: changeme
+# (disable Remmina's built-in SSH tunnel — Tailscale SSH is incompatible with libssh)
+```
+
+Manage backups via the [IDrive360 web console](https://www.idrive360.com/enterprise/login).
+See [idrive360.md](idrive360.md) for CLI reference (commands run inside the VM).
 
 ---
 

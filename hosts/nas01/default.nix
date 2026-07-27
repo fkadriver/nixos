@@ -1,24 +1,5 @@
 { inputs, ... }@flakeContext:
 let
-  # Writes one syslog-format line to /var/log/idrive360-status.log every run.
-  # Uses a glob for the device hash so it survives re-registration.
-  idrive360StatusScript = pkgs: pkgs.writeShellScript "idrive360-status" ''
-    set -euo pipefail
-    STATUS_FILE=$(${pkgs.findutils}/bin/find /var/lib/idrive360/opt/idriveIt/user_profile/scott \
-      -name "lastBackupStatus.txt" 2>/dev/null | head -1)
-    LOG=/var/log/idrive360-status.log
-
-    if [ -z "$STATUS_FILE" ]; then
-      echo "$(date '+%b %d %H:%M:%S') nas01 idrive360-status: ERROR no status file found" >> "$LOG"
-      exit 0
-    fi
-
-    STATUS=$(${pkgs.jq}/bin/jq -r '.last_backup_status.status // "unknown"' "$STATUS_FILE")
-    FILENAME=$(${pkgs.jq}/bin/jq -r '.last_backup_status.filename // "unknown"' "$STATUS_FILE")
-    JOBTYPE=$(${pkgs.jq}/bin/jq -r '.last_backup_status.jobType // "unknown"' "$STATUS_FILE")
-    echo "$(date '+%b %d %H:%M:%S') nas01 idrive360-status: status=$STATUS job=$FILENAME type=$JOBTYPE" >> "$LOG"
-  '';
-
   # Called by smartd via -M exec when a SMART failure is detected.
   smartdAlertScript = pkgs: pkgs.writeShellScript "smartd-alert" ''
     LOG=/var/log/smartd-alerts.log
@@ -92,17 +73,6 @@ let
 
           # Temperature monitoring
           temps = ''echo '=== CPU Temps (°F) ===' && sensors -f 2>/dev/null | grep -E ':.*°F' || echo '(run: sudo sensors-detect)'; echo ""; echo '=== Drive Temps (°F) ==='; for d in /dev/sd?; do C=$(sudo smartctl -A "$d" 2>/dev/null | awk '/^[[:space:]]*19[04] /{print $10}' | head -1); if [ -n "$C" ]; then printf "%s: %d°F\n" "$d" "$((C * 9 / 5 + 32))"; else printf "%s: N/A\n" "$d"; fi; done'';
-
-          # IDrive360 — DEB container (Ubuntu)
-          idrive-deb-log     = "journalctl -u docker-idrive360-deb -f";
-          idrive-deb-restart = "sudo systemctl restart docker-idrive360-deb";
-          idrive-deb-stop    = "sudo systemctl stop docker-idrive360-deb";
-          idrive-deb-ps      = "docker exec idrive360-deb ps aux";
-          idrive-deb-status  = ''
-            echo "=== DEB Container ===" && docker ps --filter name=idrive360-deb --format "{{.Status}}" | grep . || echo "NOT RUNNING";
-            LATEST=$(ls -t /var/lib/idrive360/opt/idriveIt/user_profile/scott/*/Backup/DefaultBackupSet/LOGS/* 2>/dev/null | head -1);
-            [ -n "$LATEST" ] && echo "=== Latest log: $(basename "$LATEST") ===" && tail -6 "$LATEST"
-          '';
 
           # IDrive360 — nas01-backup VM (Ubuntu 24.04 / QEMU/KVM)
           # VMs live in qemu:///system; LIBVIRT_DEFAULT_URI is set in initExtra below.
@@ -262,11 +232,6 @@ let
       ];
       systemd.tmpfiles.rules = [
         "d /pool/borg 0750 scott users -"
-        # Docker container state dirs kept for archive; remove when containers are purged
-        "d /var/lib/idrive360/opt      0755 root root -"
-        "d /var/lib/idrive360/seed     0755 root root -"
-        "d /var/lib/idrive360-rpm/opt  0755 root root -"
-        "d /var/lib/idrive360-rpm/seed 0755 root root -"
       ];
 
       # Drive spindown. by-id paths instead of sdX (assignments shift on reboot).
@@ -344,28 +309,9 @@ let
         manager = "wazuh.warthog-royal.ts.net";
         enrollmentPasswordFile = "/run/bitwarden-secrets/wazuh_agent_enrollment_password";
         extraLocalFiles = [
-          { location = "/var/log/idrive360-status.log"; logFormat = "syslog"; }
           { location = "/var/log/smartd-alerts.log"; logFormat = "syslog"; }
           { location = "/var/log/borg-status.log"; logFormat = "syslog"; }
         ];
-      };
-
-      # IDrive360 backup status logger — writes one syslog line every 15 min so
-      # Wazuh can alert on status=Failure without reading inside the container.
-      systemd.services.idrive360-status = {
-        description = "Log IDrive360 backup status for Wazuh";
-        serviceConfig = {
-          Type = "oneshot";
-          ExecStart = idrive360StatusScript pkgs;
-        };
-      };
-      systemd.timers.idrive360-status = {
-        wantedBy = [ "timers.target" ];
-        timerConfig = {
-          OnBootSec = "5min";
-          OnUnitActiveSec = "15min";
-          Persistent = true;
-        };
       };
 
       systemd.services.borg-status = {
@@ -399,55 +345,6 @@ let
       environment.etc."nas01-backup/setup.sh" = {
         source = ./nas01-backup-setup.sh;
         mode = "0755";
-      };
-
-      # Legacy Docker containers — DISABLED (replaced by nas01-backup VM).
-      # TODO: remove these blocks and the entrypoint scripts once the VM is stable,
-      #       then `docker system prune` and delete /var/lib/idrive360{,-rpm}/.
-      environment.etc."idrive360-deb/entrypoint.sh" = {
-        source = ./idrive360-entrypoint-deb.sh;
-        mode = "0755";
-      };
-      environment.etc."idrive360-rpm/entrypoint.sh" = {
-        source = ./idrive360-entrypoint-rpm.sh;
-        mode = "0755";
-      };
-      virtualisation.oci-containers = {
-        backend = "docker";
-        containers.idrive360-deb = {
-          image = "ubuntu:24.04";
-          autoStart = false;
-          entrypoint = "/entrypoint.sh";
-          volumes = [
-            "/etc/idrive360-deb/entrypoint.sh:/entrypoint.sh:ro"
-            "/var/lib/idrive360/opt:/opt/IDrive360"
-            "/var/lib/idrive360/seed:/seed:ro"
-            "/pool:/pool:ro,rslave"
-          ];
-          extraOptions = [ "--network=host" "--init" ];
-        };
-        containers.idrive360-rpm = {
-          image = "idrive360-rocky9:latest";
-          autoStart = false;
-          entrypoint = "/entrypoint.sh";
-          volumes = [
-            "/etc/idrive360-rpm/entrypoint.sh:/entrypoint.sh:ro"
-            "/var/lib/idrive360-rpm/opt:/opt/IDrive360"
-            "/var/lib/idrive360-rpm/seed:/seed:ro"
-            "/pool:/pool:ro,rslave"
-          ];
-          extraOptions = [ "--network=host" "--init" ];
-        };
-      };
-      systemd.services.docker-idrive360-deb = {
-        serviceConfig = {
-          Restart = lib.mkForce "no";
-        };
-      };
-      systemd.services.docker-idrive360-rpm = {
-        serviceConfig = {
-          Restart = lib.mkForce "no";
-        };
       };
 
       system = {
