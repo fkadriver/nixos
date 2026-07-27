@@ -105,15 +105,21 @@ let
           '';
 
           # IDrive360 — nas01-backup VM (Ubuntu 24.04 / QEMU/KVM)
+          # VMs live in qemu:///system; LIBVIRT_DEFAULT_URI is set in initExtra below.
           idrive-vm-status   = "virsh domstate nas01-backup";
           idrive-vm-ip       = "virsh domifaddr nas01-backup";
           idrive-vm-start    = "sudo virsh start nas01-backup";
           idrive-vm-stop     = "sudo virsh shutdown nas01-backup";
           idrive-vm-ssh      = ''ssh scott@$(virsh domifaddr nas01-backup | awk '/ipv4/{print $4}' | cut -d/ -f1)'';
-          idrive-vm-vnc      = "vncviewer localhost:1";
+          # VNC is on the VM's NAT IP (192.168.122.x:5901), not nas01 localhost.
+          # From laptop: configure Remmina with Server=192.168.122.54:5901, SSH tunnel=nas01
+          idrive-vm-vnc      = ''vncviewer $(virsh domifaddr nas01-backup | awk '/ipv4/{print $4}' | cut -d/ -f1):5901'';
           idrive-vm-console  = "sudo virsh console nas01-backup";
         };
         programs.bash.initExtra = ''
+          # virsh defaults to qemu:///session; VMs live in qemu:///system
+          export LIBVIRT_DEFAULT_URI=qemu:///system
+
           # Borg server functions — take hostname as argument
           # Usage: borg-ls latitude | borg-check vm01 | borg-unlock airbook.local
           # unalias first: shell-aliases.nix defines client-side borg-check/borg-unlock
