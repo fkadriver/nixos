@@ -1,0 +1,73 @@
+<domain type='kvm'>
+  <name>nas01-backup</name>
+  <memory unit='MiB'>2048</memory>
+  <currentMemory unit='MiB'>2048</currentMemory>
+  <vcpu placement='static'>2</vcpu>
+  <cpu mode='host-passthrough' check='none'/>
+  <os>
+    <type arch='x86_64' machine='q35'>hvm</type>
+    <boot dev='hd'/>
+  </os>
+  <features>
+    <acpi/>
+    <apic/>
+  </features>
+  <clock offset='utc'>
+    <timer name='rtc' tickpolicy='catchup'/>
+    <timer name='pit' tickpolicy='delay'/>
+    <timer name='hpet' present='no'/>
+  </clock>
+  <on_poweroff>destroy</on_poweroff>
+  <on_reboot>restart</on_reboot>
+  <on_crash>restart</on_crash>
+  <!-- Required for virtiofs shared-memory transport -->
+  <memoryBacking>
+    <source type='memfd'/>
+    <access mode='shared'/>
+  </memoryBacking>
+  <devices>
+    <!-- Main disk: qcow2 backed by Ubuntu 24.04 cloud image -->
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2'/>
+      <source file='/var/lib/libvirt/images/nas01-backup.qcow2'/>
+      <target dev='vda' bus='virtio'/>
+    </disk>
+    <!-- Cloud-init seed ISO (detached after first boot if desired) -->
+    <disk type='file' device='cdrom'>
+      <driver name='qemu' type='raw'/>
+      <source file='/var/lib/libvirt/images/nas01-backup-cidata.iso'/>
+      <target dev='sda' bus='sata'/>
+      <readonly/>
+    </disk>
+    <interface type='network'>
+      <source network='default'/>
+      <model type='virtio'/>
+    </interface>
+    <!-- Guest agent: enables virsh domifaddr, graceful shutdown, etc. -->
+    <channel type='unix'>
+      <target type='virtio' name='org.qemu.guest_agent.0'/>
+    </channel>
+    <!-- VNC bound to localhost; access via SSH tunnel or from nas01 RDP session -->
+    <graphics type='vnc' port='-1' autoport='yes' listen='127.0.0.1'>
+      <listen type='address' address='127.0.0.1'/>
+    </graphics>
+    <video>
+      <model type='virtio' heads='1' primary='yes'/>
+    </video>
+    <!-- virtiofs shares: /pool (IDrive360 backup source) and /mnt (extra drives) -->
+    <filesystem type='mount' accessmode='passthrough'>
+      <driver type='virtiofs'/>
+      <source dir='/pool'/>
+      <target dir='pool'/>
+    </filesystem>
+    <filesystem type='mount' accessmode='passthrough'>
+      <driver type='virtiofs'/>
+      <source dir='/mnt'/>
+      <target dir='mnt'/>
+    </filesystem>
+    <memballoon model='virtio'/>
+    <rng model='virtio'>
+      <backend model='random'>/dev/urandom</backend>
+    </rng>
+  </devices>
+</domain>

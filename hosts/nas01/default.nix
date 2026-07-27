@@ -104,16 +104,14 @@ let
             [ -n "$LATEST" ] && echo "=== Latest log: $(basename "$LATEST") ===" && tail -6 "$LATEST"
           '';
 
-          # IDrive360 — RPM container (Rocky Linux)
-          idrive-rpm-log     = "journalctl -u docker-idrive360-rpm -f";
-          idrive-rpm-restart = "sudo systemctl restart docker-idrive360-rpm";
-          idrive-rpm-stop    = "sudo systemctl stop docker-idrive360-rpm";
-          idrive-rpm-ps      = "docker exec idrive360-rpm ps aux";
-          idrive-rpm-status  = ''
-            echo "=== RPM Container ===" && docker ps --filter name=idrive360-rpm --format "{{.Status}}" | grep . || echo "NOT RUNNING";
-            LATEST=$(ls -t /var/lib/idrive360-rpm/opt/idriveIt/user_profile/scott/*/Backup/DefaultBackupSet/LOGS/* 2>/dev/null | head -1);
-            [ -n "$LATEST" ] && echo "=== Latest log: $(basename "$LATEST") ===" && tail -6 "$LATEST"
-          '';
+          # IDrive360 — nas01-backup VM (Ubuntu 24.04 / QEMU/KVM)
+          idrive-vm-status   = "virsh domstate nas01-backup";
+          idrive-vm-ip       = "virsh domifaddr nas01-backup";
+          idrive-vm-start    = "sudo virsh start nas01-backup";
+          idrive-vm-stop     = "sudo virsh shutdown nas01-backup";
+          idrive-vm-ssh      = ''ssh scott@$(virsh domifaddr nas01-backup | awk '/ipv4/{print $4}' | cut -d/ -f1)'';
+          idrive-vm-vnc      = "vncviewer localhost:1";
+          idrive-vm-console  = "sudo virsh console nas01-backup";
         };
         programs.bash.initExtra = ''
           # Borg server functions — take hostname as argument
@@ -185,7 +183,7 @@ let
       # Samba: data share + read-only borg repo browsing
       # (borg clients back up via SSH, not SMB)
       users.groups.nas = { };
-      users.users.scott.extraGroups = [ "nas" ];
+      users.users.scott.extraGroups = [ "nas" "libvirtd" "kvm" ];
       services.samba = {
         enable = true;
         settings = {
@@ -252,9 +250,14 @@ let
         openbox
         firefox
         xterm
+        # QEMU/KVM: nas01-backup VM (IDrive360 backup agent)
+        virtiofsd        # virtiofs daemon for sharing /pool and /mnt into the VM
+        cloud-utils      # cloud-localds for building cloud-init ISOs
+        tigervnc         # vncviewer to reach nas01-backup from the RDP/Openbox session
       ];
       systemd.tmpfiles.rules = [
         "d /pool/borg 0750 scott users -"
+        # Docker container state dirs kept for archive; remove when containers are purged
         "d /var/lib/idrive360/opt      0755 root root -"
         "d /var/lib/idrive360/seed     0755 root root -"
         "d /var/lib/idrive360-rpm/opt  0755 root root -"
@@ -376,13 +379,25 @@ let
         };
       };
 
-      # IDrive360 cloud backup: vendor .deb self-updates and downloads its engine
-      # at runtime, so it runs in an Ubuntu container instead of a Nix package
-      # (prior packaging attempt archived in archive/pkgs/idrive-e360/).
-      # Two parallel IDrive360 containers:
-      #   idrive360-deb — Ubuntu 24.04, existing registration, /var/lib/idrive360/{opt,seed}
-      #   idrive360-rpm — Rocky Linux 9,  fresh registration,  /var/lib/idrive360-rpm/{opt,seed}
-      # Only one should run at a time to avoid port conflicts (--network=host).
+      # IDrive360 cloud backup: runs in the nas01-backup QEMU/KVM VM (Ubuntu 24.04).
+      # Set up once with:  sudo bash /etc/nas01-backup/setup.sh
+      # The VM persists its disk across reboots — no re-registration needed.
+      virtualisation.libvirtd = {
+        enable = true;
+      };
+      # VM definition and setup script deployed to /etc/nas01-backup/
+      environment.etc."nas01-backup/domain.xml" = {
+        source = ./nas01-backup-domain.xml;
+        mode = "0644";
+      };
+      environment.etc."nas01-backup/setup.sh" = {
+        source = ./nas01-backup-setup.sh;
+        mode = "0755";
+      };
+
+      # Legacy Docker containers — DISABLED (replaced by nas01-backup VM).
+      # TODO: remove these blocks and the entrypoint scripts once the VM is stable,
+      #       then `docker system prune` and delete /var/lib/idrive360{,-rpm}/.
       environment.etc."idrive360-deb/entrypoint.sh" = {
         source = ./idrive360-entrypoint-deb.sh;
         mode = "0755";
@@ -407,6 +422,7 @@ let
         };
         containers.idrive360-rpm = {
           image = "idrive360-rocky9:latest";
+          autoStart = false;
           entrypoint = "/entrypoint.sh";
           volumes = [
             "/etc/idrive360-rpm/entrypoint.sh:/entrypoint.sh:ro"
@@ -418,18 +434,13 @@ let
         };
       };
       systemd.services.docker-idrive360-deb = {
-        after = [ "zfs-import-pool.service" ];
-        requires = [ "zfs-import-pool.service" ];
         serviceConfig = {
           Restart = lib.mkForce "no";
         };
       };
       systemd.services.docker-idrive360-rpm = {
-        after = [ "zfs-import-pool.service" ];
-        requires = [ "zfs-import-pool.service" ];
         serviceConfig = {
-          Restart = lib.mkForce "always";
-          RestartSec = lib.mkForce "60s";
+          Restart = lib.mkForce "no";
         };
       };
 
