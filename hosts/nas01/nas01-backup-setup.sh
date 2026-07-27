@@ -112,21 +112,19 @@ write_files:
     permissions: '0755'
     content: |
       #!/bin/bash
-      # Kill any stale display
       pkill Xvfb 2>/dev/null || true
       rm -f /tmp/.X1-lock /tmp/.X11-unix/X1
       sleep 1
 
-      # Start virtual framebuffer
       Xvfb :1 -screen 0 1280x800x16 -nolisten tcp &
       sleep 2
 
-      # Start LXDE on the virtual display
       export DISPLAY=:1
+      xset s off 2>/dev/null || true
+      xset s noblank 2>/dev/null || true
       dbus-launch --exit-with-session startlxde &
       sleep 3
 
-      # Expose via VNC (reads ~/.vnc/passwd for password)
       exec x11vnc -display :1 -forever -rfbport 5901 -usepw -shared
 
   - path: /etc/systemd/system/vnc-desktop.service
@@ -150,6 +148,11 @@ runcmd:
   - echo 'pool    /pool   virtiofs  defaults,_netdev,nofail  0  0' >> /etc/fstab
   - echo 'mnt     /mnt    virtiofs  defaults,_netdev,nofail  0  0' >> /etc/fstab
   - mount -a 2>/dev/null || true
+
+  # Disable screensaver/locker (no physical display; would lock VNC sessions)
+  - apt-get remove -y xscreensaver xscreensaver-data xscreensaver-gl 2>/dev/null || true
+  - mkdir -p /etc/xdg/autostart
+  - printf '[Desktop Entry]\nHidden=true\n' > /etc/xdg/autostart/light-locker.desktop
 
   # VNC password (change after first login with: vncpasswd)
   - mkdir -p /home/scott/.vnc
