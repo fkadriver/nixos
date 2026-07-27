@@ -251,7 +251,6 @@ let
         firefox
         xterm
         # QEMU/KVM: nas01-backup VM (IDrive360 backup agent)
-        virtiofsd        # virtiofs daemon for sharing /pool and /mnt into the VM
         cloud-utils      # cloud-localds for building cloud-init ISOs
         tigervnc         # vncviewer to reach nas01-backup from the RDP/Openbox session
       ];
@@ -384,6 +383,7 @@ let
       # The VM persists its disk across reboots — no re-registration needed.
       virtualisation.libvirtd = {
         enable = true;
+        qemu.vhostUserPackages = [ pkgs.virtiofsd ];
       };
       # VM definition and setup script deployed to /etc/nas01-backup/
       environment.etc."nas01-backup/domain.xml" = {
