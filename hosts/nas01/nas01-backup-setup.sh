@@ -142,11 +142,45 @@ write_files:
       [Install]
       WantedBy=multi-user.target
 
-  # Adds passive Wazuh <localfile> monitoring of IDrive360's own status files
-  # (never touches the IDrive360 install itself — read-only). Glob covers the
-  # profile-hash directory, which changes on re-registration. Idempotent —
-  # skips if already patched, so it's safe if re-run after a manual restore.
-  - path: /usr/local/bin/idrive360-wazuh-localfiles.py
+  # Wazuh visibility for IDrive360's backup status (never touches the
+  # IDrive360 install itself — read-only).
+  #
+  # NOTE: an earlier version of this used three <localfile> blocks tailing
+  # IDrive360's status files directly (log_format=json). Confirmed via live
+  # testing (2026-07-28) that Wazuh's logcollector does NOT reliably detect
+  # these files being rewritten in place — it missed every rewrite we tried,
+  # including ones that grew the file, across a fresh wazuh-agent restart.
+  # Replaced with a command wrapper that reads the file fresh on every run
+  # instead (same pattern as wazuh-borg-status). See docs/idrive360.md and
+  # wazuh-tailscale repo's config/wazuh_cluster/scripts/idrive360-status.sh
+  # (canonical source of the script) + decoders/idrive360-command.xml +
+  # rules/idrive360-command-rules.xml.
+  - path: /usr/local/bin/wazuh-idrive360-status
+    permissions: '0755'
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+
+      STATUS_FILE=$(ls /opt/IDrive360/idriveIt/user_profile/scott/*/.userInfo/lastOnlineBackupStatus.json 2>/dev/null | head -1)
+
+      if [ -z "$STATUS_FILE" ] || [ ! -f "$STATUS_FILE" ]; then
+          echo "idrive360_backup: status=UNKNOWN error=status_file_not_found"
+          exit 0
+      fi
+
+      STATUS=$(grep -oP '"status"\s*:\s*"\K[^"]+' "$STATUS_FILE" 2>/dev/null || echo "")
+      TIME=$(grep -oP '"time"\s*:\s*\K[0-9]+' "$STATUS_FILE" 2>/dev/null || echo "0")
+
+      if [ -z "$STATUS" ]; then
+          echo "idrive360_backup: status=UNKNOWN error=status_field_missing"
+          exit 0
+      fi
+
+      echo "idrive360_backup: status=${STATUS} time=${TIME}"
+
+  # Idempotent — skips if already patched, so it's safe if re-run after a
+  # manual restore.
+  - path: /usr/local/bin/idrive360-wazuh-command.py
     permissions: '0755'
     content: |
       #!/usr/bin/env python3
@@ -154,25 +188,18 @@ write_files:
       with open(conf_path) as f:
           content = f.read()
 
-      marker = "idrive360-status-localfiles"
+      marker = "idrive360-command-localfile"
       if marker in content:
           print("already present, skipping")
           raise SystemExit(0)
 
-      block = """  <!-- %s: passive status-file monitoring, added for Wazuh visibility -->
+      block = """  <!-- %s: reads IDrive360's status file fresh on every run
+           (see /usr/local/bin/wazuh-idrive360-status). -->
         <localfile>
-          <log_format>json</log_format>
-          <location>/opt/IDrive360/idriveIt/user_profile/scott/*/.userInfo/lastBackupStatus.txt</location>
-        </localfile>
-
-        <localfile>
-          <log_format>json</log_format>
-          <location>/opt/IDrive360/idriveIt/user_profile/scott/*/.userInfo/lastActivitystatus.txt</location>
-        </localfile>
-
-        <localfile>
-          <log_format>json</log_format>
-          <location>/opt/IDrive360/idriveIt/user_profile/scott/*/.userInfo/lastOnlineBackupStatus.json</location>
+          <log_format>command</log_format>
+          <command>/usr/local/bin/wazuh-idrive360-status</command>
+          <alias>idrive360 backup status</alias>
+          <frequency>900</frequency>
         </localfile>
 
       </ossec_config>
@@ -217,7 +244,7 @@ runcmd:
   # (password: bw get item "Wazuh Agent Enrollment" — same secret nas01 itself uses)
   - curl -sS -o /tmp/wazuh-agent.deb https://packages.wazuh.com/4.x/apt/pool/main/w/wazuh-agent/wazuh-agent_4.14.5-1_amd64.deb
   - WAZUH_MANAGER='wazuh.warthog-royal.ts.net' dpkg -i /tmp/wazuh-agent.deb
-  - python3 /usr/local/bin/idrive360-wazuh-localfiles.py
+  - python3 /usr/local/bin/idrive360-wazuh-command.py
 CLOUDINIT
 
     cloud-localds "$CIDATA_ISO" "$TMPDIR/user-data" "$TMPDIR/meta-data"
