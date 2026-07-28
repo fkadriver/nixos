@@ -7,15 +7,18 @@ The Ubuntu-era `apply.sh` deployment is archived at `archive/hosts/nas01-ubuntu/
 ## Hardware
 
 - **Role**: NAS — file serving, Borg backup server, Syncthing hub, IDrive360 cloud backup
+- **Model**: HP ProDesk 600 G4 DM (TAA) — Desktop Mini, serial MXL9231YDY, BIOS Q22 Ver. 02.06.03
+- **CPU**: Intel Core i5-8500T @ 2.10GHz (6 cores/6 threads, no HT, turbo to 3.5GHz)
+- **Memory**: 8GB DDR4 SODIMM @ 2667 MT/s (1 of 2 slots populated — expandable)
 - **Tailscale hostname**: `nas01.warthog-royal.ts.net`
 
 ### Drives
 
 | Drive | Mount | Purpose |
 |---|---|---|
-| Micron 256GB SSD (serial UGXVK01J7C9TJA) | `/` (LVM/ext4 via disko) | OS |
-| 3x 4TB HGST (RAIDZ1) | `/pool` | ZFS pool — NAS data + borg repos (lz4, ashift=12) |
-| WD 18TB | `/mnt/wd18t_1`, `/mnt/wd18t_3` | **FAILING (2026-07)** — mounts kept `nofail` for salvage only |
+| Micron MTFDDAK256TBN 256GB SATA SSD (serial UGXVK01J7C9TJA) | `/` (LVM/ext4 via disko) | OS |
+| 3x HGST HDS724040ALE640 4TB 7200rpm (RAIDZ1) | `/pool` | ZFS pool — NAS data + borg repos (lz4, ashift=12) |
+| WD WD180EDGZ-11BLDS0 18TB 7200rpm | `/mnt/wd18t_1`, `/mnt/wd18t_3` | **FAILING (2026-07)** — mounts kept `nofail` for salvage only |
 
 The ZFS pool and WD drive are **not** managed by disko — they carry data across OS reinstalls.
 

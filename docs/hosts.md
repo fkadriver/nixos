@@ -50,10 +50,11 @@ ssh scott@log01 'sudo age-keygen -y /var/lib/sops-nix/key.txt'
 Then add to `.sops.yaml` and run `sops updatekeys secrets/secrets.yaml`.
 
 ### nas01
-**NAS server** - File serving and backup hub (converted from Ubuntu, July 2026)
+**HP ProDesk 600 G4 DM** - File serving and backup hub (converted from Ubuntu, July 2026)
 
 | | |
 |---|---|
+| CPU / Memory | Intel Core i5-8500T @ 2.10GHz (6c/6t), 8GB DDR4-2667 SODIMM (1 of 2 slots populated) |
 | Purpose | NAS: Samba/NFS file serving, Borg backup server, Syncthing hub, IDrive360 cloud backup |
 | Storage | 256GB Micron SSD (OS), 3x 4TB HGST ZFS RAIDZ1 (`/pool`, incl. borg repos), WD 18TB (failing — salvage only) |
 | Key Features | ZFS (autoScrub/TRIM), Samba, NFS, syncthing-declarative, hd-idle spindown, Wazuh agent, IDrive360 in Docker |

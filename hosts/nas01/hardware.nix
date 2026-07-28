@@ -1,5 +1,7 @@
 # Hardware configuration for nas01
-# CPU: Intel (kvm-intel)
+# Model: HP ProDesk 600 G4 DM (TAA), serial MXL9231YDY
+# CPU: Intel Core i5-8500T @ 2.10GHz (6c/6t)
+# Memory: 8GB DDR4 SODIMM @ 2667 MT/s (1 of 2 slots populated)
 # OS storage: Micron MTFDDAK256TBN 256GB SATA SSD (serial UGXVK01J7C9TJA)
 # Data storage: 3x HGST 4TB (ZFS raidz1 "pool"), WD 18TB (ext4, borg repos)
 # OS disk partitioning is handled by disko (see disko-config.nix)
