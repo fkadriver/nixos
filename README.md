@@ -24,10 +24,7 @@ nix build .#nixosConfigurations.<hostname>.config.system.build.vm
 |------|----------|---------|---------|
 | `latitude` | Dell Latitude 7480 | KDE | Daily driver (Borg backup, 3D printing) |
 | `latitude-xfce` | Dell Latitude 7480 | XFCE | Full desktop variant |
-| `latitude-kde` | Dell Latitude 7480 | KDE | Full desktop variant |
 | `latitude-minimal` | Dell Latitude 7480 | XFCE | Testing |
-| `airbook` | MacBook Air 7,2 | XFCE | NixOS on Mac |
-| `airbook-kde` | MacBook Air 7,2 | KDE | NixOS on Mac |
 | `OTworkstation` | Dell Latitude 5480 | XFCE | OT lab VM workstation |
 | `vm01` | Dell Latitude E7270 | Headless | Immich photo server |
 | `log01` | Shuttle Zingbox GL014G128W10 | Headless | Centralized syslog collector |
@@ -46,15 +43,20 @@ See [docs/hosts.md](docs/hosts.md) for detailed host documentation.
 ├── flake.nix              # Main flake configuration
 ├── hosts/                 # Host-specific configurations
 │   ├── latitude/         # Dell Latitude 7480 (+ variants)
-│   ├── airbook/          # MacBook Air 7,2 NixOS
-│   ├── airbook-darwin/   # MacBook Air 7,2 macOS
+│   ├── OTworkstation/    # Dell Latitude 5480 (OT lab VM workstation)
 │   ├── vm01/             # Immich server
+│   ├── nas01/            # NAS / Borg backup hub
 │   ├── log01/            # Centralized syslog collector
 │   ├── pihole01/         # Primary Pi-hole DNS (RPi 3B)
 │   ├── pihole02/         # Secondary Pi-hole DNS (RPi 3B)
+│   ├── airbook-darwin/   # MacBook Air 7,2 macOS (nix-darwin)
 │   └── installer/        # Installation ISO
 ├── modules/               # Auto-discovered NixOS modules
+├── homeConfigurations/    # Standalone Home Manager config (scott.nix)
 ├── secrets/               # Encrypted secrets (sops-nix)
+├── scripts/               # Deployment/maintenance scripts
+├── examples/              # Example module usage
+├── archive/               # Retired hosts & modules (kept for reference)
 └── docs/                  # Documentation
 ```
 
