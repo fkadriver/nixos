@@ -41,6 +41,7 @@ let
       inputs.self.nixosModules.common
       inputs.self.nixosModules.bitwarden
       inputs.self.nixosModules.bitwarden-scott
+      inputs.self.nixosModules.borg-backup
       inputs.self.nixosModules.vscode-server
       inputs.self.nixosModules.wazuh-agent
       inputs.self.nixosModules.user-scott
@@ -85,6 +86,11 @@ let
           # From laptop: configure Remmina with Server=192.168.122.54:5901, SSH tunnel=nas01
           idrive-vnc      = ''vncviewer $(virsh domifaddr nas01-backup | awk '/ipv4/{print $4}' | cut -d/ -f1):5901'';
           idrive-console  = "sudo virsh console nas01-backup";
+          # VM disk backup (Borg, local repo /pool/borg/nas01) — runs daily via
+          # borgbackup-job-system.service; these are for on-demand use.
+          idrive-vm-backup  = "sudo systemctl start borgbackup-job-system.service && sudo journalctl -u borgbackup-job-system.service -n 20 --no-pager";
+          idrive-vm-list    = ''sudo env BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" borg list /pool/borg/nas01'';
+          idrive-vm-restore = "sudo bash /etc/nas01-backup/vm-restore.sh";
         };
         programs.bash.initExtra = ''
           # virsh defaults to qemu:///session; VMs live in qemu:///system
@@ -335,6 +341,10 @@ let
       virtualisation.libvirtd = {
         enable = true;
         qemu.vhostUserPackages = [ pkgs.virtiofsd ];
+        # nas01-backup uses virtiofs shares, which don't support save/restore —
+        # managed-save on host shutdown leaves an unrestorable image (SIGPIPE on
+        # resume). ACPI-shutdown the guest instead so it always cold boots.
+        onShutdown = "shutdown";
       };
       # VM definition and setup script deployed to /etc/nas01-backup/
       environment.etc."nas01-backup/domain.xml" = {
@@ -344,6 +354,50 @@ let
       environment.etc."nas01-backup/setup.sh" = {
         source = ./nas01-backup-setup.sh;
         mode = "0755";
+      };
+      environment.etc."nas01-backup/vm-restore.sh" = {
+        source = ./nas01-backup-vm-restore.sh;
+        mode = "0755";
+      };
+
+      # nas01's own OS-disk data that can't be rebuilt from this flake: /home
+      # and the nas01-backup VM disk (its IDrive360 registration/config).
+      # Backed up locally to /pool (redundant ZFS raidz1), so it survives a
+      # failure of nas01's OS SSD — see docs/nas01.md.
+      #
+      # The VM disk is only ever backed up in a frozen, consistent state:
+      # preHook redirects its writes to a throwaway overlay (live, no VM
+      # downtime) before borg reads it; postHook merges the overlay back.
+      # Memory state is never involved — nas01-backup's virtiofs shares can't
+      # save/restore that anyway (see the managed-save incident, 2026-07-28).
+      services.borg-backup = {
+        enable = true;
+        repository = "/pool/borg/nas01";
+        encryption.passphraseFile = "/run/bitwarden-secrets/borg_passphrase";
+        paths = [
+          "/home"
+          "/var/lib/libvirt/images/nas01-backup.qcow2"
+          "/var/lib/libvirt/images/nas01-backup-cidata.iso"
+        ];
+        preHook = ''
+          OVERLAY=/var/lib/libvirt/images/nas01-backup.borgsnap.qcow2
+          if virsh domstate nas01-backup 2>/dev/null | grep -q running; then
+            rm -f "$OVERLAY"
+            virsh snapshot-create-as nas01-backup "borg-$(date +%s)" \
+              --diskspec vda,file="$OVERLAY" --disk-only --atomic --no-metadata
+          fi
+        '';
+        postHook = ''
+          OVERLAY=/var/lib/libvirt/images/nas01-backup.borgsnap.qcow2
+          if [ -f "$OVERLAY" ]; then
+            virsh blockcommit nas01-backup vda --active --pivot --wait || true
+            rm -f "$OVERLAY"
+          fi
+        '';
+      };
+      systemd.services."borgbackup-job-system" = {
+        after = [ "libvirtd.service" ];
+        wants = [ "libvirtd.service" ];
       };
 
       system = {

@@ -21,7 +21,19 @@ The ZFS pool and WD drive are **not** managed by disko — they carry data acros
 
 ---
 
-## Fresh Installation
+## Disaster Recovery — OS SSD (sda) Failure
+
+nas01's OS disk (the Micron SSD) is a single, non-redundant drive. Everything
+on it is either declarative (rebuildable from this flake) or backed up to
+`/pool` (the redundant ZFS raidz1 array, which lives on three *other* physical
+disks and survives an OS-SSD failure untouched). The only things that are
+**not** reproducible from git are `/home` and the `nas01-backup` VM's disk —
+both are backed up nightly to `/pool/borg/nas01` (see
+[Borg Backup](#borg-backup-server-side) below) specifically so this runbook
+can restore them.
+
+These same steps also apply to an intentional fresh install (e.g. a new OS
+SSD), not just a failure.
 
 ### 1. Partition OS disk and install (from NixOS installer USB)
 
@@ -48,29 +60,72 @@ sops updatekeys secrets/secrets.yaml
 # Commit/push, then rebuild nas01
 ```
 
-### 3. Import the ZFS pool and create the borg dataset (one-time)
+This step matters for recovery specifically because `/run/bitwarden-secrets/borg_passphrase`
+(needed to read the Borg repo in steps 4–5 below) only appears after this key
+is trusted and a rebuild has run.
+
+### 3. Import the ZFS pool
 
 ```bash
 sudo zpool import -f pool   # -f: pool wasn't cleanly exported from old OS
-sudo zfs create -o compression=lz4 pool/borg
-sudo chown scott:users /pool/borg && sudo chmod 750 /pool/borg
+zpool status                # confirm raidz1-0 is ONLINE, no errors
 ```
 
-`boot.zfs.extraPools` auto-imports the pool on subsequent boots. Clients
-auto-init their repos at `/pool/borg/<hostname>` on their first backup run.
+`boot.zfs.extraPools` auto-imports the pool on subsequent boots.
+`/pool/borg/nas01` (this host's own Borg repo — see below) and
+`/pool/borg/<hostname>` for every client already exist on the pool and need
+no re-creation; they came back with the import.
 
-### 4. Restore Syncthing identity (keeps device ID, no re-pairing)
+### 4. Restore `/home` from Borg
 
-Copy `cert.pem`, `key.pem` from the pre-rebuild backup into
-`/home/scott/.config/syncthing/` before syncthing first starts.
+```bash
+LATEST=$(sudo env BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" \
+  borg list --last 1 --format '{archive}' /pool/borg/nas01)
 
-### 5. Samba password (not declarative)
+cd / && sudo env BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" \
+  borg extract "/pool/borg/nas01::$LATEST" home
+
+# home-manager-managed dotfiles are restored as plain files (not the usual
+# nix-store symlinks) — relink them:
+sudo nixos-rebuild switch --flake ~/git/nixos#nas01
+```
+
+Syncthing itself will already be running by this point (it starts during
+step 2's rebuild, with a freshly-generated identity). The `/home` extract
+above overwrites `cert.pem`/`key.pem` in `/home/scott/.config/syncthing/`
+with the old identity, so restart it to pick that up (keeps the old device
+ID — no re-pairing needed):
+```bash
+sudo systemctl restart syncthing
+```
+
+### 5. Restore the nas01-backup VM disk
+
+```bash
+sudo bash /etc/nas01-backup/vm-restore.sh
+```
+
+Extracts the latest qcow2 + cloud-init ISO from `/pool/borg/nas01` and
+defines + starts the VM (domain.xml is already back in place declaratively
+from step 2's rebuild). Pass an archive name as an argument to restore a
+specific point instead of the latest — list them with
+`idrive-vm-list`. See [IDrive360](#idrive360-cloud-backup-qemukvm-vm) below
+for details on what is/isn't captured.
+
+### 6. Samba password (not declarative)
 
 ```bash
 sudo smbpasswd -a scott
 ```
 
-### 6. Seed IDrive360 (see below)
+### 7. Verify
+
+```bash
+zpool status                        # pool healthy
+sudo systemctl status samba-smbd    # file sharing up
+idrive-status                       # nas01-backup VM running
+borg-repos                          # other hosts' repos visible under /pool/borg
+```
 
 ---
 
@@ -140,6 +195,38 @@ idrive-ssh       # ssh directly into the VM
 idrive-console   # serial console (Ctrl+] to exit)
 ```
 
+### VM disk backup and restore
+
+The live qcow2 disk lives on the OS SSD (not the redundant `/pool`), so it's
+backed up nightly to `/pool/borg/nas01` via `services.borg-backup` (same Borg
+job that also backs up `/home` — see
+[Borg Backup](#borg-backup-server-side) below). Memory/uptime state is never
+part of the backup — `nas01-backup`'s virtiofs shares can't save/restore that
+(see the managed-save troubleshooting entry below) — only the disk, and only
+in a consistent, frozen state:
+
+1. `preHook` checks if the VM is running; if so it redirects new writes to a
+   throwaway external overlay (`virsh snapshot-create-as --disk-only`), which
+   freezes the base qcow2 file with **zero VM downtime**.
+2. Borg backs up `/home` and the now-static qcow2 + cloud-init ISO.
+3. `postHook` merges the overlay back into the base
+   (`virsh blockcommit --active --pivot`) and removes it.
+
+You may see `file changed while we backed it up` logged for the qcow2 file —
+this is a borg warning, not a failure (`failOnWarnings = false`, same as
+every other host's borg job); the extracted disk has been verified intact
+with `qemu-img check`.
+
+Aliases:
+```bash
+idrive-vm-backup   # trigger an on-demand backup now (also runs nightly)
+idrive-vm-list     # list available backup archives (borg list)
+idrive-vm-restore  # sudo bash /etc/nas01-backup/vm-restore.sh — restore + start
+```
+
+Full disaster-recovery use of `vm-restore.sh` is covered in
+[Disaster Recovery](#disaster-recovery--os-ssd-sda-failure) above.
+
 VNC access from a remote machine (e.g. Remmina on Tailscale):
 ```bash
 # Open SSH tunnel on the remote machine (keep open while using VNC):
@@ -189,6 +276,14 @@ Client-side `BORG_REMOTE_PATH` is `/run/current-system/sw/bin/borg` (set by `mod
 | vm01 | `/pool/borg/vm01` |
 | log01 | `/pool/borg/log01` |
 | airbook-darwin | `/pool/borg/airbook-darwin` |
+| nas01 (itself, local — no SSH) | `/pool/borg/nas01` — `/home` + `nas01-backup` VM disk |
+
+nas01's own job is the same `services.borg-backup` module as the other
+hosts, just pointed at a local path instead of `ssh://...`, and with
+`preHook`/`postHook` added (see [IDrive360](#idrive360-cloud-backup-qemukvm-vm)
+above) to freeze the VM disk consistently before each backup. It exists so
+that `/home` and the VM disk survive an OS-SSD failure — see
+[Disaster Recovery](#disaster-recovery--os-ssd-sda-failure).
 
 On-server aliases: `borg-repos` (overview), `borg-ls <host>`, `borg-check <host>`, `borg-unlock <host>`.
 
@@ -257,3 +352,28 @@ idrive-ssh       # ssh into the VM
 
 See `docs/idrive360.md` for full IDrive360 operations (VM-based since the
 Docker containers were removed — see commit b20740e).
+
+### `virsh start nas01-backup` fails with "unexpected fatal signal 13"
+
+```
+error: internal error: Child process (... libvirt_iohelper .../nas01-backup.save 0) unexpected fatal signal 13
+error: Unable to restore from managed state ... Maybe the file is corrupted?
+```
+
+Cause: `nas01-backup` has virtiofs shares (`/pool`, `/mnt`), which don't
+support save/restore — the virtiofsd backend state can't be serialized. If
+libvirt ever managed-saves this VM (e.g. `libvirt-guests.service` suspending
+it on a host shutdown/reboot), the restore-on-boot fails with a SIGPIPE and
+leaves a stuck, unrestorable save image; every subsequent `virsh start`
+repeats the same failure until it's cleared.
+
+Fix (one-time, to recover a stuck VM):
+```bash
+sudo virsh managedsave-remove nas01-backup
+sudo virsh start nas01-backup
+```
+
+This is already prevented going forward: `virtualisation.libvirtd.onShutdown`
+is set to `"shutdown"` (ACPI shutdown instead of suspend), so
+`nas01-backup` always cold-boots and this can't recur from a normal host
+reboot.

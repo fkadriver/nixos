@@ -102,6 +102,18 @@ in
       default = "/run/current-system/sw/bin/borg";
       description = "Path to borg executable on remote server (for SSH repos)";
     };
+
+    preHook = mkOption {
+      type = types.lines;
+      default = "";
+      description = "Shell commands run before the backup (e.g. to freeze a live disk for consistent backup).";
+    };
+
+    postHook = mkOption {
+      type = types.lines;
+      default = "";
+      description = "Shell commands run after the backup, on both success and failure (e.g. to thaw a disk frozen in preHook).";
+    };
   };
 
   config = mkIf cfg.enable {
@@ -215,6 +227,8 @@ in
       paths = cfg.paths;
       exclude = cfg.exclude;
       repo = cfg.repository;
+      preHook = cfg.preHook;
+      postHook = cfg.postHook;
       encryption = {
         mode = cfg.encryption.mode;
         passCommand = if cfg.encryption.passphraseFile != null
