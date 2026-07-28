@@ -365,6 +365,13 @@ let
           "com.apple.commerce" = {
             AutoUpdate = false;                # Don't auto-update App Store apps
           };
+          # SwiftBar: point it at the home-manager-deployed plugin folder (so it
+          # skips the first-run folder picker) and launch at login. The Syncthing
+          # menubar plugin lives at Plugins/syncthing.30s.sh (see home.nix).
+          "com.ameba.SwiftBar" = {
+            PluginDirectory = "/Users/scott/Library/Application Support/SwiftBar/Plugins";
+            SwiftBarLaunchAtLogin = true;
+          };
         };
 
         # Trackpad
@@ -531,6 +538,67 @@ AUTOFSMAP
           # Reload autofs, then retire the previous ~/mnt/nas01 location (best-effort).
           automount -vc 2>/dev/null || true
           rmdir /Users/scott/mnt/nas01 /Users/scott/mnt 2>/dev/null || true
+        ) || true
+      ''
+
+      # Syncthing device reconciliation. nix-darwin can't manage the brew-installed
+      # daemon via services.syncthing (that's NixOS-only — see modules/syncthing-declarative.nix),
+      # so instead we converge the running config to a fixed device set through the REST
+      # API on each rebuild: keep this host + latitude + iphone + nas01 (3C5DWOE) and drop
+      # anything else — e.g. the stale pre-NixOS nas01 id BN4CDEN that reappears whenever an
+      # old peer re-introduces it. Deleting a device cascades to its folder shares. IDs mirror
+      # modules/syncthing-declarative.nix. Best-effort: the daemon is a user LaunchAgent, so if
+      # it isn't running during activation we skip and retry next rebuild. Wrapped in a subshell
+      # + `|| true`; the DELETE briefly blocks while Syncthing persists config, so curl may time
+      # out even though the change applied — hence per-call `|| true`.
+      ''
+        (
+          ST_CONFIG="/Users/scott/Library/Application Support/Syncthing/config.xml"
+          ST_API="http://127.0.0.1:8384"
+          [ -f "$ST_CONFIG" ] || exit 0
+          ST_KEY=$(/usr/bin/xmllint --xpath 'string(/configuration/gui/apikey)' "$ST_CONFIG" 2>/dev/null || true)
+          [ -n "$ST_KEY" ] || exit 0
+
+          st() { /usr/bin/curl -sS --connect-timeout 3 --max-time 15 -H "X-API-Key: $ST_KEY" "$@"; }
+          jqf() { ${pkgs.jq}/bin/jq "$@"; }
+
+          # Daemon reachable? (user LaunchAgent may be down during activation — skip if so.)
+          st "$ST_API/rest/system/ping" >/dev/null 2>&1 || exit 0
+
+          ST_NAS01="3C5DWOE-HU34T3R-I74NNBJ-OOUELYG-HLSIUQN-L6GX52T-7GXPE5N-ZYPU4QO"
+          ST_LATITUDE="B4FAPKC-JTGMKTY-SE223WL-W2Y3VTT-JHU65E4-X3FUZ2C-4N62X4T-IRI75QZ"
+          ST_IPHONE="SDE4XUA-P5E6GZF-EMPGWPV-POTQWCO-2VJKNC3-T2CQMJ4-4OJQTEU-SSUNDA4"
+          ST_SELF=$(st "$ST_API/rest/system/status" | jqf -r '.myID // empty')
+          [ -n "$ST_SELF" ] || exit 0
+          ST_ALLOWED=$(jqf -cn --arg a "$ST_SELF" --arg b "$ST_NAS01" --arg c "$ST_LATITUDE" --arg d "$ST_IPHONE" '[$a,$b,$c,$d]')
+
+          # Ensure nas01 exists (add with its Tailscale address if a peer hasn't introduced it).
+          ST_DEVICES=$(st "$ST_API/rest/config/devices")
+          if [ "$(printf '%s' "$ST_DEVICES" | jqf --arg id "$ST_NAS01" 'any(.[]; .deviceID==$id)')" != "true" ]; then
+            st -X POST -H 'Content-Type: application/json' \
+              -d "{\"deviceID\":\"$ST_NAS01\",\"name\":\"nas01\",\"addresses\":[\"tcp://nas01.warthog-royal.ts.net:22000\"]}" \
+              "$ST_API/rest/config/devices" >/dev/null || true
+          fi
+
+          # Delete any device not in the allowed set (never the local device — it's in the set).
+          printf '%s' "$ST_DEVICES" | jqf -r '.[].deviceID' | while read -r id; do
+            [ -n "$id" ] || continue
+            if [ "$(printf '%s' "$ST_ALLOWED" | jqf --arg id "$id" 'index($id) != null')" != "true" ]; then
+              st -X DELETE "$ST_API/rest/config/devices/$id" >/dev/null || true
+            fi
+          done
+
+          # Strip any lingering non-allowed device refs from every folder (cascade backstop).
+          st "$ST_API/rest/config/folders" | jqf -r '.[].id' | while read -r fid; do
+            [ -n "$fid" ] || continue
+            folder=$(st "$ST_API/rest/config/folders/$fid")
+            newfolder=$(printf '%s' "$folder" | jqf --argjson allowed "$ST_ALLOWED" \
+              '.devices |= map(select(.deviceID as $d | $allowed | index($d) != null))')
+            if [ "$newfolder" != "$folder" ]; then
+              printf '%s' "$newfolder" | st -X PUT -H 'Content-Type: application/json' -d @- \
+                "$ST_API/rest/config/folders/$fid" >/dev/null || true
+            fi
+          done
         ) || true
       ''
 
