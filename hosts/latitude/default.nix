@@ -102,6 +102,7 @@ let
         pkgs.gimp
         pkgs.git-lfs
         # pkgs.input-leap
+        pkgs.kdePackages.krdc  # KDE remote desktop client (VNC/RDP) — e.g. nas01-backup
         pkgs.syncthingtray-minimal
         pkgs.x2goclient  # remote X sessions to OTworkstation
       ];

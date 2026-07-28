@@ -266,6 +266,9 @@ let
         "libreoffice"
         "thunderbird"
 
+        # Remote access
+        "vnc-viewer"       # RealVNC Viewer — for reaching nas01-backup etc.
+
         # 2D CAD
         "librecad"
         "qcad"
