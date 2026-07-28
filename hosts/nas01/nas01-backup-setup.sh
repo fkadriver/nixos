@@ -142,6 +142,47 @@ write_files:
       [Install]
       WantedBy=multi-user.target
 
+  # Adds passive Wazuh <localfile> monitoring of IDrive360's own status files
+  # (never touches the IDrive360 install itself — read-only). Glob covers the
+  # profile-hash directory, which changes on re-registration. Idempotent —
+  # skips if already patched, so it's safe if re-run after a manual restore.
+  - path: /usr/local/bin/idrive360-wazuh-localfiles.py
+    permissions: '0755'
+    content: |
+      #!/usr/bin/env python3
+      conf_path = "/var/ossec/etc/ossec.conf"
+      with open(conf_path) as f:
+          content = f.read()
+
+      marker = "idrive360-status-localfiles"
+      if marker in content:
+          print("already present, skipping")
+          raise SystemExit(0)
+
+      block = """  <!-- %s: passive status-file monitoring, added for Wazuh visibility -->
+        <localfile>
+          <log_format>json</log_format>
+          <location>/opt/IDrive360/idriveIt/user_profile/scott/*/.userInfo/lastBackupStatus.txt</location>
+        </localfile>
+
+        <localfile>
+          <log_format>json</log_format>
+          <location>/opt/IDrive360/idriveIt/user_profile/scott/*/.userInfo/lastActivitystatus.txt</location>
+        </localfile>
+
+        <localfile>
+          <log_format>json</log_format>
+          <location>/opt/IDrive360/idriveIt/user_profile/scott/*/.userInfo/lastOnlineBackupStatus.json</location>
+        </localfile>
+
+      </ossec_config>
+      """ % marker
+
+      idx = content.rfind("</ossec_config>")
+      with open(conf_path, "w") as f:
+          f.write(content[:idx] + block)
+      print("patched")
+
 runcmd:
   # Mount points for virtiofs shares
   - mkdir -p /pool /mnt
@@ -176,6 +217,7 @@ runcmd:
   # (password: bw get item "Wazuh Agent Enrollment" — same secret nas01 itself uses)
   - curl -sS -o /tmp/wazuh-agent.deb https://packages.wazuh.com/4.x/apt/pool/main/w/wazuh-agent/wazuh-agent_4.14.5-1_amd64.deb
   - WAZUH_MANAGER='wazuh.warthog-royal.ts.net' dpkg -i /tmp/wazuh-agent.deb
+  - python3 /usr/local/bin/idrive360-wazuh-localfiles.py
 CLOUDINIT
 
     cloud-localds "$CIDATA_ISO" "$TMPDIR/user-data" "$TMPDIR/meta-data"

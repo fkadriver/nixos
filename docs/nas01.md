@@ -222,6 +222,37 @@ nas01 at `/run/bitwarden-secrets/wazuh_agent_enrollment_password`.
 Verify: `sudo /var/ossec/bin/wazuh-control status` inside the VM, or
 `sudo grep -i connect /var/ossec/logs/ossec.log`.
 
+#### IDrive360 backup status
+
+The Docker-era setup had a host-side script that parsed IDrive360's status
+file and wrote a synthetic syslog line for Wazuh to tail (removed in commit
+b20740e — the VM's internal state isn't visible on the host filesystem the
+way a Docker bind mount was). Now that the VM has its own Wazuh agent with
+direct filesystem access to the real files, that workaround is unnecessary:
+`ossec.conf` inside the VM has `<localfile>` entries (`log_format: json`)
+pointing straight at IDrive360's own status files — pure passive monitoring,
+nothing about the IDrive360 install itself is touched:
+
+- `.userInfo/lastBackupStatus.txt` — `{status, filename, jobType}` of the last backup job
+- `.userInfo/lastActivitystatus.txt` — current/last activity + its log path
+- `.userInfo/lastOnlineBackupStatus.json` — last online backup, `{status, time}`
+
+(Full path: `/opt/IDrive360/idriveIt/user_profile/scott/*/.userInfo/...` — the
+profile-hash directory changes on re-registration, hence the glob.)
+
+Known caveat: these files are rewritten in place on each update, not
+appended to. Wazuh's log collector detects truncation (new content shorter
+than what it last read) and re-reads from the start, but if a rewrite
+happens to produce content the same length or longer, it can miss or garble
+that update — a generic tail-vs-rewrite limitation, not an IDrive360 bug.
+Acceptable here since these are point-in-time status snapshots, not an
+audit trail.
+
+Baked into `nas01-backup-setup.sh`'s cloud-init
+(`idrive360-wazuh-localfiles.py`, idempotent) so a fresh VM build gets this
+automatically — it patches `ossec.conf` right after the Wazuh package
+install, before the (manual) enrollment step.
+
 ### VM disk backup and restore
 
 The live qcow2 disk lives on the OS SSD (not the redundant `/pool`), so it's
