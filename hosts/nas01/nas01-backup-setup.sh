@@ -167,6 +167,15 @@ runcmd:
   - systemctl enable qemu-guest-agent.service
   - systemctl start qemu-guest-agent.service
   - systemctl start vnc-desktop.service
+
+  # Wazuh agent (monitoring for this VM / IDrive360). Installs and points at
+  # the manager, but does NOT enroll — that needs the enrollment password,
+  # which isn't baked into this cloud-init image. After first boot, run:
+  #   sudo /var/ossec/bin/agent-auth -m wazuh.warthog-royal.ts.net -P '<password>' -A nas01-backup
+  #   sudo systemctl enable --now wazuh-agent
+  # (password: bw get item "Wazuh Agent Enrollment" — same secret nas01 itself uses)
+  - curl -sS -o /tmp/wazuh-agent.deb https://packages.wazuh.com/4.x/apt/pool/main/w/wazuh-agent/wazuh-agent_4.14.5-1_amd64.deb
+  - WAZUH_MANAGER='wazuh.warthog-royal.ts.net' dpkg -i /tmp/wazuh-agent.deb
 CLOUDINIT
 
     cloud-localds "$CIDATA_ISO" "$TMPDIR/user-data" "$TMPDIR/meta-data"

@@ -195,6 +195,33 @@ idrive-ssh       # ssh directly into the VM
 idrive-console   # serial console (Ctrl+] to exit)
 ```
 
+### Monitoring (Wazuh agent inside the VM)
+
+`nas01-backup` is a plain Ubuntu 24.04 guest, so it runs the **native** Wazuh
+agent (standard `.deb` + systemd unit) rather than the NixOS FHS-wrapped
+build `modules/wazuh-agent.nix` uses on real hosts — same manager
+(`wazuh.warthog-royal.ts.net`), reached over the VM's normal NAT path (ports
+1514/1515 are open through to the manager without needing Tailscale inside
+the guest).
+
+`nas01-backup-setup.sh`'s cloud-init installs the package and points it at
+the manager automatically on a fresh VM build, but does **not** enroll it —
+enrollment needs the live enrollment password, which isn't baked into the
+cloud-init image for secrets-hygiene reasons. Enroll manually after first
+boot (already done for the current VM):
+
+```bash
+sudo /var/ossec/bin/agent-auth -m wazuh.warthog-royal.ts.net -P '<password>' -A nas01-backup
+sudo systemctl enable --now wazuh-agent
+```
+
+Password: same Bitwarden item as the host's own agent
+(`wazuh_agent_enrollment_password` / "Wazuh Agent Enrollment"), readable on
+nas01 at `/run/bitwarden-secrets/wazuh_agent_enrollment_password`.
+
+Verify: `sudo /var/ossec/bin/wazuh-control status` inside the VM, or
+`sudo grep -i connect /var/ossec/logs/ossec.log`.
+
 ### VM disk backup and restore
 
 The live qcow2 disk lives on the OS SSD (not the redundant `/pool`), so it's
@@ -377,3 +404,19 @@ This is already prevented going forward: `virtualisation.libvirtd.onShutdown`
 is set to `"shutdown"` (ACPI shutdown instead of suspend), so
 `nas01-backup` always cold-boots and this can't recur from a normal host
 reboot.
+
+### New `services.wazuh-agent` localfile/command not showing up on the manager
+
+`fixPermsScript` (in `modules/wazuh-agent.nix`) symlinks any script it finds
+at `/usr/local/bin/wazuh-*` into `/var/ossec/scripts/` (the only place
+visible inside the FHS-sandboxed `wazuh-logcollector`), but it only runs via
+`ExecStartPre` on `wazuh-agent.service` — i.e. once, at that service's last
+start. If you enable a new script-backed check (e.g. `services.borg-backup`,
+which ships `/usr/local/bin/wazuh-borg-status`) on a host where
+`wazuh-agent.service` was already running, the symlink won't exist until you
+restart it:
+
+```bash
+sudo systemctl restart wazuh-agent.service
+sudo ls -la /var/ossec/scripts/   # confirm the new symlink resolves
+```
