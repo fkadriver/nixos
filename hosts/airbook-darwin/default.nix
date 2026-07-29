@@ -267,7 +267,10 @@ let
         "thunderbird"
 
         # Remote access
-        "vnc-viewer"       # RealVNC Viewer — for reaching nas01-backup etc.
+        # TigerVNC (not RealVNC's vnc-viewer cask — RealVNC only hosts the latest
+        # installer, so its pinned .dmg URL 404s whenever the cask version lags).
+        # TigerVNC ships stable versioned SourceForge downloads and needs no account.
+        "tigervnc"         # VNC viewer — for reaching nas01-backup etc.
 
         # 2D CAD
         "librecad"
