@@ -295,6 +295,12 @@ in
 
         # macOS-specific
         flush-dns = "sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder";
+
+        # Remote desktop — nas01-backup VM (IDrive360 host). Its x11vnc LXDE desktop
+        # (port 5901) is reachable directly over the tailnet via MagicDNS — the VM is
+        # its own tailnet node, so no SSH tunnel through nas01 is needed. VNC password:
+        # changeme. Launches TigerVNC detached so the terminal returns.
+        nas01-backup-vnc = "/Applications/TigerVNC.app/Contents/MacOS/vncviewer nas01-backup.warthog-royal.ts.net::5901 >/dev/null 2>&1 &";
       };
       initExtra = ''
         export PATH="$PATH:$HOME/bin:$HOME/.local/bin:$HOME/go/bin"
@@ -406,6 +412,12 @@ in
 
         # macOS-specific
         flush-dns = "sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder";
+
+        # Remote desktop — nas01-backup VM (IDrive360 host). Its x11vnc LXDE desktop
+        # (port 5901) is reachable directly over the tailnet via MagicDNS — the VM is
+        # its own tailnet node, so no SSH tunnel through nas01 is needed. VNC password:
+        # changeme. Launches TigerVNC detached so the terminal returns.
+        nas01-backup-vnc = "/Applications/TigerVNC.app/Contents/MacOS/vncviewer nas01-backup.warthog-royal.ts.net::5901 >/dev/null 2>&1 &";
       };
       initContent = ''
         export PATH="$PATH:$HOME/bin:$HOME/.local/bin:$HOME/go/bin"
