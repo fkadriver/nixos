@@ -78,8 +78,10 @@ run_on_tty() {
     fi
 }
 
-# Emits: <reachable|unreachable>|<dirty|clean>|<behind>|<ahead>
+# Emits: <reachable|unreachable>|<dirty|clean>|<behind>|<ahead>|<gen>|<built>
 # on stdout so the caller can parse it. All errors → unreachable.
+# <gen>/<built> come from the current `nixos-rebuild list-generations` entry
+# (generation number and its build date/time); darwin hosts report "-" for both.
 probe_host() {
     local host="$1"
     local out
@@ -89,8 +91,13 @@ probe_host() {
         counts=\$(git rev-list --left-right --count origin/main...HEAD); \
         behind=\$(echo \"\$counts\" | cut -f1); \
         ahead=\$(echo \"\$counts\" | cut -f2); \
-        echo \"reachable|\$tree|\$behind|\$ahead\"" 2>/dev/null)"; then
-        echo "unreachable|-|-|-"
+        genline=\$(nixos-rebuild list-generations 2>/dev/null | awk '\$NF==\"True\"'); \
+        gen=\$(echo \"\$genline\" | awk '{print \$1}'); \
+        built=\$(echo \"\$genline\" | awk '{print \$2, \$3}'); \
+        [[ -z \$gen ]] && gen='-'; \
+        [[ -z \$built || \$built == ' ' ]] && built='-'; \
+        echo \"reachable|\$tree|\$behind|\$ahead|\$gen|\$built\"" 2>/dev/null)"; then
+        echo "unreachable|-|-|-|-|-"
         return
     fi
     # Take the last non-empty line in case SSH banners leak through.
@@ -113,10 +120,10 @@ gather_status() {
 }
 
 print_status_table() {
-    printf "%-16s %-12s %-8s %-10s %-10s\n" "HOST" "REACHABLE" "TREE" "BEHIND" "AHEAD"
-    printf "%-16s %-12s %-8s %-10s %-10s\n" "----" "---------" "----" "------" "-----"
+    printf "%-16s %-12s %-8s %-10s %-10s %-6s %-20s\n" "HOST" "REACHABLE" "TREE" "BEHIND" "AHEAD" "GEN" "BUILT"
+    printf "%-16s %-12s %-8s %-10s %-10s %-6s %-20s\n" "----" "---------" "----" "------" "-----" "---" "-----"
     for host in "${HOSTS[@]}"; do
-        IFS='|' read -r reach tree behind ahead <<<"${STATUS[$host]}"
+        IFS='|' read -r reach tree behind ahead gen built <<<"${STATUS[$host]}"
         local color="$NC" label="$host"
         [[ "$host" == "$CURRENT_HOST" ]] && label="$host (local)"
         if [[ "$reach" == "unreachable" ]]; then
@@ -128,8 +135,8 @@ print_status_table() {
         else
             color="$GREEN"
         fi
-        printf "${color}%-16s %-12s %-8s %-10s %-10s${NC}\n" \
-            "$label" "$reach" "$tree" "$behind" "$ahead"
+        printf "${color}%-16s %-12s %-8s %-10s %-10s %-6s %-20s${NC}\n" \
+            "$label" "$reach" "$tree" "$behind" "$ahead" "$gen" "$built"
     done
 }
 
@@ -144,7 +151,7 @@ confirm() {
 # Returns 0 if the host ends in sync, 1 otherwise.
 sync_host() {
     local host="$1"
-    IFS='|' read -r reach tree behind ahead <<<"${STATUS[$host]}"
+    IFS='|' read -r reach tree behind ahead gen built <<<"${STATUS[$host]}"
 
     if [[ "$reach" != "reachable" ]]; then
         echo -e "${RED}[$host] unreachable, skipping${NC}"
@@ -186,7 +193,7 @@ sync_host() {
 apply_host() {
     local host="$1"
     local config="${FLAKE_CONFIG[$host]:-$host}"
-    IFS='|' read -r reach tree behind ahead <<<"${STATUS[$host]}"
+    IFS='|' read -r reach tree behind ahead gen built <<<"${STATUS[$host]}"
 
     if [[ "$reach" != "reachable" ]]; then
         echo -e "${RED}[$host] unreachable, skipping${NC}"
