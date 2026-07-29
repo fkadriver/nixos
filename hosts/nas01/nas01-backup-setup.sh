@@ -8,10 +8,13 @@
 #   3. Builds a cloud-init ISO (installs LXDE + VNC + IDrive360 deps on first boot)
 #   4. Defines the VM in libvirt and starts it
 #
-# After cloud-init completes (~5 min):
-#   - SSH:  ssh -J nas01 scott@$(virsh domifaddr nas01-backup | awk '/ipv4/{print $4}' | cut -d/ -f1)
-#   - VNC:  ssh -L 5901:127.0.0.1:5901 nas01   then connect to localhost:5901
-#     (or open a VNC viewer from the nas01 RDP/Openbox session: vncviewer localhost:1)
+# After cloud-init completes (~5 min): the VM joins the tailnet as its own node
+# (MagicDNS: nas01-backup), so it's reachable directly from any tailnet machine —
+# no jump host and no SSH tunnel needed (x11vnc binds 0.0.0.0:5901):
+#   - SSH:  ssh scott@nas01-backup.warthog-royal.ts.net
+#   - VNC:  point a viewer at nas01-backup.warthog-royal.ts.net::5901
+#           From nas01 itself, the `idrive-vnc` alias does the NAT-IP equivalent
+#           (vncviewer <VM-NAT-IP>:5901); the NAT IP is only routable on nas01.
 #   Default password for both SSH and VNC: changeme  — change it after first login.
 #
 # To install IDrive360 inside the VM after it's up:
@@ -288,14 +291,12 @@ echo ""
 echo "Once cloud-init finishes:"
 VM_IP=$(virsh domifaddr "$VM_NAME" 2>/dev/null | awk '/ipv4/{print $4}' | cut -d/ -f1 || true)
 if [ -n "$VM_IP" ]; then
-    echo "  VM IP: $VM_IP"
-    echo "  SSH:   ssh scott@$VM_IP            (or: ssh -J nas01 scott@$VM_IP from laptop)"
-else
-    echo "  Get VM IP: virsh domifaddr nas01-backup"
-    echo "  SSH:       ssh scott@<VM-IP>"
+    echo "  VM NAT IP: $VM_IP  (only routable on nas01)"
 fi
-echo "  VNC:   From nas01 RDP/Openbox session: vncviewer localhost:1"
-echo "         From laptop: ssh -L 5901:127.0.0.1:5901 nas01   then VNC to localhost:5901"
+echo "  Reach it directly over the tailnet (VM is its own node, MagicDNS: nas01-backup):"
+echo "  SSH:   ssh scott@nas01-backup.warthog-royal.ts.net"
+echo "  VNC:   point a viewer at nas01-backup.warthog-royal.ts.net::5901"
+echo "         From nas01 itself:  idrive-vnc   (vncviewer <VM-NAT-IP>:5901)"
 echo "  Default password (SSH + VNC): changeme  — change with passwd / vncpasswd"
 echo ""
 echo "To install IDrive360:"
