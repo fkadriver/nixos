@@ -104,8 +104,12 @@ let
         # pkgs.input-leap
         pkgs.kdePackages.krdc  # KDE remote desktop client (VNC/RDP) — e.g. nas01-backup
         pkgs.syncthingtray-minimal
+        pkgs.tigervnc  # vncviewer for nas01-backup-vnc alias (direct tailnet VNC)
         pkgs.x2goclient  # remote X sessions to OTworkstation
       ];
+
+      # Direct tailnet VNC to the nas01-backup VM (same alias name as airbook-darwin)
+      environment.shellAliases.nas01-backup-vnc = "vncviewer nas01-backup.warthog-royal.ts.net::5901";
 
       sops.secrets."syncthing_nas01_apikey" = {
         owner = "scott";
