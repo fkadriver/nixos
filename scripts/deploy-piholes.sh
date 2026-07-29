@@ -18,7 +18,7 @@
 
 set -euo pipefail
 
-SCRIPT_VERSION="1.2.1"
+SCRIPT_VERSION="1.2.2"
 SCRIPT_URL="https://raw.githubusercontent.com/fkadriver/nixos/main/scripts/deploy-piholes.sh"
 
 RED='\033[0;31m'
@@ -30,14 +30,6 @@ NC='\033[0m'
 FLAKE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VERBOSE=false
 QUIET=false
-
-# TEMPORARY WORKAROUND (added 2026-07-28): nixpkgs-unstable currently ships nix
-# linked against a broken libsodium (libsodium-1.0.22-unstable-2026-04-16) that
-# crashes parsing ANY non-empty trusted-public-keys entry with
-# "error: public key is not valid" -- before signature verification even runs.
-# This blocks substitution of the aarch64 closure needed for pihole builds.
-# Remove NIX_SIG_WORKAROUND once nixpkgs-unstable ships a fixed libsodium/nix.
-NIX_SIG_WORKAROUND=(--option trusted-public-keys '' --option require-sigs false)
 
 # Must match pihole.lockedKernelVersion in each host's default.nix.
 # Update both together when intentionally upgrading the kernel.
@@ -240,7 +232,6 @@ deploy_pi() {
         --target-host "$ssh_target" \
         "${build_args[@]}" \
         --option builders '' \
-        "${NIX_SIG_WORKAROUND[@]}" \
         --sudo \
         "${rebuild_log_flag[@]}"; then
         ok "nixos-rebuild boot completed"
@@ -257,7 +248,6 @@ deploy_pi() {
     local gcroot="${HOME}/.local/share/nix/gcroots/pihole-deploy-${name}"
     mkdir -p "$(dirname "$gcroot")"
     if nix build --option builders '' \
-        "${NIX_SIG_WORKAROUND[@]}" \
         --out-link "$gcroot" \
         "${FLAKE_DIR}#nixosConfigurations.${name}.config.system.build.toplevel" 2>/dev/null; then
         ok "GC root updated: ${gcroot}"
