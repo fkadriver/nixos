@@ -237,6 +237,8 @@ let
       ];
       systemd.tmpfiles.rules = [
         "d /pool/borg 0750 scott users -"
+        "d /usr/local/bin 0755 root root -"
+        "L+ /usr/local/bin/wazuh-zfs-pool-status - - - - ${pkgs.writeShellScript "wazuh-zfs-pool-status" (builtins.readFile ./wazuh-zfs-pool-status.sh)}"
       ];
 
       # Drive spindown. by-id paths instead of sdX (assignments shift on reboot).

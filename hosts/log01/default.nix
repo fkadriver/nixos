@@ -98,6 +98,15 @@ let
         field = "password";
         mode = "0400";
       };
+      # Fine-grained PAT, Actions:read only, scoped to exactly the repos
+      # wazuh-github-ci-status polls (tailnet, Fortydeux-NixOS-System-Flake,
+      # photoAlbumOrganizer, SANS) — see wazuh-tailscale README.
+      services.bitwarden.secrets.github_actions_token = {
+        name = "github_actions_token";
+        itemId = "fb798cd1-0355-438a-bb07-b496015dddae";
+        field = "password";
+        mode = "0400";
+      };
 
       systemd.services.wazuh-docker = {
         description = "Wazuh Docker Compose Stack";
@@ -146,10 +155,44 @@ let
         };
       };
 
-      # Ensure remote log directory and root SSH dir exist with correct permissions
+      # goflow2 Netflow collector — standalone from the Wazuh stack, writes
+      # NDJSON flow records into the same directory rsyslog uses for OPNsense's
+      # other forwarded logs (see goflow2-netflow repo + wazuh-tailscale's
+      # shared/default/agent.conf for how Wazuh picks it up).
+      systemd.services.goflow2-docker = {
+        description = "goflow2 Netflow Collector";
+        wantedBy = [ "multi-user.target" ];
+        after = [ "docker.service" "network-online.target" ];
+        wants = [ "network-online.target" ];
+        requires = [ "docker.service" ];
+
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+          WorkingDirectory = "/home/scott/git/goflow2-netflow";
+          ExecStart = "${pkgs.docker}/bin/docker compose up -d";
+          ExecStop = "${pkgs.docker}/bin/docker compose down";
+        };
+      };
+
+      # Ensure remote log directory and root SSH dir exist with correct permissions.
+      # OPNsense.internal is called out explicitly (not just the parent dir) so
+      # goflow2-docker has somewhere to bind-mount even before rsyslog has ever
+      # received anything from OPNsense.
+      #
+      # wazuh-github-ci-status: deployed via "L+" symlink (same mechanism
+      # borg-backup.nix uses for wazuh-borg-status). Flakes evaluate purely,
+      # so this reads ./wazuh-github-ci-status.sh (in this repo, alongside
+      # this file) rather than the wazuh-tailscale repo directly — that repo
+      # keeps the documented canonical copy; this is a synced duplicate, same
+      # relationship borg-backup.nix already has with wazuh-borg-status.sh.
       systemd.tmpfiles.rules = [
         "d /var/log/remote 0750 root adm -"
+        "d /var/log/remote/OPNsense.internal 0750 root adm -"
         "d /root/.ssh      0700 root root -"
+        "d /usr/local/bin  0755 root root -"
+        "L+ /usr/local/bin/wazuh-github-ci-status - - - - ${pkgs.writeShellScript "wazuh-github-ci-status" (builtins.readFile ./wazuh-github-ci-status.sh)}"
+        "L+ /usr/local/bin/wazuh-tailscale-health - - - - ${pkgs.writeShellScript "wazuh-tailscale-health" (builtins.readFile ./wazuh-tailscale-health.sh)}"
       ];
 
       # Borg backup to nas01

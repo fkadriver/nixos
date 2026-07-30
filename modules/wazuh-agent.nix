@@ -18,6 +18,11 @@ let
     hash = "sha256-eNIpMtZVaXT2e9SIQ0FgloHcYy6nRNvXJV1wSl/V1w0=";
   };
 
+  # docker-listener wodle (wodles/docker/DockerListener) is a python3 script
+  # requiring the third-party "docker" PyPI package (not stdlib) — bare
+  # python3 alone still fails with "'docker' module needs to be installed".
+  wazuhPython = pkgs.python3.withPackages (ps: [ ps.docker ]);
+
   # FHS env for runtime — Wazuh binaries are glibc-linked and expect
   # /lib/x86_64-linux-gnu, /usr/lib, etc.
   wazuhFHS = pkgs.buildFHSEnv {
@@ -30,6 +35,12 @@ let
       zlib
       openssl
       curl
+      wazuhPython  # python3 + docker module, for the docker-listener wodle
+      jq           # used by wazuh-github-ci-status to parse the GitHub API response
+      tailscale    # CLI only, for wazuh-tailscale-health — talks to the host's
+                   # already-running tailscaled over its socket (bound below)
+      zfs          # zpool/zfs CLI, for wazuh-zfs-pool-status (nas01) — talks to
+                   # the kernel ZFS module via /dev/zfs (bound below)
       libcap
       procps  # provides ps, used by wazuh-control's pstatus() to verify daemons started
     ];
@@ -41,6 +52,18 @@ let
       # Expose the global SSH known_hosts so borg's StrictHostKeyChecking=yes
       # can verify nas01's host key (programs.ssh.knownHosts writes it here).
       "--ro-bind-try" "/etc/ssh/ssh_known_hosts" "/etc/ssh/ssh_known_hosts"
+      # Expose Bitwarden-fetched secrets (e.g. github_actions_token, read by
+      # wazuh-github-ci-status) — RuntimeDirectoryMode 0700 root-owned, but
+      # the wazuh-agent process itself runs as root here so it can read in.
+      "--ro-bind-try" "/run/bitwarden-secrets" "/run/bitwarden-secrets"
+      # tailscaled's control socket — world-writable (srw-rw-rw-), needed for
+      # `tailscale status` (wazuh-tailscale-health) to talk to the daemon.
+      # ro-bind is enough: connecting to an existing socket doesn't need
+      # write access to its directory entry, just the socket's own perms.
+      "--ro-bind-try" "/run/tailscale" "/run/tailscale"
+      # /dev/zfs (world read-write) — zpool/zfs CLI talks to the kernel ZFS
+      # module through this device node (wazuh-zfs-pool-status, nas01 only).
+      "--dev-bind-try" "/dev/zfs" "/dev/zfs"
     ];
   };
 
@@ -175,10 +198,12 @@ EOF
     # store paths are followable. Use readlink -f to get the real store path (not the
     # /usr/local/bin symlink, which points back into the invisible /usr/local).
     mkdir -p /var/ossec/scripts
-    src=/usr/local/bin/wazuh-borg-status
-    if [ -e "$src" ]; then
-      ln -sf "$(readlink -f "$src")" /var/ossec/scripts/wazuh-borg-status
-    fi
+    for name in wazuh-borg-status wazuh-github-ci-status wazuh-tailscale-health wazuh-zfs-pool-status; do
+      src="/usr/local/bin/$name"
+      if [ -e "$src" ]; then
+        ln -sf "$(readlink -f "$src")" "/var/ossec/scripts/$name"
+      fi
+    done
   '';
 
   # Sed-safe XML fragment for extra localfiles: \n is literal (GNU sed newline escape)
@@ -196,13 +221,24 @@ EOF
         's|</ossec_config>|  <localfile>\n    <log_format>syslog</log_format>\n    <location>/var/log/remote/*/*.log</location>\n  </localfile>\n</ossec_config>|' \
         "$CONF"
     fi
-    # Extra localfiles declared via services.wazuh-agent.extraLocalFiles (idempotent)
+    # Extra localfiles declared via services.wazuh-agent.extraLocalFiles.
+    # Re-synced on every run (delete any existing begin/end-marked block,
+    # then insert the current one) rather than skip-if-marker-present —
+    # the old guard only checked whether the marker existed at all, not
+    # whether its content matched the current declaration, so changing
+    # extraLocalFiles (e.g. dropping idrive360-status.log for
+    # smartd-alerts.log + borg-status.log on nas01) silently left the
+    # OLD list in place forever: the marker was already there from an
+    # earlier deploy, so the guard skipped re-inserting the new one, and
+    # the newly-declared files were never actually monitored despite
+    # looking correctly configured in this file.
+    ${pkgs.gnused}/bin/sed -i \
+      '/<!-- nixos-extra-localfiles:begin -->/,/<!-- nixos-extra-localfiles:end -->/d' \
+      "$CONF"
     ${lib.optionalString (cfg.extraLocalFiles != []) ''
-      if ! ${pkgs.gnugrep}/bin/grep -q 'nixos-extra-localfiles' "$CONF"; then
-        ${pkgs.gnused}/bin/sed -i \
-          's|</ossec_config>|<!-- nixos-extra-localfiles -->\n${extraLocalFilesSed}</ossec_config>|' \
-          "$CONF"
-      fi
+      ${pkgs.gnused}/bin/sed -i \
+        's|</ossec_config>|<!-- nixos-extra-localfiles:begin -->\n${extraLocalFilesSed}<!-- nixos-extra-localfiles:end -->\n</ossec_config>|' \
+        "$CONF"
     ''}
     # Allow command/full_command entries pushed from the manager's shared agent.conf.
     # Default is 0 (disabled for security); must be set per-agent in local_internal_options.
