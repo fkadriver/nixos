@@ -41,6 +41,15 @@
           configureFlags = (old.configureFlags or []) ++ [ "--disable-libgcrypt" ];
         });
 
+        # systemd's BPF sandboxing helpers (restrict-fs, restrict-ifaces, socket-bind)
+        # are compiled with a freestanding `clang -target bpf` invocation that, in the
+        # current nixpkgs revision, can't find linux/types.h or errno.h when
+        # x86_64→aarch64 cross-compiling — breaks every pihole rebuild. Disabling
+        # withLibBPF only drops systemd's own BPF-based unit sandboxing
+        # (RestrictNetworkInterfaces=, bpf-based IPAddressAllow/Deny accounting);
+        # the piholes firewall via nftables directly, so nothing here depends on it.
+        systemd = prev.systemd.override { withLibBPF = false; };
+
         # buildNpmPackage pre-fetches deps as a fixed-output derivation keyed on
         # npmDepsHash; overrideAttrs can't change it. Rebuild the derivation from
         # scratch using the 2026.3.0 source (last version where BW_SESSION works
