@@ -1,5 +1,24 @@
 { inputs, ... }@flakeContext:
 let
+  # Logs container state/restart-count for unifi-controller and unifi-db so
+  # Wazuh can alert if the stack goes down or starts restart-looping.
+  unifiDockerStatusScript = pkgs: pkgs.writeShellScript "unifi-docker-status" ''
+    LOG=/var/log/unifi-docker-status.log
+    for name in unifi-controller unifi-db; do
+      state=$(${pkgs.docker}/bin/docker inspect -f '{{.State.Status}}' "$name" 2>/dev/null)
+      if [ -z "$state" ]; then
+        echo "$(date '+%b %d %H:%M:%S') vm01 unifi-docker-status: container=$name status=MISSING" >> "$LOG"
+        continue
+      fi
+      restarts=$(${pkgs.docker}/bin/docker inspect -f '{{.RestartCount}}' "$name" 2>/dev/null)
+      if [ "$state" != "running" ]; then
+        echo "$(date '+%b %d %H:%M:%S') vm01 unifi-docker-status: container=$name status=DOWN state=$state restarts=$restarts" >> "$LOG"
+      else
+        echo "$(date '+%b %d %H:%M:%S') vm01 unifi-docker-status: container=$name status=OK state=$state restarts=$restarts" >> "$LOG"
+      fi
+    done
+  '';
+
   nixosModule = { config, lib, pkgs, ... }: {
     imports = [
       ./hardware-configuration.nix
@@ -50,6 +69,10 @@ let
         enable = true;
         manager = "wazuh.warthog-royal.ts.net";
         enrollmentPasswordFile = "/run/bitwarden-secrets/wazuh_agent_enrollment_password";
+        extraLocalFiles = [
+          { location = "/var/log/unifi-docker-status.log"; logFormat = "syslog"; }
+          { location = "/home/scott/git/unifi_controller/unifi-config/logs/server.log"; logFormat = "syslog"; }
+        ];
       };
 
       # Force fresh Wazuh install by removing stale ossec.conf from the
@@ -193,6 +216,24 @@ EOF
             exec ${pkgs.docker}/bin/docker compose up -d
           '';
           ExecStop = "${pkgs.docker}/bin/docker compose down";
+        };
+      };
+
+      # Container health check for Wazuh (see wazuh-agent extraLocalFiles above)
+      systemd.services.unifi-docker-status = {
+        description = "Log UniFi docker container health for Wazuh";
+        after = [ "unifi-docker.service" ];
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = unifiDockerStatusScript pkgs;
+        };
+      };
+      systemd.timers.unifi-docker-status = {
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          OnBootSec = "5min";
+          OnUnitActiveSec = "10min";
+          Persistent = true;
         };
       };
 
