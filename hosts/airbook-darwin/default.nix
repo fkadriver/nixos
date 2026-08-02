@@ -104,6 +104,73 @@ let
     echo "borg_backup: status=''${STATUS} repo=''${REPO} archive=''${ARCHIVE} start=''${START} duration=''${DURATION}s age=''${AGE_H}h"
   '';
 
+  # Weekly restore verification (canary round-trip) — the darwin counterpart of
+  # modules/borg-backup.nix's restoreTest. Deletes the live canary, recovers it
+  # from the newest archive, verifies, and puts it back. Sources /etc/wazuh/borg.conf
+  # for repo/passphrase/ssh, and appends a `borg_restore:` line to /var/log/borg-restore.log
+  # (tailed by Wazuh). Always exits 0 so both OK and failures are reported.
+  borgRestoreTest = pkgs.writeShellScript "borg-restore-test" ''
+    set -uo pipefail
+    export PATH="/run/current-system/sw/bin:/usr/bin:/bin:$PATH"
+    export BORG_RELOCATED_REPO_ACCESS_IS_OK=yes
+
+    CONF=/etc/wazuh/borg.conf
+    # shellcheck source=/dev/null
+    set -a; [ -f "$CONF" ] && . "$CONF"; set +a
+
+    REPO="''${BORG_REPO:-}"
+    CANARY=/Users/scott/.borg-restore-canary
+    LOG=/var/log/borg-restore.log
+    HOST=airbook-darwin
+    BORG=/run/current-system/sw/bin/borg
+
+    emit() {
+      echo "$(date '+%b %e %H:%M:%S') $HOST borg_restore: $1" >> "$LOG"
+      echo "borg_restore: $1"
+    }
+
+    [ -z "$REPO" ] && { emit "status=ERROR repo=unset error=BORG_REPO_not_configured"; exit 0; }
+    [ -x "$BORG" ] || { emit "status=ERROR repo=$REPO error=borg_not_found"; exit 0; }
+
+    LAST=$("$BORG" list --last 1 --format '{archive}' "$REPO" 2>&1) || {
+      ERR=$(printf '%s' "$LAST" | head -1 | tr -cs '[:alnum:]_.-' '_' | cut -c1-60)
+      emit "status=ERROR repo=$REPO error=$ERR"; exit 0
+    }
+    [ -z "$LAST" ] && { emit "status=ERROR repo=$REPO error=no_archives"; exit 0; }
+
+    BEFORE=""; [ -f "$CANARY" ] && BEFORE=$(cat "$CANARY" 2>/dev/null || true)
+    restore_before() { [ -n "$BEFORE" ] && printf '%s\n' "$BEFORE" > "$CANARY"; }
+
+    rm -f "$CANARY"
+    TMP=$(mktemp -d)
+    trap 'rm -rf "$TMP"' EXIT
+    REL="''${CANARY#/}"
+
+    if ! ( cd "$TMP" && "$BORG" extract "$REPO::$LAST" "$REL" ) 2>"$TMP/err"; then
+      ERR=$(head -1 "$TMP/err" 2>/dev/null | tr -cs '[:alnum:]_.-' '_' | cut -c1-60)
+      restore_before
+      emit "status=ERROR repo=$REPO archive=$LAST error=extract_failed:$ERR"; exit 0
+    fi
+
+    EXTRACTED="$TMP/$REL"
+    if [ ! -f "$EXTRACTED" ]; then
+      restore_before
+      emit "status=ERROR repo=$REPO archive=$LAST error=canary_absent_in_archive"; exit 0
+    fi
+
+    cp "$EXTRACTED" "$CANARY"
+    chown scott:staff "$CANARY" 2>/dev/null || true
+
+    if head -1 "$EXTRACTED" | ${pkgs.gnugrep}/bin/grep -q '^borg-restore-canary$'; then
+      WRITTEN=$(${pkgs.gnugrep}/bin/grep '^written=' "$EXTRACTED" | cut -d= -f2)
+      AGE_H=0
+      [ -n "''${WRITTEN:-}" ] && AGE_H=$(( ( $(date +%s) - WRITTEN ) / 3600 ))
+      emit "status=OK repo=$REPO archive=$LAST verify=match canary_age=''${AGE_H}h"
+    else
+      emit "status=ERROR repo=$REPO archive=$LAST verify=mismatch"
+    fi
+  '';
+
   darwinModule = { config, lib, pkgs, ... }: {
     # Nix configuration
     nix = {
@@ -711,6 +778,14 @@ wazuh_command.remote_commands=1'
                 /Library/Ossec/etc/ossec.conf
               NEED_KICKSTART=1
             fi
+
+            # Tail the weekly restore-test log so `borg_restore:` lines reach Wazuh.
+            if ! ${pkgs.gnugrep}/bin/grep -q 'borg-restore.log' /Library/Ossec/etc/ossec.conf; then
+              ${pkgs.gnused}/bin/sed -i \
+                's|</ossec_config>|  <localfile>\n    <log_format>syslog</log_format>\n    <location>/var/log/borg-restore.log</location>\n  </localfile>\n</ossec_config>|' \
+                /Library/Ossec/etc/ossec.conf
+              NEED_KICKSTART=1
+            fi
           fi
 
           if [ "$NEED_KICKSTART" = "1" ]; then
@@ -771,10 +846,15 @@ wazuh_command.remote_commands=1'
 
           echo "=== Borg backup started: $(date) ==="
 
-          # Authenticate to Bitwarden and fetch passphrase
+          # Authenticate to Bitwarden and fetch passphrase.
+          # BW_SESSION MUST be exported: `bw get item` reads the unlocked session
+          # from the environment. Without the export it runs against a *locked*
+          # vault, silently prompts for the master password (readline crash under
+          # launchd's closed stdin), and yields an empty passphrase — which for a
+          # long time masked the fact that the repo was created empty-passphrase.
           BW="/usr/local/bin/bw"
           "$BW" login --apikey --quiet 2>/dev/null || true
-          BW_SESSION="$("$BW" unlock --passwordenv BW_PASSWORD --raw)"
+          export BW_SESSION="$("$BW" unlock --passwordenv BW_PASSWORD --raw)"
           export BORG_PASSPHRASE="$("$BW" get item "$BW_BORG_ITEM_ID" \
             | ${pkgs.jq}/bin/jq -r '.login.password' )"
           "$BW" lock --quiet || true
@@ -797,6 +877,16 @@ wazuh_command.remote_commands=1'
           # (including "repo already exists") are ignored — a real failure surfaces at
           # borg create below.
           ${pkgs.borgbackup}/bin/borg init --encryption=repokey-blake2 "$REPO" 2>/dev/null || true
+
+          # Refresh the restore-test canary so the newest archive always holds a
+          # current one (mirrors modules/borg-backup.nix on NixOS). It lives under
+          # /Users/scott, which is already in the backup set below.
+          {
+            echo "borg-restore-canary"
+            echo "host=airbook-darwin"
+            echo "written=$(date +%s)"
+            echo "token=$(date +%s)-$$"
+          } > /Users/scott/.borg-restore-canary
 
           # `caffeinate -i` holds an IdleSleepAssertion for the whole borg run so macOS
           # won't sleep mid-upload. `pmset -g` shows sleep assertions cycle in and out
@@ -843,6 +933,20 @@ wazuh_command.remote_commands=1'
           StandardErrorPath = "/Users/scott/.local/share/borg/backup.error.log";
         };
       };
+
+    # Weekly restore verification (canary round-trip). Runs as root so it can read
+    # the passphrase in /etc/wazuh/borg.pass. Sunday 04:00, after the 02:00 backup.
+    # Weekday 0 = Sunday. Results land in /var/log/borg-restore.log (tailed by Wazuh).
+    launchd.daemons.borg-restore-test = {
+      serviceConfig = {
+        Label = "com.local.borg-restore-test";
+        ProgramArguments = [ "${borgRestoreTest}" ];
+        StartCalendarInterval = [{ Weekday = 0; Hour = 4; Minute = 0; }];
+        RunAtLoad = false;
+        StandardOutPath = "/var/log/borg-restore.out.log";
+        StandardErrorPath = "/var/log/borg-restore.error.log";
+      };
+    };
 
     # Services
     services = {

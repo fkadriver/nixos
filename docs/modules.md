@@ -129,3 +129,13 @@ Some modules provide custom options:
 - Repository path, backup paths, exclusions
 - Pruning schedule (daily, weekly, monthly retention)
 - Schedule configuration
+- **Weekly restore verification** (`restoreTest`, on by default): a canary file is
+  refreshed before every backup (its dir is auto-added to `paths`), and a weekly
+  timer (`Sun 04:00`) deletes the live canary, restores it from the newest archive,
+  verifies it, and puts it back. Results are logged to `/var/log/borg-restore.log`
+  in a `borg_restore: status=OK|ERROR …` line and shipped to Wazuh via
+  `services.wazuh-agent.extraLocalFiles`. Fully self-contained — enabling
+  `services.borg-backup` on any host activates it automatically. (airbook/darwin
+  mirrors this via launchd in `hosts/airbook-darwin/default.nix`, since darwin
+  can't consume the NixOS module.) The manager-side `borg_restore` decoder/rule
+  lives in the `wazuh-tailscale` repo.

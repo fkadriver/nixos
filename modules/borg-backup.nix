@@ -114,9 +114,129 @@ in
       default = "";
       description = "Shell commands run after the backup, on both success and failure (e.g. to thaw a disk frozen in preHook).";
     };
+
+    restoreTest = {
+      enable = mkOption {
+        type = types.bool;
+        default = true;
+        description = ''
+          Weekly canary restore-verification job. A small canary file is refreshed
+          before every backup (via the job preHook); the test then deletes the local
+          canary and restores it from the latest archive, proving the repo is
+          actually restorable. Result is logged in the same `borg_...:` line format
+          as the status probe and tailed into Wazuh.
+        '';
+      };
+
+      canaryFile = mkOption {
+        type = types.str;
+        default = "/var/lib/borg-restore/canary";
+        description = ''
+          Canary file path. Its parent directory is added to the backup `paths`
+          automatically, so the restore test works on any host that enables borg
+          without further configuration.
+        '';
+      };
+
+      schedule = mkOption {
+        type = types.str;
+        default = "Sun *-*-* 04:00:00";
+        description = "systemd OnCalendar expression for the restore test (default: weekly, Sunday 04:00, after the nightly backup).";
+      };
+
+      logFile = mkOption {
+        type = types.str;
+        default = "/var/log/borg-restore.log";
+        description = "Log file the restore test appends to; registered as a Wazuh localfile so results ship to the manager.";
+      };
+    };
   };
 
-  config = mkIf cfg.enable {
+  config = mkIf cfg.enable (
+   let
+    canaryFile = cfg.restoreTest.canaryFile;
+    canaryDir  = builtins.dirOf canaryFile;
+    logFile    = cfg.restoreTest.logFile;
+
+    # Self-contained restore verification: delete the live canary, recover it from
+    # the newest archive, verify, and put it back. Reads the same /etc/wazuh/borg.conf
+    # the status probe uses (BORG_REPO/PASSCOMMAND/RSH/REMOTE_PATH). Never exits
+    # non-zero on a backup problem — it always emits one machine-parsable line so
+    # Wazuh sees OK *and* failures.
+    restoreTestScript = pkgs.writeShellScript "borg-restore-test" ''
+      set -uo pipefail
+      export PATH="/run/current-system/sw/bin:$PATH"
+      export BORG_RELOCATED_REPO_ACCESS_IS_OK=yes
+
+      CONF=/etc/wazuh/borg.conf
+      # set -a so sourced BORG_* vars are exported to the borg subprocess
+      # shellcheck source=/dev/null
+      set -a; [ -f "$CONF" ] && . "$CONF"; set +a
+
+      REPO="''${BORG_REPO:-${cfg.repository}}"
+      CANARY="${canaryFile}"
+      LOG="${logFile}"
+      HOST="${config.networking.hostName}"
+
+      mkdir -p "$(dirname "$LOG")"
+      emit() {
+        echo "$(date '+%b %e %H:%M:%S') $HOST borg_restore: $1" >> "$LOG"
+        echo "borg_restore: $1"
+      }
+
+      if ! command -v borg >/dev/null 2>&1; then
+        emit "status=ERROR repo=$REPO error=borg_not_found"; exit 0
+      fi
+
+      LAST=$(borg list --last 1 --format '{archive}' "$REPO" 2>&1) || {
+        ERR=$(printf '%s' "$LAST" | head -1 | tr -cs '[:alnum:]_.-' '_' | cut -c1-60)
+        emit "status=ERROR repo=$REPO error=$ERR"; exit 0
+      }
+      if [ -z "$LAST" ]; then
+        emit "status=ERROR repo=$REPO error=no_archives"; exit 0
+      fi
+
+      # Preserve the current canary so a failed extract can be rolled back.
+      BEFORE=""; [ -f "$CANARY" ] && BEFORE=$(cat "$CANARY" 2>/dev/null || true)
+      restore_before() {
+        if [ -n "$BEFORE" ]; then
+          mkdir -p "$(dirname "$CANARY")"
+          printf '%s\n' "$BEFORE" > "$CANARY"
+        fi
+      }
+
+      # Delete-then-restore: remove the live canary and recover it from the archive.
+      rm -f "$CANARY"
+      TMP=$(mktemp -d)
+      trap 'rm -rf "$TMP"' EXIT
+      REL="''${CANARY#/}"
+
+      if ! ( cd "$TMP" && borg extract "$REPO::$LAST" "$REL" ) 2>"$TMP/err"; then
+        ERR=$(head -1 "$TMP/err" 2>/dev/null | tr -cs '[:alnum:]_.-' '_' | cut -c1-60)
+        restore_before
+        emit "status=ERROR repo=$REPO archive=$LAST error=extract_failed:$ERR"; exit 0
+      fi
+
+      EXTRACTED="$TMP/$REL"
+      if [ ! -f "$EXTRACTED" ]; then
+        restore_before
+        emit "status=ERROR repo=$REPO archive=$LAST error=canary_absent_in_archive"; exit 0
+      fi
+
+      # Complete the round-trip: put the recovered canary back in place.
+      mkdir -p "$(dirname "$CANARY")"
+      cp "$EXTRACTED" "$CANARY"
+
+      if head -1 "$EXTRACTED" | ${pkgs.gnugrep}/bin/grep -q '^borg-restore-canary$'; then
+        WRITTEN=$(${pkgs.gnugrep}/bin/grep '^written=' "$EXTRACTED" | cut -d= -f2)
+        AGE_H=0
+        [ -n "''${WRITTEN:-}" ] && AGE_H=$(( ( $(date +%s) - WRITTEN ) / 3600 ))
+        emit "status=OK repo=$REPO archive=$LAST verify=match canary_age=''${AGE_H}h"
+      else
+        emit "status=ERROR repo=$REPO archive=$LAST verify=mismatch"
+      fi
+    '';
+   in {
     environment.systemPackages = with pkgs; [ borgbackup ];
 
     environment.shellAliases =
@@ -224,10 +344,21 @@ in
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHrBHn7I+Zd1FGvi4L3hLzxJoRoydTKiDDKJ4Ivg1x2N";
 
     services.borgbackup.jobs."system" = {
-      paths = cfg.paths;
+      # Auto-include the canary dir so the restore test works regardless of `paths`.
+      paths = cfg.paths ++ optional cfg.restoreTest.enable canaryDir;
       exclude = cfg.exclude;
       repo = cfg.repository;
-      preHook = cfg.preHook;
+      # Refresh the canary before every backup so the newest archive always holds a
+      # current one, then run any user-supplied preHook.
+      preHook = (optionalString cfg.restoreTest.enable ''
+        mkdir -p ${canaryDir}
+        {
+          echo "borg-restore-canary"
+          echo "host=${config.networking.hostName}"
+          echo "written=$(date +%s)"
+          echo "token=$(date +%s%N)-$$"
+        } > ${canaryFile}
+      '') + cfg.preHook;
       postHook = cfg.postHook;
       encryption = {
         mode = cfg.encryption.mode;
@@ -261,5 +392,33 @@ in
       after = [ "bitwarden-secrets-sync.service" ];
       wants = [ "bitwarden-secrets-sync.service" ];
     };
-  };
+
+    # Weekly restore verification (canary round-trip). Self-contained: enabling
+    # services.borg-backup is all a host needs — the timer, script, and Wazuh
+    # localfile are all provided here.
+    systemd.services.borg-restore-test = mkIf cfg.restoreTest.enable {
+      description = "Borg restore verification (canary round-trip) for ${cfg.repository}";
+      after = [ "network-online.target" "bitwarden-secrets-sync.service" ];
+      wants = [ "network-online.target" "bitwarden-secrets-sync.service" ];
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = toString restoreTestScript;
+      };
+    };
+
+    systemd.timers.borg-restore-test = mkIf cfg.restoreTest.enable {
+      description = "Schedule weekly Borg restore verification";
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnCalendar = cfg.restoreTest.schedule;
+        Persistent = true;
+      };
+    };
+
+    # Ship restore-test results to Wazuh by tailing its log (same mechanism as the
+    # status probe's log on nas01). Merges with any host-level extraLocalFiles.
+    services.wazuh-agent.extraLocalFiles = mkIf cfg.restoreTest.enable [
+      { location = logFile; logFormat = "syslog"; }
+    ];
+   });
 }
