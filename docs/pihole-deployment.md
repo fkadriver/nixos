@@ -21,6 +21,17 @@ with limited secrets) and finalize (add the Pi's age key, deploy real secrets).
 
 ### 1a. Build
 
+Using the deploy script (preferred — locks the kernel version check and out-links
+each image separately so building both doesn't clobber the other's `result` symlink):
+
+```bash
+./scripts/deploy-piholes.sh --build-image                  # both Pis
+./scripts/deploy-piholes.sh pihole01 --build-image          # pihole01 only
+./scripts/deploy-piholes.sh pihole02 --build-image --verbose
+```
+
+Or manually:
+
 ```bash
 # pihole02 (Pi 3B)
 nix build .#nixosConfigurations.pihole02.config.system.build.sdImage
@@ -29,7 +40,8 @@ nix build .#nixosConfigurations.pihole02.config.system.build.sdImage
 nix build .#nixosConfigurations.pihole01.config.system.build.sdImage
 ```
 
-The image lands in:
+The image lands in (`result-<host>-sdimage/` when built via the script,
+`result/` when built manually):
 
 ```
 result/sd-image/nixos-image-pihole02-aarch64-linux.img

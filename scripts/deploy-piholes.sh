@@ -15,10 +15,16 @@
 #   ./scripts/deploy-piholes.sh --verbose              # also show full nix build logs on screen
 #   ./scripts/deploy-piholes.sh --quiet                # no log file, minimal screen output
 #   ./scripts/deploy-piholes.sh --check-version        # check if a newer version exists on GitHub
+#
+#   ./scripts/deploy-piholes.sh --build-image                  # build SD images for both Pis
+#   ./scripts/deploy-piholes.sh pihole01 --build-image          # build SD image for pihole01 only
+#   ./scripts/deploy-piholes.sh pihole02 --build-image --verbose
+#   (image builds run locally via QEMU binfmt emulation — no --build-host/target-host involved;
+#    see docs/pihole-deployment.md Phase 1)
 
 set -euo pipefail
 
-SCRIPT_VERSION="1.2.2"
+SCRIPT_VERSION="1.3.0"
 SCRIPT_URL="https://raw.githubusercontent.com/fkadriver/nixos/main/scripts/deploy-piholes.sh"
 
 RED='\033[0;31m'
@@ -72,10 +78,12 @@ check_new_version() {
 
 # Parse arguments
 BUILD_HOST=""
+BUILD_IMAGE=false
 TARGET=()
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --build-host) BUILD_HOST="$2"; shift 2 ;;
+        --build-image|--image) BUILD_IMAGE=true; shift ;;
         --verbose|-v) VERBOSE=true; shift ;;
         --quiet|-q) QUIET=true; shift ;;
         --check-version) check_new_version; exit 0 ;;
@@ -94,10 +102,12 @@ fi
 
 # Determine log file name based on targets
 TS=$(date +%Y%m%d-%H%M%S)
+LOGTAG="update"
+$BUILD_IMAGE && LOGTAG="image"
 if [[ ${#TARGET[@]} -eq 1 ]]; then
-    LOGFILE="/tmp/${TARGET[0]}-update_${TS}.log"
+    LOGFILE="/tmp/${TARGET[0]}-${LOGTAG}_${TS}.log"
 else
-    LOGFILE="/tmp/pihole-update_${TS}.log"
+    LOGFILE="/tmp/pihole-${LOGTAG}_${TS}.log"
 fi
 
 # Set up logging: default and verbose tee to logfile; quiet skips it
@@ -105,8 +115,9 @@ if ! $QUIET; then
     exec > >(tee -a "$LOGFILE") 2>&1
 fi
 
-# Auto-select build host if not specified
-if [[ -z "$BUILD_HOST" ]]; then
+# Image builds run entirely on this machine via QEMU binfmt emulation (pi-builder.nix) —
+# there's no remote target to deploy to, so the --build-host auto-selection below doesn't apply.
+if [[ -z "$BUILD_HOST" ]] && ! $BUILD_IMAGE; then
     if [[ "$(hostname)" == "vm01" ]]; then
         # Running on vm01 itself — build locally (omit --build-host to avoid SSH to localhost)
         BUILD_HOST="localhost"
@@ -160,6 +171,32 @@ check_kernel_version() {
         echo ""
         read -rp "  Proceed with recompile? [y/N] " confirm
         [[ "${confirm,,}" == "y" ]] || { fail "Aborted."; return 1; }
+    fi
+}
+
+build_sd_image() {
+    local name=$1
+    local outlink="${FLAKE_DIR}/result-${name}-sdimage"
+
+    echo ""
+    log "━━━ Building SD image for ${name} ━━━"
+
+    check_kernel_version "$name" || return 1
+
+    local build_log_flag=()
+    $VERBOSE && build_log_flag=(--print-build-logs)
+
+    if nix build \
+        "${FLAKE_DIR}#nixosConfigurations.${name}.config.system.build.sdImage" \
+        --out-link "$outlink" \
+        --option builders '' \
+        "${build_log_flag[@]}"; then
+        local img
+        img=$(find "${outlink}/sd-image" -maxdepth 1 -name '*.img' | head -1)
+        ok "SD image built: ${img}"
+    else
+        fail "SD image build failed for ${name}"
+        return 1
     fi
 }
 
@@ -279,7 +316,11 @@ deploy_pi() {
 }
 
 echo ""
-echo -e "${BLUE}Pi-hole deployment — $(date)${NC}"
+if $BUILD_IMAGE; then
+    echo -e "${BLUE}Pi-hole SD image build — $(date)${NC}"
+else
+    echo -e "${BLUE}Pi-hole deployment — $(date)${NC}"
+fi
 echo -e "${BLUE}Flake: ${FLAKE_DIR}${NC}"
 echo -e "${BLUE}Script version: ${SCRIPT_VERSION}${NC}"
 $QUIET || echo -e "${BLUE}Log: ${LOGFILE}${NC}"
@@ -287,6 +328,26 @@ $VERBOSE && echo -e "${YELLOW}Verbose mode — full build logs enabled${NC}"
 echo ""
 
 check_new_version
+
+if $BUILD_IMAGE; then
+    for pi in "${TARGET[@]}"; do
+        build_sd_image "$pi" || {
+            echo ""
+            echo -e "${RED}Image build failed on ${pi} — stopping.${NC}"
+            exit 1
+        }
+    done
+
+    echo ""
+    if [[ ${#TARGET[@]} -eq 1 ]]; then
+        echo -e "${GREEN}━━━ ${TARGET[0]} SD image built successfully ━━━${NC}"
+    else
+        echo -e "${GREEN}━━━ All Pi-hole SD images built successfully ━━━${NC}"
+    fi
+    $QUIET || echo -e "${BLUE}Log saved: ${LOGFILE}${NC}"
+    exit 0
+fi
+
 verify_build_host
 
 for pi in "${TARGET[@]}"; do
