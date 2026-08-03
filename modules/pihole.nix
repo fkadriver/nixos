@@ -526,7 +526,12 @@
       # Initialize gravity.db if missing
       if [ ! -f /var/lib/pihole/gravity.db ]; then
         ${pihole}/bin/pihole -g
-        kill -s SIGRTMIN "$(systemctl show --property MainPID --value pihole-ftl.service)"
+        # bash's builtin `kill` doesn't understand real-time signal names like
+        # SIGRTMIN (only external kill binaries do, and even those want "RTMIN"
+        # without the SIG prefix) — it errors "invalid signal specification" and,
+        # combined with `set -e`, aborts this script before lists ever get added.
+        # Go through systemctl instead, which resolves RTMIN correctly.
+        systemctl kill --signal=RTMIN --kill-whom=main pihole-ftl.service
       fi
 
       source ${pihole}/share/pihole/advanced/Scripts/api.sh

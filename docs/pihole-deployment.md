@@ -202,6 +202,12 @@ to force the build to run locally over SSH loopback.
 
 Both **latitude** and **vm01** have sshd on `127.0.0.1` configured for this purpose.
 
+> **Note:** `scott@pihole01`/`scott@pihole02` resolve via Tailscale MagicDNS to the
+> Pi's tailnet address, not its LAN static IP. If Tailscale is down or unreachable,
+> this hangs with "Connection timed out" even though the Pi is up — see
+> [Troubleshooting](#nixos-rebuild---target-host-scottpihole0x-hangs-with-connection-timed-out)
+> for using the static LAN IP instead.
+
 ### Using the deploy script (preferred)
 
 From latitude or vm01:
@@ -353,6 +359,48 @@ to the main web UI login.
 - The static IP `192.168.10.11` requires the build machine to be on the same
   subnet (or have a route to `192.168.10.0/24`)
 - Try connecting a monitor — the console will show the boot log and any errors
+
+### `nixos-rebuild --target-host scott@pihole0x` hangs with "Connection timed out"
+
+Symptom: SSH to the plain hostname (`ssh scott@pihole01`, or `nixos-rebuild ...
+--target-host scott@pihole01`) times out, but the Pi is otherwise up and reachable.
+
+Cause: `pihole01`/`pihole02` resolve via Tailscale MagicDNS
+(`resolvectl query pihole01`) to the Pi's tailnet IP (e.g. `100.x.x.x`), which
+takes priority over `/etc/hosts` or LAN DNS. If Tailscale on the Pi (or the
+tailnet path between it and your build machine) isn't currently reachable, the
+hostname resolves to a dead address even though the Pi answers fine on its LAN
+static IP.
+
+Fix: target the static LAN IP directly instead of the hostname:
+
+```bash
+nixos-rebuild boot --flake .#pihole01 --target-host scott@192.168.10.10 --sudo --option builders ''
+```
+
+### Gravity database stays empty / no blocklists after deploy or reboot
+
+Symptom: `pihole-ftl` is `active`, but the web UI shows 0 domains on the
+blocklist, and `pihole-ftl-setup.service` shows as `failed`:
+
+```bash
+sudo systemctl status pihole-ftl-setup
+sudo journalctl -u pihole-ftl-setup -n 50
+```
+
+If the journal shows `kill: SIGRTMIN: invalid signal specification`, that's
+this bug: the setup script (`modules/pihole.nix`) used to call bash's builtin
+`kill -s SIGRTMIN <pid>` to notify FTL after seeding an empty gravity.db.
+Bash's builtin `kill` doesn't know real-time signal names (and even external
+`kill` binaries want `RTMIN`, not `SIGRTMIN`) — the builtin errors out, and
+because the script runs under `set -e`, it aborts right there, before the
+`addList` calls that populate the actual blocklists ever run.
+
+Fixed by using `systemctl kill --signal=RTMIN --kill-whom=main
+pihole-ftl.service` instead, which resolves the signal name correctly. If you
+hit this on a Pi built from an older commit, redeploy with the current
+`modules/pihole.nix` and reboot — gravity will repopulate on the next
+`pihole-ftl-setup` run.
 
 ### rsyslog DNS logs not streaming in real time
 
