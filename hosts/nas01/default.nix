@@ -227,6 +227,7 @@ let
         borgbackup
         hd-idle
         zfs
+        ethtool
         # Remote desktop session
         openbox
         firefox
@@ -235,6 +236,16 @@ let
         cloud-utils      # cloud-localds for building cloud-init ISOs
         tigervnc         # vncviewer to reach nas01-backup from the RDP/Openbox session
       ];
+      # eno1 is an Intel I219; its Energy Efficient Ethernet link-idle state
+      # has a known erratum that desyncs the MAC/PHY and produces a Tx hang
+      # (dmesg: "Detected Hardware Unit Hang") the e1000e watchdog can never
+      # recover from — only a hard reboot clears it. Disabling EEE avoids the
+      # trigger. Re-run on every network start since it doesn't survive a
+      # driver reload.
+      networking.localCommands = ''
+        ${pkgs.ethtool}/bin/ethtool --set-eee eno1 eee off 2>/dev/null || true
+      '';
+
       systemd.tmpfiles.rules = [
         "d /pool/borg 0750 scott users -"
         "d /usr/local/bin 0755 root root -"
