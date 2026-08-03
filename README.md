@@ -147,6 +147,15 @@ Deploys NixOS updates to pihole01 and pihole02 sequentially, verifying DNS healt
 
 All output is tee'd to a timestamped log in `/tmp/` by default. Use `--quiet` to suppress logging (errors and final status only). Use `--verbose` to add `--print-build-logs` output.
 
+### check-fw-updates.sh
+
+Checks firmware updates (via fwupd) on every host with the fwupd module enabled — latitude, OTworkstation, vm01, nas01, log01 — and prompts to apply them. Remote hosts are checked over an interactive SSH session so sudo password prompts and fwupdmgr's per-device confirmations work.
+
+```bash
+./scripts/check-fw-updates.sh          # check each host, prompt before applying
+./scripts/check-fw-updates.sh --yes    # skip the per-host apply prompt
+```
+
 ## Common Tasks
 
 ### Check Configuration
@@ -197,6 +206,7 @@ Logitech devices on `latitude` are managed by [Solaar](https://github.com/pwr-So
 Defined in `modules/shell-aliases.nix`:
 - `nix-rebuild` - Pull latest and rebuild current host (NixOS) or darwin (airbook)
 - `nix-sync` - Run `scripts/sync-nixos-hosts.sh`
+- `fw-check` - Run `scripts/check-fw-updates.sh`
 - `smart [drive]` - Full SMART report for all drives, or just one (e.g. `smart sda`)
 - `ts-info [host]` - Show enabled Tailscale features (SSH, exit-node option, routes, tags) for self, or a peer by hostname
 
