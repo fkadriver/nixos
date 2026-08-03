@@ -45,6 +45,11 @@ declare -A LOCKED_KERNEL_VERSIONS
 LOCKED_KERNEL_VERSIONS[pihole01]="6.6.78"
 LOCKED_KERNEL_VERSIONS[pihole02]="6.18.34-stable_20260609"
 
+# Machines that should each have a local copy of built SD images.
+# After a successful --build-image, the resulting .img is rsynced to every
+# other host in this list (skipping whichever one just built it).
+IMAGE_SYNC_HOSTS=("latitude" "vm01")
+
 declare -A PI_DNS
 PI_DNS[pihole01]="192.168.10.10"
 PI_DNS[pihole02]="192.168.10.11"
@@ -194,10 +199,31 @@ build_sd_image() {
         local img
         img=$(find "${outlink}/sd-image" -maxdepth 1 -name '*.img' | head -1)
         ok "SD image built: ${img}"
+        sync_image_to_peers "$name" "$img"
     else
         fail "SD image build failed for ${name}"
         return 1
     fi
+}
+
+# Copy a freshly built image out to the other static machines so a card can
+# be flashed from either one without re-running the (multi-hour) build.
+sync_image_to_peers() {
+    local name=$1 img=$2
+    local self
+    self=$(hostname)
+
+    for peer in "${IMAGE_SYNC_HOSTS[@]}"; do
+        [[ "$peer" == "$self" ]] && continue
+        log "Syncing ${name} image to ${peer}..."
+        local remote_dir="${FLAKE_DIR}/result-${name}-sdimage/sd-image"
+        if ssh -o ConnectTimeout=5 -o BatchMode=yes "$peer" "mkdir -p '${remote_dir}'" 2>/dev/null \
+            && rsync -a --partial "$img" "${peer}:${remote_dir}/"; then
+            ok "Synced to ${peer}"
+        else
+            warn "Could not sync image to ${peer} (non-fatal — copy it manually)"
+        fi
+    done
 }
 
 verify_pi() {
