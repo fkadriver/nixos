@@ -9,6 +9,7 @@ let
       inputs.self.nixosModules.wazuh-agent
       inputs.self.nixosModules.laptop-minimal
       inputs.self.nixosModules.user-scott
+      inputs.self.nixosModules.fwupd
     ];
     config = {
       # Filesystem configuration for latitude-minimal (not using disko)

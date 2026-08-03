@@ -11,6 +11,7 @@ let
       inputs.self.nixosModules.vscode-server
       inputs.self.nixosModules.wazuh-agent
       inputs.self.nixosModules.user-scott
+      inputs.self.nixosModules.fwupd
       inputs.home-manager.nixosModules.home-manager
       (inputs.self.homeConfigurations.scott).nixosModule
     ];

@@ -34,6 +34,7 @@ let
       inputs.self.nixosModules.pi-builder
       inputs.self.nixosModules.distributed-builds
       inputs.self.nixosModules.wazuh-agent
+      inputs.self.nixosModules.fwupd
     ];
 
     config = {

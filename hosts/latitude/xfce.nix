@@ -11,6 +11,7 @@ let
       inputs.self.nixosModules.multi-monitor
       inputs.self.nixosModules.autorandr-profiles
       inputs.self.nixosModules.user-scott
+      inputs.self.nixosModules.fwupd
     ];
     config = {
       # Filesystem configuration (not using disko)

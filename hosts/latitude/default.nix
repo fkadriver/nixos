@@ -18,6 +18,7 @@ let
       inputs.self.nixosModules.screen-recording
       inputs.self.nixosModules.forscan
       inputs.self.nixosModules.mcp-nixos
+      inputs.self.nixosModules.fwupd
     ];
     config = {
       networking = {

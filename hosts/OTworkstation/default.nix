@@ -78,6 +78,7 @@ let
       inputs.self.nixosModules.virtualbox
       inputs.self.nixosModules.vmware
       inputs.self.nixosModules.wireless
+      inputs.self.nixosModules.fwupd
     ];
     config = {
       networking.hostName = "OTworkstation";
