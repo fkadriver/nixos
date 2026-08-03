@@ -43,7 +43,7 @@ QUIET=false
 # pihole02 = Pi 3B (nixos-hardware kernel)
 declare -A LOCKED_KERNEL_VERSIONS
 LOCKED_KERNEL_VERSIONS[pihole01]="6.6.78"
-LOCKED_KERNEL_VERSIONS[pihole02]="6.12.47-stable_20250916"
+LOCKED_KERNEL_VERSIONS[pihole02]="6.18.34-stable_20260609"
 
 declare -A PI_DNS
 PI_DNS[pihole01]="192.168.10.10"

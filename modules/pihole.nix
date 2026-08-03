@@ -41,6 +41,15 @@
           configureFlags = (old.configureFlags or []) ++ [ "--disable-libgcrypt" ];
         });
 
+        # zram-generator's test suite calls unshare(CLONE_NEWUSER), which fails with
+        # EINVAL under QEMU's aarch64 user-mode emulation (nested user namespaces
+        # aren't supported through binfmt emulation). nixpkgs only skips doCheck for
+        # LoongArch64, not for the x86_64→aarch64 cross environment used to build
+        # these Pi images, so disable it here.
+        zram-generator = prev.zram-generator.overrideAttrs (old: {
+          doCheck = false;
+        });
+
         # systemd's BPF sandboxing helpers (restrict-fs, restrict-ifaces, socket-bind)
         # are compiled with a freestanding `clang -target bpf` invocation that, in the
         # current nixpkgs revision, can't find linux/types.h or errno.h when
