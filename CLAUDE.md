@@ -328,7 +328,7 @@ Boot labels are set via `boot.loader.systemd-boot.label` or `boot.loader.grub.en
 
 ### Garbage Collection
 The configuration automatically:
-- Runs garbage collection weekly (keeps last 30 days)
+- Runs garbage collection weekly (keeps last 7 days of generations, then GCs unreferenced store paths)
 - Keeps only 10 boot menu generations
 - Configured in `common.nix`
 
