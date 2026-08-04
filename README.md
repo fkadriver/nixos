@@ -156,6 +156,14 @@ Checks firmware updates (via fwupd) on every host with the fwupd module enabled 
 ./scripts/check-fw-updates.sh --yes    # skip the per-host apply prompt
 ```
 
+### host-status.sh
+
+Queries every NixOS host over SSH (in parallel) and prints a table of uptime, NixOS version, current generation + build date, kernel version, and root filesystem usage. Covers latitude, otworkstation, vm01, nas01, log01, pihole01, pihole02 — airbook is excluded since it's macOS/darwin and not reachable via SSH from latitude.
+
+```bash
+./scripts/host-status.sh
+```
+
 ## Common Tasks
 
 ### Check Configuration
@@ -207,6 +215,7 @@ Defined in `modules/shell-aliases.nix`:
 - `nix-rebuild` - Pull latest and rebuild current host (NixOS) or darwin (airbook)
 - `nix-sync` - Run `scripts/sync-nixos-hosts.sh`
 - `fw-check` - Run `scripts/check-fw-updates.sh`
+- `host-status` - Run `scripts/host-status.sh`
 - `smart [drive]` - Full SMART report for all drives, or just one (e.g. `smart sda`)
 - `ts-info [host]` - Show enabled Tailscale features (SSH, exit-node option, routes, tags) for self, or a peer by hostname
 

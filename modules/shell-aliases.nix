@@ -73,6 +73,7 @@
         nix-rebuild = "_d=$PWD; [ \"$_d\" != \"$HOME/git/nixos\" ] && cd ~/git/nixos; GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=accept-new' git pull && sudo nixos-rebuild switch --flake ~/git/nixos#$(hostname); [ \"$_d\" != \"$HOME/git/nixos\" ] && cd -; unset _d; source ~/.bashrc";
         nix-sync = "~/git/nixos/scripts/sync-nixos-hosts.sh";
         fw-check = "~/git/nixos/scripts/check-fw-updates.sh";
+        host-status = "~/git/nixos/scripts/host-status.sh";
 
         # Tmux shortcuts
         t = "tmux attach-session -t default 2>/dev/null || tmux new-session -s default";
