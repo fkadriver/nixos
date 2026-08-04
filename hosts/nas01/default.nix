@@ -52,6 +52,12 @@ let
     ];
 
     config = {
+      # nas01 is headless (SSH/VNC-only, no console login or SDDM session), so
+      # vscode-server.nix's PAM auto-unlock (wired to "login"/"sddm") never
+      # fires here. Every SSH session then tries to prompt gnome-keyring to
+      # unlock, which fails immediately (no display) and spams the journal.
+      services.gnome.gnome-keyring.enable = lib.mkForce false;
+
       home-manager.useGlobalPkgs = true;
       home-manager.useUserPackages = true;
 
