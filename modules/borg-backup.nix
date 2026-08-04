@@ -267,6 +267,14 @@ in
     # for borgbackup and read the SSH key and passphrase files.
     systemd.tmpfiles.rules = [
       "d /usr/local/bin 0755 root root -"
+    ] ++ optional cfg.restoreTest.enable
+      # borgbackup-job-system runs under ProtectSystem=strict, so canaryDir must
+      # both exist before the unit starts (ReadWritePaths doesn't create it —
+      # see the readWritePaths option below) and be pre-created here rather than
+      # by preHook's own `mkdir -p`, which runs too late, inside the already
+      # read-only-sandboxed process.
+      "d ${canaryDir} 0700 root root -"
+    ++ [
       "L+ /usr/local/bin/wazuh-borg-status - - - - ${pkgs.writeShellScript "wazuh-borg-status" ''
         set -euo pipefail
         export PATH="/run/current-system/sw/bin:$PATH"
@@ -348,6 +356,13 @@ in
       paths = cfg.paths ++ optional cfg.restoreTest.enable canaryDir;
       exclude = cfg.exclude;
       repo = cfg.repository;
+      # The job runs under ProtectSystem=strict; canaryDir must be listed here
+      # or preHook's write to it hits a read-only filesystem (confirmed: this
+      # broke nightly backups fleet-wide for two nights before being caught —
+      # the mkdir failure aborts the whole job, not just the canary refresh).
+      # The directory itself is pre-created by the tmpfiles rule above, since
+      # ReadWritePaths requires the path to already exist.
+      readWritePaths = optional cfg.restoreTest.enable canaryDir;
       # Refresh the canary before every backup so the newest archive always holds a
       # current one, then run any user-supplied preHook.
       preHook = (optionalString cfg.restoreTest.enable ''
