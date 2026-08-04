@@ -85,6 +85,7 @@
       unzip
       usbimager  # Write .img/.iso files to USB drives
       gparted    # Disk partitioning and formatting
+      binutils   # strings, objdump, etc. — extract printable strings from binaries
 
       # 2D CAD
       librecad
