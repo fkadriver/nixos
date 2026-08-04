@@ -211,13 +211,14 @@ Logitech devices on `latitude` are managed by [Solaar](https://github.com/pwr-So
 
 ## Shell Aliases
 
-Defined in `modules/shell-aliases.nix`:
+Defined in `modules/shell-aliases.nix` (every host):
 - `nix-rebuild` - Pull latest and rebuild current host (NixOS) or darwin (airbook)
-- `nix-sync` - Run `scripts/sync-nixos-hosts.sh`
-- `fw-check` - Run `scripts/check-fw-updates.sh`
-- `host-status` - Run `scripts/host-status.sh`
 - `smart [drive]` - Full SMART report for all drives, or just one (e.g. `smart sda`)
 - `ts-info [host]` - Show enabled Tailscale features (SSH, exit-node option, routes, tags) for self, or a peer by hostname
+
+Fleet-management aliases are scoped to the hosts that actually administer the fleet, not every host:
+- `nix-sync`, `fw-check`, `host-status` - daily-driver machines only (`modules/daily-driver.nix`; latitude and airbook)
+- `deploy-piholes` - `modules/deploy-pihole.nix`; latitude and vm01 only (vm01 is the aarch64 cross-build host)
 
 ## Acknowledgments
 

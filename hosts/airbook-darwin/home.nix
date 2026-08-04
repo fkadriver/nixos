@@ -292,6 +292,7 @@ in
         # System rebuild (darwin-specific)
         nix-rebuild = "_d=$PWD; [ \"$_d\" != \"$HOME/git/nixos\" ] && cd ~/git/nixos; git pull && sudo darwin-rebuild switch --flake ~/git/nixos#airbook-darwin && { sw_vers -productVersion | grep -q '^15\\.' && sudo softwareupdate --install --recommended --no-scan 2>/dev/null || true; }; [ \"$_d\" != \"$HOME/git/nixos\" ] && cd -; unset _d";
         nix-sync = "~/git/nixos/scripts/sync-nixos-hosts.sh";
+        fw-check = "~/git/nixos/scripts/check-fw-updates.sh";
         host-status = "~/git/nixos/scripts/host-status.sh";
 
         # macOS-specific
@@ -410,6 +411,7 @@ in
         # System rebuild (darwin-specific)
         nix-rebuild = "_d=$PWD; [ \"$_d\" != \"$HOME/git/nixos\" ] && cd ~/git/nixos; git pull && sudo darwin-rebuild switch --flake ~/git/nixos#airbook-darwin && { sw_vers -productVersion | grep -q '^15\\.' && sudo softwareupdate --install --recommended --no-scan 2>/dev/null || true; }; [ \"$_d\" != \"$HOME/git/nixos\" ] && cd -; unset _d";
         nix-sync = "~/git/nixos/scripts/sync-nixos-hosts.sh";
+        fw-check = "~/git/nixos/scripts/check-fw-updates.sh";
         host-status = "~/git/nixos/scripts/host-status.sh";
 
         # macOS-specific

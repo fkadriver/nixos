@@ -8,7 +8,7 @@ This document provides a high-level overview of all available modules in this re
 |--------|-------------|
 | `common.nix` | Server-safe base configuration with CLI tools, tmux, git, docker, direnv, auditd, rsyslog forwarding to log01, logrotate (7-day). Imports `tailscale.nix` and `shell-aliases.nix` |
 | `user-scott.nix` | User account configuration (wheel, networkmanager, docker groups) |
-| `shell-aliases.nix` | System-wide shell aliases (`nas01`, `slap`, `log01`, `gpc`, rebuild commands) |
+| `shell-aliases.nix` | System-wide shell aliases (`nas01`, `slap`, `log01`, `gpc`, rebuild commands). Fleet-management aliases (`nix-sync`, `fw-check`, `host-status`, `deploy-piholes`) live in `daily-driver.nix` / `deploy-pihole.nix` instead — see those entries |
 
 ## Desktop Environment Modules
 
@@ -18,13 +18,14 @@ This document provides a high-level overview of all available modules in this re
 | `laptop-xfce.nix` | Full XFCE desktop with development tools, gaming support, media tools |
 | `laptop-kde.nix` | Full KDE Plasma 6 with Windows 11-like taskbar, gaming, KDE Connect |
 | `laptop-minimal.nix` | Minimal XFCE for testing (no WiFi auto-config, no Bitwarden) |
-| `daily-driver.nix` | Shared configuration for Scott's daily-driver machines (applications, fonts, 3D printing) |
+| `daily-driver.nix` | Shared configuration for Scott's daily-driver machines (applications, fonts, 3D printing). Also carries the `nix-sync`/`fw-check`/`host-status` fleet-management aliases (imported via `laptop-kde.nix`/`laptop-xfce.nix` → latitude; mirrored by hand in `hosts/airbook-darwin/home.nix`) |
 
 ## Pi-hole Modules
 
 | Module | Description |
 |--------|-------------|
 | `pihole.nix` | Pi-hole FTL + web UI, slim base config (replaces `common` for Pi hosts): tailscale, shell-aliases, git, vim, curl, wget, htop, tmux, starship, rsyslog forwarding to log01. Manages sops secrets for the admin password hash. DNS query logs (`/var/log/pihole/pihole.log`) are tailed in real time via rsyslog `imfile` (inotify mode) and streamed to log01 via TCP. FTL process logs (startup, errors) are sent to syslog via `misc.syslog = true`. |
+| `deploy-pihole.nix` | Adds the `deploy-piholes` alias (`scripts/deploy-piholes.sh`). Imported only by `hosts/latitude` and `hosts/vm01` — the two machines actually used to build/deploy Pi-hole updates (vm01 is the aarch64 cross-build host, see `pi-builder.nix`/`distributed-builds.nix`) |
 
 ## Networking Modules
 

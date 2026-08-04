@@ -15,6 +15,7 @@ let
       inputs.self.nixosModules.vmware
       inputs.self.nixosModules.pi-builder
       inputs.self.nixosModules.distributed-builds
+      inputs.self.nixosModules.deploy-pihole
       inputs.self.nixosModules.screen-recording
       inputs.self.nixosModules.forscan
       inputs.self.nixosModules.mcp-nixos

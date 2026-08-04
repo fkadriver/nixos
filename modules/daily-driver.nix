@@ -32,6 +32,14 @@
     };
 
 
+    # Fleet-management aliases: only meaningful on a machine used to administer
+    # the other hosts, so kept out of shell-aliases.nix (imported by every host).
+    environment.shellAliases = {
+      nix-sync = "~/git/nixos/scripts/sync-nixos-hosts.sh";
+      fw-check = "~/git/nixos/scripts/check-fw-updates.sh";
+      host-status = "~/git/nixos/scripts/host-status.sh";
+    };
+
     networking.networkmanager.enable = true;
 
     services.libinput = {

@@ -33,6 +33,7 @@ let
       inputs.self.nixosModules.user-scott
       inputs.self.nixosModules.pi-builder
       inputs.self.nixosModules.distributed-builds
+      inputs.self.nixosModules.deploy-pihole
       inputs.self.nixosModules.wazuh-agent
       inputs.self.nixosModules.fwupd
     ];
