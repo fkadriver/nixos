@@ -243,14 +243,16 @@ let
         cloud-utils      # cloud-localds for building cloud-init ISOs
         tigervnc         # vncviewer to reach nas01-backup from the RDP/Openbox session
       ];
-      # eno1 is an Intel I219; its Energy Efficient Ethernet link-idle state
-      # has a known erratum that desyncs the MAC/PHY and produces a Tx hang
-      # (dmesg: "Detected Hardware Unit Hang") the e1000e watchdog can never
-      # recover from — only a hard reboot clears it. Disabling EEE avoids the
-      # trigger. Re-run on every network start since it doesn't survive a
-      # driver reload.
+      # eno1 is an Intel I219; it's prone to a Tx hang (dmesg: "Detected
+      # Hardware Unit Hang") that the e1000e watchdog can never recover from
+      # — only a hard reboot clears it. Disabling EEE (2026-08-03) did NOT
+      # prevent a recurrence on 2026-08-04 after ~8h uptime under normal
+      # (non-build) load, so TSO/GSO/GRO — the other commonly-cited trigger
+      # for this same e1000e erratum family — are now also disabled. Re-run
+      # on every network start since none of this survives a driver reload.
       networking.localCommands = ''
         ${pkgs.ethtool}/bin/ethtool --set-eee eno1 eee off 2>/dev/null || true
+        ${pkgs.ethtool}/bin/ethtool -K eno1 tso off gso off gro off 2>/dev/null || true
       '';
 
       systemd.tmpfiles.rules = [

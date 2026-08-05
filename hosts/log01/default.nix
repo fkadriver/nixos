@@ -156,6 +156,33 @@ let
         };
       };
 
+      # Stamps data.client_hostname onto recent Pi-hole DNS query events from
+      # OPNsense DHCP lease data already indexed in wazuh-alerts-* — there's
+      # no ingest-pipeline enrich processor on this wazuh-indexer build, so
+      # this does the join after the fact via _update_by_query instead of at
+      # index time. See wazuh-tailscale README's "DNS hostname enrichment"
+      # section. Unlike wazuh-github-ci-status/wazuh-tailscale-health above,
+      # this doesn't need a Nix-store copy for purity — it only needs docker
+      # on PATH and the wazuh-tailscale repo checked out, so it runs straight
+      # from that checkout instead of going through readFile + writeShellScript.
+      systemd.timers.wazuh-dns-enrich = {
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          OnBootSec = "2m";
+          OnUnitActiveSec = "5m";
+        };
+      };
+      systemd.services.wazuh-dns-enrich = {
+        description = "Enrich Pi-hole DNS events with DHCP client hostnames";
+        after = [ "wazuh-docker.service" ];
+        path = [ pkgs.docker pkgs.jq pkgs.bash ];
+        serviceConfig = {
+          Type = "oneshot";
+          WorkingDirectory = "/home/scott/git/wazuh-tailscale";
+          ExecStart = "${pkgs.bash}/bin/bash /home/scott/git/wazuh-tailscale/config/wazuh_dashboard/enrich-dns-hostnames.sh";
+        };
+      };
+
       # goflow2 Netflow collector — standalone from the Wazuh stack, writes
       # NDJSON flow records into the same directory rsyslog uses for OPNsense's
       # other forwarded logs (see goflow2-netflow repo + wazuh-tailscale's
