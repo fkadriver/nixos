@@ -31,6 +31,8 @@ let
     sshKey = "/home/scott/.ssh/id_ed25519_legacy";
   };
 in {
+  imports = [ inputs.sops-nix.nixosModules.sops ];
+
   # Distributed builds: only enabled on vm01.
   # latitude must not offload its own local builds to vm01 — only pihole deploys
   # use both machines, and those are driven explicitly via --build-host, not the daemon.
@@ -53,4 +55,27 @@ in {
       IdentityFile /home/scott/.ssh/id_ed25519_legacy
       StrictHostKeyChecking no
   '';
+
+  # Mutual binary-cache substitution: whatever either machine has already built
+  # (e.g. the aarch64 pihole closures — hours of QEMU cross-compilation), the
+  # other can fetch instead of rebuilding. Both sign locally-built paths with
+  # the same shared key so either side can verify paths built by the other,
+  # without weakening signature checking against the real substituters
+  # (cache.nixos.org, cachix) the way require-sigs=false would.
+  sops.age.keyFile = lib.mkDefault "/var/lib/sops-nix/key.txt";
+  sops.secrets."nix_cache/signing_key" = {
+    sopsFile = ../secrets/secrets.yaml;
+    owner = "root";
+    mode = "0400";
+  };
+
+  nix.settings = {
+    secret-key-files = [ config.sops.secrets."nix_cache/signing_key".path ];
+    extra-substituters =
+      lib.optionals (hostname != "latitude") [ "ssh-ng://scott@latitude" ] ++
+      lib.optionals (hostname != "vm01")     [ "ssh-ng://scott@vm01" ];
+    extra-trusted-public-keys = [
+      "jen-acres-builders:rYBoDlCKPnKYZe4K90CFBGy0QTmhuTBChyGzYxw1Nzs="
+    ];
+  };
 }
