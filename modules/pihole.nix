@@ -431,6 +431,23 @@
             iCloudPrivateRelay = false;
           };
         };
+        # RFC1918 reverse zones (168.192.in-addr.arpa etc.) are delegated to the
+        # AS112 project, which returns an authenticated, DNSSEC-signed NXDOMAIN
+        # for them. With dns.dnssec enabled, dnsmasq's validator treats that
+        # signed "zone doesn't exist" proof as bogus and SERVFAILs the PTR/A
+        # answers we get back from the revServers above — bogus-priv (on by
+        # default) doesn't cover this case, only the older unsigned/empty one.
+        # Negative trust anchors tell dnsmasq to treat these specific zones as
+        # deliberately unsigned instead of walking the (poisoned) AS112 chain.
+        # One per revServers CIDR above.
+        misc.dnsmasq_lines = [
+          "trust-anchor=1.168.192.in-addr.arpa"
+          "trust-anchor=10.168.192.in-addr.arpa"
+          "trust-anchor=11.168.192.in-addr.arpa"
+          "trust-anchor=20.168.192.in-addr.arpa"
+          "trust-anchor=21.168.192.in-addr.arpa"
+          "trust-anchor=30.168.192.in-addr.arpa"
+        ];
         webserver = {
           interface.theme = "default-dark";
           api = {
