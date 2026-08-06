@@ -33,7 +33,7 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-HOSTS=(latitude otworkstation vm01 log01)
+HOSTS=(latitude otworkstation vm01 log01 nas01)
 REPO_PATH='~/git/nixos'
 SSH_OPTS=(-o ConnectTimeout=5 -o BatchMode=yes)
 
@@ -138,6 +138,8 @@ print_status_table() {
         printf "${color}%-16s %-12s %-8s %-10s %-10s %-6s %-20s${NC}\n" \
             "$label" "$reach" "$tree" "$behind" "$ahead" "$gen" "$built"
     done
+    echo
+    echo "(Host list is hardcoded — if a host is missing, add it to the HOSTS array near the top of this script.)"
 }
 
 # Ask a yes/no question unless --yes was passed. Default is no.
