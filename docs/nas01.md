@@ -378,6 +378,37 @@ Network: Tailscale-only (declared in `modules/syncthing-declarative.nix`).
 
 ## Troubleshooting
 
+### eno1 e1000e "Detected Hardware Unit Hang" (RESOLVED 2026-08-06)
+
+nas01's onboard NIC (Intel I219, `eno1`) was hanging under normal load
+(no builds running) — `dmesg`/journal fills with repeating
+`e1000e 0000:00:1f.6 eno1: Detected Hardware Unit Hang` every ~2s, the
+interface never recovers on its own, and only a hard/forced reboot
+(physical Ctrl-Alt-Del if SSH is already unreachable) clears it.
+
+Timeline:
+- **2026-08-03**: disabled EEE (Energy Efficient Ethernet) via
+  `ethtool --set-eee eno1 eee off`, suspecting the I219 EEE erratum.
+- **2026-08-04**: hang recurred anyway, ~8h into a boot, with EEE
+  confirmed disabled the whole time and no link flap/driver reload in
+  between — ruled out EEE as the (sole) trigger.
+- **2026-08-05**: also disabled TSO/GSO/GRO offload
+  (`ethtool -K eno1 tso off gso off gro off`) — the other commonly-cited
+  trigger for this same e1000e erratum family.
+- **2026-08-06**: confirmed stable for 27+ hours (vs. the previous ~8h
+  failure window) — issue considered resolved.
+
+Both fixes live in `hosts/nas01/default.nix` under
+`networking.localCommands`, applied via `network-local-commands.service`
+on every boot (they don't survive a driver reload, hence re-applied at
+network start rather than set once).
+
+If this recurs on the **replacement hardware** planned for
+mid-to-late August 2026, it's likely a different NIC/driver and this
+history may not directly apply — check `ethtool -i eno1` (or whatever
+the new interface is named) for the driver in use before assuming the
+same erratum.
+
 ### ZFS pool didn't import
 
 ```bash
