@@ -62,6 +62,40 @@ let
         ];
       };
 
+      # mtga-mcp: local MTGA collection tracker (MTGA runs here via Heroic/Wine)
+      home-manager.users.scott = { ... }: {
+        home.sessionVariables = {
+          MTGA_MCP_PLAYER_LOG = "/home/scott/Games/Heroic/Prefixes/default/Magic The Gathering Arena/drive_c/users/steamuser/AppData/LocalLow/Wizards Of The Coast/MTGA/Player.log";
+          MTGA_MCP_RAW_DIR = "/home/scott/Games/Heroic/MagicTheGathering/MTGA_Data/Downloads/Raw";
+          MTGA_MCP_DB_PATH = "/home/scott/Documents/mtga-mcp/mtga.db";
+        };
+
+        systemd.user.services.mtga-capture = {
+          Unit.Description = "MTGA inventory capture";
+          Service = {
+            Type = "oneshot";
+            # Whole assignment must be quoted when the value contains spaces — systemd
+            # word-splits unquoted Environment= entries (see systemd.service(5)).
+            Environment = [
+              "MTGA_MCP_DB_PATH=%h/Documents/mtga-mcp/mtga.db"
+              ''"MTGA_MCP_PLAYER_LOG=/home/scott/Games/Heroic/Prefixes/default/Magic The Gathering Arena/drive_c/users/steamuser/AppData/LocalLow/Wizards Of The Coast/MTGA/Player.log"''
+              "MTGA_MCP_RAW_DIR=/home/scott/Games/Heroic/MagicTheGathering/MTGA_Data/Downloads/Raw"
+            ];
+            ExecStart = "/home/scott/git/mtga-mcp/.venv/bin/mtga-mcp capture";
+          };
+        };
+
+        systemd.user.timers.mtga-capture = {
+          Unit.Description = "Run MTGA capture every 15 minutes";
+          Timer = {
+            OnBootSec = "2min";
+            OnUnitActiveSec = "15min";
+            Persistent = true;
+          };
+          Install.WantedBy = [ "timers.target" ];
+        };
+      };
+
       services.wazuh-agent = {
         enable = true;
         manager = "wazuh.warthog-royal.ts.net";
