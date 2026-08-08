@@ -93,6 +93,9 @@ let
           # From laptop: configure Remmina with Server=192.168.122.54:5901, SSH tunnel=nas01
           idrive-vnc      = ''vncviewer $(virsh domifaddr nas01-backup | awk '/ipv4/{print $4}' | cut -d/ -f1):5901'';
           idrive-console  = "sudo virsh console nas01-backup";
+          # Restart the IDrive360 agent service inside the VM (over the tailnet —
+          # the VM is its own tailnet node, same path latitude/airbook use).
+          idrive-restart  = "ssh scott@nas01-backup.warthog-royal.ts.net sudo systemctl restart idrive360cron";
           # VM disk backup (Borg, local repo /pool/borg/nas01) — runs daily via
           # borgbackup-job-system.service; these are for on-demand use.
           idrive-vm-backup  = "sudo systemctl start borgbackup-job-system.service && sudo journalctl -u borgbackup-job-system.service -n 20 --no-pager";

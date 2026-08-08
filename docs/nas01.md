@@ -196,6 +196,7 @@ idrive-start     # sudo virsh start nas01-backup
 idrive-stop      # sudo virsh shutdown nas01-backup
 idrive-ssh       # ssh directly into the VM
 idrive-console   # serial console (Ctrl+] to exit)
+idrive-restart   # restart the idrive360cron service inside the VM (also on latitude, airbook-darwin)
 ```
 
 ### Monitoring (Wazuh agent inside the VM)

@@ -303,6 +303,8 @@ in
         # its own tailnet node, so no SSH tunnel through nas01 is needed. VNC password:
         # changeme. Launches TigerVNC detached so the terminal returns.
         nas01-backup-vnc = "/Applications/TigerVNC.app/Contents/MacOS/vncviewer nas01-backup.warthog-royal.ts.net::5901 >/dev/null 2>&1 &";
+        # Restart the IDrive360 agent service inside the nas01-backup VM (same alias as nas01/latitude)
+        idrive-restart = "ssh scott@nas01-backup.warthog-royal.ts.net sudo systemctl restart idrive360cron";
       };
       initExtra = ''
         export PATH="$PATH:$HOME/bin:$HOME/.local/bin:$HOME/go/bin"
@@ -422,6 +424,8 @@ in
         # its own tailnet node, so no SSH tunnel through nas01 is needed. VNC password:
         # changeme. Launches TigerVNC detached so the terminal returns.
         nas01-backup-vnc = "/Applications/TigerVNC.app/Contents/MacOS/vncviewer nas01-backup.warthog-royal.ts.net::5901 >/dev/null 2>&1 &";
+        # Restart the IDrive360 agent service inside the nas01-backup VM (same alias as nas01/latitude)
+        idrive-restart = "ssh scott@nas01-backup.warthog-royal.ts.net sudo systemctl restart idrive360cron";
       };
       initContent = ''
         export PATH="$PATH:$HOME/bin:$HOME/.local/bin:$HOME/go/bin"

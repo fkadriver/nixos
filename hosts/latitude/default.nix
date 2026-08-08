@@ -146,6 +146,8 @@ let
 
       # Direct tailnet VNC to the nas01-backup VM (same alias name as airbook-darwin)
       environment.shellAliases.nas01-backup-vnc = "vncviewer nas01-backup.warthog-royal.ts.net::5901";
+      # Restart the IDrive360 agent service inside the nas01-backup VM (same alias as nas01/airbook-darwin)
+      environment.shellAliases.idrive-restart = "ssh scott@nas01-backup.warthog-royal.ts.net sudo systemctl restart idrive360cron";
 
       sops.secrets."syncthing_nas01_apikey" = {
         owner = "scott";
