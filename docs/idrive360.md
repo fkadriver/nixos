@@ -55,6 +55,22 @@ ssh scott@<VM-IP>       # or: idrive-ssh from nas01
 sudo -i                 # root shell if needed
 ```
 
+### Desktop shortcut (inside the VM's LXDE session)
+
+`~/Desktop/Restart-IDrive360-Service.desktop` runs
+`/usr/local/bin/idrive360-restart-service.sh` in an `lxterminal` window —
+`sudo systemctl restart idrive360cron` (scott has passwordless sudo in this
+VM) and prints the result. Both files need to survive a VM disk restore for
+this to keep working — they do, since the whole `nas01-backup` qcow2 disk is
+backed up nightly (see [nas01.md](nas01.md#vm-disk-backup-and-restore)), not
+just `/home`.
+
+The IDrive360 GUI client already autostarts on login — the vendor's `.deb`
+installer drops `~/.config/autostart/idrive360client.desktop`
+(`idrive360-client --hidden`), which LXDE runs automatically every time
+`vnc-desktop.service` (re)starts the desktop session. No changes needed
+there; confirmed running via `ps aux | grep idrive360-client`.
+
 ---
 
 ## How to run IDrive360 CLI commands
