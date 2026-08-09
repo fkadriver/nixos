@@ -413,7 +413,12 @@ in
     # localfile are all provided here.
     systemd.services.borg-restore-test = mkIf cfg.restoreTest.enable {
       description = "Borg restore verification (canary round-trip) for ${cfg.repository}";
-      after = [ "network-online.target" "bitwarden-secrets-sync.service" ];
+      # Order after wazuh-agent so its logcollector is already tailing borg-restore.log
+      # when we append. Wazuh syslog localfiles read from EOF and never backfill, so a
+      # line written before logcollector opens the file would be silently dropped —
+      # which is exactly why a freshly-onboarded host's first result never shipped until
+      # a manual re-run. (after= on a nonexistent unit is ignored on non-wazuh hosts.)
+      after = [ "network-online.target" "bitwarden-secrets-sync.service" "wazuh-agent.service" ];
       wants = [ "network-online.target" "bitwarden-secrets-sync.service" ];
       serviceConfig = {
         Type = "oneshot";
@@ -425,7 +430,13 @@ in
       description = "Schedule weekly Borg restore verification";
       wantedBy = [ "timers.target" ];
       timerConfig = {
+        # Weekly schedule, plus a boot-time run so a newly-onboarded (or freshly-rebuilt)
+        # host emits a live result once logcollector is tailing, rather than waiting up to
+        # a week for the first line to reach Wazuh. network-online + the wazuh-agent
+        # ordering above keep this from firing before the repo is reachable / logcollector
+        # is up. Persistent still catches up a missed weekly run.
         OnCalendar = cfg.restoreTest.schedule;
+        OnBootSec = "5min";
         Persistent = true;
       };
     };

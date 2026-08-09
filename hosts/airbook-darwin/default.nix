@@ -942,7 +942,14 @@ wazuh_command.remote_commands=1'
         Label = "com.local.borg-restore-test";
         ProgramArguments = [ "${borgRestoreTest}" ];
         StartCalendarInterval = [{ Weekday = 0; Hour = 4; Minute = 0; }];
-        RunAtLoad = false;
+        # Also run at load (boot / darwin-rebuild) so a freshly-onboarded host emits a
+        # live result once Wazuh's logcollector is tailing borg-restore.log. Wazuh syslog
+        # localfiles read from EOF and never backfill, so the single 04:00 line written
+        # before logcollector opened the file was silently dropped until a manual re-run.
+        # Caveat: RunAtLoad ignores network readiness — a cold boot while offline can emit
+        # one status=ERROR line (repo unreachable) until the next run; airbook is normally
+        # online during rebuilds so this is low-risk.
+        RunAtLoad = true;
         StandardOutPath = "/var/log/borg-restore.out.log";
         StandardErrorPath = "/var/log/borg-restore.error.log";
       };
