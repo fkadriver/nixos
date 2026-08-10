@@ -57,6 +57,9 @@
         # Logging
         rsyslog
 
+        # File Transfer
+        localsend    # cross-platform AirDrop-alike
+
       ];
     };
 

@@ -224,6 +224,9 @@ let
       # MCP server for Claude Code (NixOS/nix-darwin package/option queries)
       uv
 
+      # File Transfer
+      localsend    # cross-platform AirDrop-alike
+
     ];
 
     # Craft / decorative fonts (matches craftFonts in font.nix)
