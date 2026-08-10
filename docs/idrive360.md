@@ -4,8 +4,10 @@ IDrive360 runs inside the `nas01-backup` QEMU/KVM VM (Ubuntu 24.04).
 All CLI access goes through SSH into the VM. The web console is at
 [idrive360.com/enterprise/login](https://www.idrive.com/enterprise/login).
 
-**Device user hash**: `yms8amixgppkylvghwrgdi7opkorvwyn3gjonvt7ditg7nu06h`
-(appears in many CLI commands as the device/account identifier)
+**Device user hash**: `he9zabssi3wm3gids9btlrnci8a4qbkjvqbc5qoacuoo7jgets`
+(appears in many CLI commands as the device/account identifier; this changes if
+the device is ever re-registered — confirm the current value with
+`ls /opt/IDrive360/idriveIt/user_profile/scott/` before trusting the examples below)
 
 ---
 
@@ -94,7 +96,7 @@ cat /etc/idrive360crontab.json
 
 ```bash
 /opt/IDrive360/idrive360 --backup SCHEDULED \
-  yms8amixgppkylvghwrgdi7opkorvwyn3gjonvt7ditg7nu06h
+  he9zabssi3wm3gids9btlrnci8a4qbkjvqbc5qoacuoo7jgets
 ```
 
 ### Stop / terminate a backup job
@@ -179,7 +181,7 @@ and refuses to start any new job.
 **Diagnose:**
 
 ```bash
-PROFILE="/opt/IDrive360/idriveIt/user_profile/scott/yms8amixgppkylvghwrgdi7opkorvwyn3gjonvt7ditg7nu06h"
+PROFILE="/opt/IDrive360/idriveIt/user_profile/scott/he9zabssi3wm3gids9btlrnci8a4qbkjvqbc5qoacuoo7jgets"
 
 ls -la "$PROFILE/Backup/DefaultBackupSet/ENGINE_LOCKE_FILE"
 cat "$PROFILE/Backup/DefaultBackupSet/LOGPID"
@@ -190,7 +192,7 @@ cat "$PROFILE/.userInfo/lastBackupStatus.txt"
 **Fix — clear stale locks and restart:**
 
 ```bash
-PROFILE="/opt/IDrive360/idriveIt/user_profile/scott/yms8amixgppkylvghwrgdi7opkorvwyn3gjonvt7ditg7nu06h"
+PROFILE="/opt/IDrive360/idriveIt/user_profile/scott/he9zabssi3wm3gids9btlrnci8a4qbkjvqbc5qoacuoo7jgets"
 LOGS="$PROFILE/Backup/DefaultBackupSet/LOGS"
 
 rm -f "$PROFILE/Backup/DefaultBackupSet/ENGINE_LOCKE_FILE"
@@ -204,6 +206,52 @@ done
 
 sudo systemctl restart idrive360cron
 ```
+
+---
+
+## Troubleshooting: Wazuh/console shows "unexpected error" / Failure, but data is actually backing up
+
+**Known vendor bug**, confirmed still present in the latest available
+`idrive360-client` (1.3.0 → 1.3.0, `idrive360 --install update` found nothing
+newer as of 2026-08-10).
+
+**Root cause**: the backup engine's finalization step tries to open a bare
+`.../DefaultBackupSet/pid.txt`, but the client only ever writes rotated copies
+(`pid.txt_1`…`pid.txt_4`), never the bare filename. This shows up in
+`~/.trace/traceLog.txt` (under the device hash directory) at the end of
+*every* job:
+
+```
+[Common.pm] unable to open file : .../DefaultBackupSet/pid.txt No such file or directory
+[&backup] Operation could not be completed. Reason: unexpected_error
+```
+
+It fires on essentially every hourly CDP sync (near-100% of the time — this
+is normal background noise) and, intermittently, on the nightly Scheduled
+backup too, apparently more likely the longer the job runs (wider race window
+against the CDP file-watcher's `pid.txt` rotation). **The file transfer
+itself usually already completed successfully before this hits** — don't
+trust the reported status; check the run's actual `[SUMMARY]` instead:
+
+```bash
+H=$(ls /opt/IDrive360/idriveIt/user_profile/scott | grep -v '\.' )   # current device hash
+PROFILE="/opt/IDrive360/idriveIt/user_profile/scott/$H"
+
+ls -t "$PROFILE/Backup/DefaultBackupSet/LOGS" | head -1              # latest run
+tail -40 "$PROFILE/Backup/DefaultBackupSet/LOGS/<latest-from-above>" # check [SUMMARY]
+```
+
+A `[SUMMARY]` showing real files backed up, with failures limited to the
+usual permission-denied noise (`/etc/shadow`, `/etc/sudoers`,
+`/pool/borg/*` — root-owned, `scott` can't read them, present in *every*
+single run) means the backup itself is fine and the `Failure` status is just
+this reporting bug — safe to disregard that Wazuh alert.
+
+If `Files backed up now` is 0, or the failed-file list includes real source
+files outside that standard root-owned set, that's a genuine failure —
+investigate normally (stale-locks section above, or `journalctl -u idrive360cron`).
+
+Reported to IDrive support; no fix as of 2026-08-10.
 
 ---
 
