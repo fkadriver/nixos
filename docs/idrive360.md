@@ -266,11 +266,20 @@ idrive360_backup: status=Failure time=1786392706 files_backed_up=66 size_backed_
 
 So a `status=Failure` line with real `files_backed_up`/`size_backed_up`
 numbers and only the usual `files_failed` noise can be triaged from the
-Wazuh alert alone. Note: the decoder/rule side that parses these fields on
-the manager lives in the separate `wazuh-tailscale` repo, not this one — if
-you want the new fields broken out as structured fields in the dashboard
-(rather than just visible in the raw log text), that repo's
-`decoders/idrive360-command.xml` needs a matching update.
+Wazuh alert alone. The decoder/rule side that parses these fields on the
+manager lives in the separate `wazuh-tailscale` repo (`log01`, reachable
+over SSH), not this one — `decoders/idrive360-command.xml` and
+`rules/idrive360-command-rules.xml` there have been updated to match, so
+the Security Events dashboard alert *description* itself now reads e.g.
+`IDrive360 backup FAILED — files_backed_up=66 size=1.14GB files_failed=34`,
+not just the raw log line.
+
+While fixing that, found the same alert-description bug (`$(agent.name)`
+and a wrong `$(data.X)` field-reference prefix, both silently rendering
+blank — confirmed via `wazuh-logtest`) pre-existing across
+`borg-rules.xml`, `borg-restore-rules.xml`, `tailscale-health-rules.xml`,
+and `nas01-health-rules.xml` too, unrelated to idrive360 specifically.
+Fixed there as well; see that repo's commit history for details.
 
 ---
 
