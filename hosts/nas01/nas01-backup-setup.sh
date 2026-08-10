@@ -164,7 +164,7 @@ write_files:
       #!/usr/bin/env bash
       set -euo pipefail
 
-      STATUS_FILE=$(ls /opt/IDrive360/idriveIt/user_profile/scott/*/.userInfo/lastOnlineBackupStatus.json 2>/dev/null | head -1)
+      STATUS_FILE=$(ls /opt/IDrive360/idriveIt/user_profile/scott/*/.userInfo/lastOnlineBackupStatus.json 2>/dev/null | head -1) || true
 
       if [ -z "$STATUS_FILE" ] || [ ! -f "$STATUS_FILE" ]; then
           echo "idrive360_backup: status=UNKNOWN error=status_file_not_found"
@@ -179,7 +179,30 @@ write_files:
           exit 0
       fi
 
-      echo "idrive360_backup: status=${STATUS} time=${TIME}"
+      # Report what was actually transferred in the most recent run (Scheduled/Manual
+      # full backup or hourly CDP sync, whichever is newer) regardless of the status
+      # field above -- that field is unreliable due to a vendor pid.txt bug that
+      # misreports Failure even when the transfer itself succeeded (docs/idrive360.md).
+      LATEST_LOG=$(ls -t /opt/IDrive360/idriveIt/user_profile/scott/*/Backup/DefaultBackupSet/LOGS/* \
+                          /opt/IDrive360/idriveIt/user_profile/scott/*/CDP/DefaultBackupSet/LOGS/* \
+                          2>/dev/null | head -1) || true
+
+      FILES_BACKED_UP="unknown"
+      SIZE_BACKED_UP="unknown"
+      FILES_FAILED="unknown"
+      LOG_NAME="none"
+
+      if [ -n "$LATEST_LOG" ] && [ -f "$LATEST_LOG" ]; then
+          LOG_NAME=$(basename "$LATEST_LOG")
+          PARSED=$(grep -oP '[Bb]acked up now\s*:?\s*\K[0-9]+' "$LATEST_LOG" | head -1) || true
+          if [ -n "$PARSED" ]; then FILES_BACKED_UP="$PARSED"; fi
+          PARSED=$(grep -oP 'Size of backed up files:\s*\K[0-9.]+\s*[A-Za-z]+' "$LATEST_LOG" | head -1) || true
+          if [ -n "$PARSED" ]; then SIZE_BACKED_UP="${PARSED// /}"; fi
+          PARSED=$(grep -oP '[Ff]ailed to backup\s*:?\s*\K[0-9]+' "$LATEST_LOG" | head -1) || true
+          if [ -n "$PARSED" ]; then FILES_FAILED="$PARSED"; fi
+      fi
+
+      echo "idrive360_backup: status=${STATUS} time=${TIME} files_backed_up=${FILES_BACKED_UP} size_backed_up=${SIZE_BACKED_UP} files_failed=${FILES_FAILED} log=${LOG_NAME}"
 
   # Idempotent — skips if already patched, so it's safe if re-run after a
   # manual restore.

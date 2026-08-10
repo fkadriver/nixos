@@ -253,6 +253,25 @@ investigate normally (stale-locks section above, or `journalctl -u idrive360cron
 
 Reported to IDrive support; no fix as of 2026-08-10.
 
+**Wazuh now surfaces this directly**, so you don't have to SSH in to check:
+`/usr/local/bin/wazuh-idrive360-status` (source of truth:
+[`nas01-backup-setup.sh`](../hosts/nas01/nas01-backup-setup.sh)) parses the
+most recent run's log — Scheduled/Manual or CDP, whichever is newer — and
+appends `files_backed_up=`, `size_backed_up=`, and `files_failed=` to the
+`idrive360_backup:` line alongside `status=`, e.g.:
+
+```
+idrive360_backup: status=Failure time=1786392706 files_backed_up=66 size_backed_up=1.14GB files_failed=34 log=1786392003_Failure_Scheduled
+```
+
+So a `status=Failure` line with real `files_backed_up`/`size_backed_up`
+numbers and only the usual `files_failed` noise can be triaged from the
+Wazuh alert alone. Note: the decoder/rule side that parses these fields on
+the manager lives in the separate `wazuh-tailscale` repo, not this one — if
+you want the new fields broken out as structured fields in the dashboard
+(rather than just visible in the raw log text), that repo's
+`decoders/idrive360-command.xml` needs a matching update.
+
 ---
 
 ## Logs
