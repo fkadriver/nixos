@@ -126,6 +126,7 @@ See [docs/bitwarden-secrets-setup.md](docs/bitwarden-secrets-setup.md) for compr
 | [docs/hosts.md](docs/hosts.md) | Host configuration details |
 | [docs/adding-hosts.md](docs/adding-hosts.md) | Adding new machines |
 | [docs/borg-backup.md](docs/borg-backup.md) | Backup configuration |
+| [docs/idrive360.md](docs/idrive360.md) | IDrive360 VM operations, troubleshooting |
 | [docs/bitwarden-secrets-setup.md](docs/bitwarden-secrets-setup.md) | Secrets management |
 | [docs/multi-monitor-setup.md](docs/multi-monitor-setup.md) | Display profiles |
 | [docs/nixos-binary-compatibility.md](docs/nixos-binary-compatibility.md) | Running non-NixOS binaries |
