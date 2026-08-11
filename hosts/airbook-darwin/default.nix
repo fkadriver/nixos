@@ -350,6 +350,7 @@ let
         "geany"
 
         # AI / image generation
+        "claude"           # Anthropic's official Claude desktop app (macOS/Windows only)
         "diffusionbee"     # Stable Diffusion GUI — Intel Mac compatible, manages models itself
 
         # Utilities

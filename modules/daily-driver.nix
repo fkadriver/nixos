@@ -73,6 +73,8 @@
     environment.systemPackages = with pkgs; [
       python3Minimal
       claude-code
+      # Claude desktop app is macOS/Windows only — no official Linux build or
+      # nixpkgs package, so it lives on airbook-darwin (brew cask "claude") only.
 
       shotwell
       mpv
