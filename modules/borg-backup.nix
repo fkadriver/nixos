@@ -314,10 +314,24 @@ in
         START_EPOCH=$(date -d "''${START/T/ }" +%s 2>/dev/null) || START_EPOCH=0
         AGE_H=$(( ($(date +%s) - START_EPOCH) / 3600 ))
 
-        DURATION=$(borg info "''${REPO}::''${ARCHIVE}" --format '{duration:.0f}' 2>/dev/null || echo "0")
+        # Duration + size stats from borg info (second borg call; acceptable for hourly cadence).
+        # original_size/compressed_size/deduplicated_size are raw bytes straight from
+        # --json, so (unlike IDrive360's size_backed_up) no unit-parsing hack is needed.
+        INFO_JSON=$(borg info --json "''${REPO}::''${ARCHIVE}" 2>/dev/null) || INFO_JSON=""
+
+        DURATION="0"
+        ORIGINAL_SIZE="unknown"
+        COMPRESSED_SIZE="unknown"
+        DEDUPLICATED_SIZE="unknown"
+        if [ -n "$INFO_JSON" ]; then
+            DURATION=$(jq -r '.archives[0].duration // 0 | floor' <<<"$INFO_JSON" 2>/dev/null || echo "0")
+            ORIGINAL_SIZE=$(jq -r '.archives[0].stats.original_size // "unknown"' <<<"$INFO_JSON" 2>/dev/null || echo "unknown")
+            COMPRESSED_SIZE=$(jq -r '.archives[0].stats.compressed_size // "unknown"' <<<"$INFO_JSON" 2>/dev/null || echo "unknown")
+            DEDUPLICATED_SIZE=$(jq -r '.archives[0].stats.deduplicated_size // "unknown"' <<<"$INFO_JSON" 2>/dev/null || echo "unknown")
+        fi
 
         if [[ "$ARCHIVE" == *.failed ]]; then
-            echo "borg_backup: status=ERROR repo=''${REPO} archive=''${ARCHIVE} start=''${START} duration=''${DURATION}s age=''${AGE_H}h error=archive_marked_failed"
+            echo "borg_backup: status=ERROR repo=''${REPO} archive=''${ARCHIVE} start=''${START} duration=''${DURATION}s age=''${AGE_H}h original_size=''${ORIGINAL_SIZE} compressed_size=''${COMPRESSED_SIZE} deduplicated_size=''${DEDUPLICATED_SIZE} error=archive_marked_failed"
             exit 0
         fi
 
@@ -327,7 +341,7 @@ in
             STATUS=OK
         fi
 
-        echo "borg_backup: status=''${STATUS} repo=''${REPO} archive=''${ARCHIVE} start=''${START} duration=''${DURATION}s age=''${AGE_H}h"
+        echo "borg_backup: status=''${STATUS} repo=''${REPO} archive=''${ARCHIVE} start=''${START} duration=''${DURATION}s age=''${AGE_H}h original_size=''${ORIGINAL_SIZE} compressed_size=''${COMPRESSED_SIZE} deduplicated_size=''${DEDUPLICATED_SIZE}"
       ''}"
     ];
 
