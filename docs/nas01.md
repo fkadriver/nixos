@@ -24,6 +24,83 @@ The ZFS pool and WD drive are **not** managed by disko — they carry data acros
 
 ---
 
+## Hardware Migration: Dell PowerEdge T330 (in progress, 2026-08)
+
+**Status (2026-08-12): urgent.** The HP ProDesk's pool controller — an
+ASM1166 M.2-to-SATA adapter card (the DIY trick used to give the Mini extra
+SATA ports) — started failing: pool drives dropping offline / `zpool`
+hanging, not ZFS-reported checksum errors, so the 3x HGST drives themselves
+are believed intact. nas01 was powered off to stop further pool instability,
+then brought back up on the OS SSD alone (no pool drives attached) so admin
+access still works. **Decision: leave the pool offline and accept NAS
+downtime (Samba/NFS/Borg target) until the T330 replacement is built** — no
+interim ASM1166 replacement, no risky import/export cycles on the flaky
+controller.
+
+**Replacement hardware**: Dell PowerEdge T330 tower, service tag `6QMGDH2`
+(purchased 2026-08-04, used, $249.99). Xeon E3-1270 v5 (4C/8T), 16GB ECC
+(4 DIMM slots, 3 free for later expansion), 8x 3.5" hot-plug bay chassis,
+dual 495W redundant PSU, iDRAC8.
+
+**Storage controller — swap the stock PERC H730 for a Dell HBA330
+(Adapter, full-height, non-RAID)**:
+- Same PCIe slot/bracket family as the H730 (confirmed physically
+  swappable), reuses the same SAS backplane cabling — no new cables needed.
+- True HBA passthrough (not RAID-card-in-non-RAID-mode): ZFS gets raw disk
+  access, full SMART/TRIM, no `megaraid,N` translation quirks the H730
+  workaround would require.
+- LSI SAS3008 chipset, `mpt3sas` driver — in-tree in the Linux kernel, no
+  extra NixOS config needed.
+- ~$25–50 used (eBay). Buy the **Adapter** variant (full-height standalone
+  card), not **Mini** (mezzanine card for a dedicated riser) — confirm with
+  the seller if a listing doesn't specify.
+- Skipping the "H730 RAID0-per-disk workaround, HBA330 later" two-step
+  originally planned — go straight to the HBA330 so ZFS gets clean
+  passthrough on day one.
+
+**Config scaffolding started**: [hosts/nas01/hardware-t330.nix](../hosts/nas01/hardware-t330.nix)
+is a draft hardware config with TODOs for everything that can't be known
+until the box boots (OS boot disk placement, real NIC name/driver, and
+whether the boot disk needs `mpt3sas` in initrd). It is **not** wired into
+`default.nix` yet — the live HP ProDesk box still uses `hardware.nix`.
+
+**Build runbook once the T330 is in hand**:
+1. Install the HBA330 in place of the H730 (same slot, reuse SAS cables).
+2. Buy + install an OS boot SSD (not yet purchased).
+3. Boot the NixOS installer USB. **Burn it in before installing** — used
+   server hardware, want to catch a marginal DIMM/core/drive/PSU before it
+   holds production data: `/etc/t330-burnin.sh [duration_minutes]` (default
+   4h; script + packages are in `hosts/installer/`). It soaks CPU+RAM with
+   `stress-ng`, runs SMART extended self-tests on every attached disk,
+   checks dmesg and the iDRAC hardware log for faults, and writes a report
+   to `/root/burnin-<timestamp>/`. It does **not** cover PSU failover
+   (pull-test each cord under load manually) or a dedicated MemTest86+ pass
+   (run that separately if you want the most thorough RAM check).
+4. Confirm BIOS is in UEFI mode (not BIOS/Legacy), run
+   `nixos-generate-config --show-hardware-config` and fill in
+   `hardware-t330.nix`'s TODOs (kernel modules, NIC name/driver — don't
+   assume the ProDesk's e1000e Tx-hang workaround applies to a different
+   NIC).
+5. Partition the OS disk with disko (same 1GB boot + LVM layout as every
+   other host — see [Disaster Recovery](#disaster-recovery--os-ssd-sda-failure)
+   below for the exact commands, same idea).
+6. Swap `default.nix`'s import from `./hardware.nix` to
+   `./hardware-t330.nix` (rename it to `hardware.nix` once validated).
+7. First boot: generate a new sops age key, add it to `.sops.yaml`
+   replacing the old nas01 entry, `sops updatekeys secrets/secrets.yaml`.
+8. Move the 3x HGST drives to the T330's backplane, `zpool import -f pool`,
+   verify `zpool status` is clean before trusting the pool.
+9. Re-verify hd-idle's `/dev/disk/by-id/...` paths in `default.nix` — the
+   `ata-HGST_...` prefix will likely change to `scsi-...`/`wwn-...` now that
+   the drives are behind `mpt3sas` instead of onboard SATA.
+10. Restore `/home` + the `nas01-backup` VM disk from the latest Borg backup
+    (same steps as [Disaster Recovery](#disaster-recovery--os-ssd-sda-failure)
+    below), retire the HP ProDesk box.
+11. Update this doc's Hardware section and remove this migration section
+    once the T330 is the live nas01.
+
+---
+
 ## Disaster Recovery — OS SSD (sda) Failure
 
 nas01's OS disk (the Micron SSD) is a single, non-redundant drive. Everything

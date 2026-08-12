@@ -75,6 +75,13 @@ inputs.nixpkgs.lib.nixosSystem {
         util-linux  # includes rfkill
         # Pre-bundle disko so it doesn't need to be downloaded at runtime
         inputs.disko.packages.x86_64-linux.disko
+        # Hardware burn-in (t330-burnin.sh below)
+        stress-ng
+        smartmontools
+        lm_sensors
+        ipmitool
+        pciutils
+        dmidecode
       ];
 
       # Add installation helper script
@@ -190,12 +197,23 @@ inputs.nixpkgs.lib.nixosSystem {
         mode = "0755";
       };
 
+      # Hardware burn-in test (CPU/RAM soak + SMART extended self-tests +
+      # BMC hardware log check) — run before installing on new/used hardware.
+      environment.etc."t330-burnin.sh" = {
+        source = ./t330-burnin.sh;
+        mode = "0755";
+      };
+
       # Add welcome message with instructions
       services.getty.helpLine = ''
 
         ==========================================
         NixOS Automated Installer
         ==========================================
+
+        New/used hardware? Burn it in first (CPU+RAM soak, SMART extended
+        self-tests, BMC hardware log check) — default 4 hours:
+          /etc/t330-burnin.sh [duration_minutes]
 
         To start installation, run:
           /etc/nixos-install-helper.sh
