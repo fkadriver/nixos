@@ -92,6 +92,16 @@ inputs.nixpkgs.lib.nixosSystem {
 
           echo "=== NixOS Automated Installer ==="
           echo ""
+          read -p "Run hardware burn-in first? Recommended for new/used hardware (yes/no): " burnin
+          if [ "$burnin" = "yes" ]; then
+            read -p "Burn-in duration in minutes (default 240 = 4h): " duration
+            duration="''${duration:-240}"
+            /etc/t330-burnin.sh "$duration"
+            echo ""
+            echo "Burn-in complete. Continuing to installation..."
+            echo ""
+          fi
+
           echo "Git repository URL (e.g., github:username/nixos):"
           read -p "> " GIT_REPO
 
@@ -211,12 +221,13 @@ inputs.nixpkgs.lib.nixosSystem {
         NixOS Automated Installer
         ==========================================
 
-        New/used hardware? Burn it in first (CPU+RAM soak, SMART extended
-        self-tests, BMC hardware log check) — default 4 hours:
-          /etc/t330-burnin.sh [duration_minutes]
-
         To start installation, run:
           /etc/nixos-install-helper.sh
+        It will offer to run the hardware burn-in first (CPU+RAM soak,
+        SMART extended self-tests, BMC hardware log check — default 4h)
+        before prompting for the git repo/host to install. To run burn-in
+        standalone without installing anything, use it directly instead:
+          /etc/t330-burnin.sh [duration_minutes]
 
         Manual installation (using git flake directly):
           1. Partition: nix run github:nix-community/disko -- --mode disko --flake <repo>#<config> --arg device '"/dev/sdX"'
