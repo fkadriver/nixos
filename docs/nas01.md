@@ -67,7 +67,13 @@ whether the boot disk needs `mpt3sas` in initrd). It is **not** wired into
 **Build runbook once the T330 is in hand**:
 1. Install the HBA330 in place of the H730 (same slot, reuse SAS cables).
 2. Buy + install an OS boot SSD (not yet purchased).
-3. Boot the NixOS installer USB. **Burn it in before installing** — used
+3. **Update firmware before anything else.** As received (service tag
+   `6QMGDH2`), BIOS was 2.0.8, all firmware dated 2017-04-08, and USB boot
+   wasn't offered as a boot option (CD/DVD only) — update BIOS (and iDRAC
+   while at it) from Dell's support site to get USB boot working and to
+   avoid running ~9-year-old firmware on hardware that's about to hold
+   production data.
+4. Boot the NixOS installer USB. **Burn it in before installing** — used
    server hardware, want to catch a marginal DIMM/core/drive/PSU before it
    holds production data: `/etc/t330-burnin.sh [duration_minutes]` (default
    4h; script + packages are in `hosts/installer/`). It soaks CPU+RAM with
@@ -76,27 +82,27 @@ whether the boot disk needs `mpt3sas` in initrd). It is **not** wired into
    to `/root/burnin-<timestamp>/`. It does **not** cover PSU failover
    (pull-test each cord under load manually) or a dedicated MemTest86+ pass
    (run that separately if you want the most thorough RAM check).
-4. Confirm BIOS is in UEFI mode (not BIOS/Legacy), run
+5. Confirm BIOS is in UEFI mode (not BIOS/Legacy), run
    `nixos-generate-config --show-hardware-config` and fill in
    `hardware-t330.nix`'s TODOs (kernel modules, NIC name/driver — don't
    assume the ProDesk's e1000e Tx-hang workaround applies to a different
    NIC).
-5. Partition the OS disk with disko (same 1GB boot + LVM layout as every
+6. Partition the OS disk with disko (same 1GB boot + LVM layout as every
    other host — see [Disaster Recovery](#disaster-recovery--os-ssd-sda-failure)
    below for the exact commands, same idea).
-6. Swap `default.nix`'s import from `./hardware.nix` to
+7. Swap `default.nix`'s import from `./hardware.nix` to
    `./hardware-t330.nix` (rename it to `hardware.nix` once validated).
-7. First boot: generate a new sops age key, add it to `.sops.yaml`
+8. First boot: generate a new sops age key, add it to `.sops.yaml`
    replacing the old nas01 entry, `sops updatekeys secrets/secrets.yaml`.
-8. Move the 3x HGST drives to the T330's backplane, `zpool import -f pool`,
+9. Move the 3x HGST drives to the T330's backplane, `zpool import -f pool`,
    verify `zpool status` is clean before trusting the pool.
-9. Re-verify hd-idle's `/dev/disk/by-id/...` paths in `default.nix` — the
-   `ata-HGST_...` prefix will likely change to `scsi-...`/`wwn-...` now that
-   the drives are behind `mpt3sas` instead of onboard SATA.
-10. Restore `/home` + the `nas01-backup` VM disk from the latest Borg backup
+10. Re-verify hd-idle's `/dev/disk/by-id/...` paths in `default.nix` — the
+    `ata-HGST_...` prefix will likely change to `scsi-...`/`wwn-...` now that
+    the drives are behind `mpt3sas` instead of onboard SATA.
+11. Restore `/home` + the `nas01-backup` VM disk from the latest Borg backup
     (same steps as [Disaster Recovery](#disaster-recovery--os-ssd-sda-failure)
     below), retire the HP ProDesk box.
-11. Update this doc's Hardware section and remove this migration section
+12. Update this doc's Hardware section and remove this migration section
     once the T330 is the live nas01.
 
 ---
