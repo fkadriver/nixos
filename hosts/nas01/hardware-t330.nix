@@ -5,7 +5,7 @@
 #   2. Replace `./hardware.nix` with `./hardware-t330.nix` in default.nix's imports.
 #   3. Rename this file to hardware.nix (git mv), retire the old one.
 #
-# Model: Dell PowerEdge T330 tower, service tag 6QMGDH2
+# Model: Dell PowerEdge T330 tower, service tag 86B3JH2
 # CPU: Xeon E3-1270 v5 (4C/8T, 3.6/4.0GHz turbo, 80W)
 # RAM: 16GB 2133MHz ECC UDIMM, 2Rx8 (4 DIMM slots, 3 free for later expansion)
 # Storage controller: Dell HBA330 (Adapter, full-height) replacing the stock

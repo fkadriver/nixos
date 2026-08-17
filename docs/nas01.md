@@ -37,7 +37,7 @@ downtime (Samba/NFS/Borg target) until the T330 replacement is built** — no
 interim ASM1166 replacement, no risky import/export cycles on the flaky
 controller.
 
-**Replacement hardware**: Dell PowerEdge T330 tower, service tag `6QMGDH2`
+**Replacement hardware**: Dell PowerEdge T330 tower, service tag `86B3JH2`
 (purchased 2026-08-04, used, $249.99). Xeon E3-1270 v5 (4C/8T), 16GB ECC
 (4 DIMM slots, 3 free for later expansion), 8x 3.5" hot-plug bay chassis,
 dual 495W redundant PSU, iDRAC8.
@@ -68,7 +68,7 @@ whether the boot disk needs `mpt3sas` in initrd). It is **not** wired into
 1. Install the HBA330 in place of the H730 (same slot, reuse SAS cables).
 2. Buy + install an OS boot SSD (not yet purchased).
 3. **Update firmware before anything else.** As received (service tag
-   `6QMGDH2`), BIOS was 2.0.8, all firmware dated 2017-04-08, and USB boot
+   `86B3JH2`), BIOS was 2.0.8, all firmware dated 2017-04-08, and USB boot
    wasn't offered as a boot option (CD/DVD only) — update BIOS (and iDRAC
    while at it) from Dell's support site to get USB boot working and to
    avoid running ~9-year-old firmware on hardware that's about to hold
