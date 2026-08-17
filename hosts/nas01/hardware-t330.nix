@@ -75,11 +75,13 @@
   hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
   hardware.enableRedistributableFirmware = true;
 
-  # TODO: T330's embedded NICs are unknown (likely Broadcom bnxt_en or Intel
-  # igb, not the ProDesk's e1000e) — the eno1 e1000e Tx-hang workaround in
+  # NICs per Dell's original build sheet (86B3JH2.csv): onboard LOM is
+  # Broadcom 5720 dual-port 1GbE (BCM5720, `tg3` driver in-tree), plus a
+  # second Broadcom 5720 dual-port 1GbE PCIe card — 4x 1GbE total, not the
+  # ProDesk's Intel e1000e. The eno1 e1000e Tx-hang workaround in
   # default.nix's networking.localCommands is HP-specific and should be
-  # removed/reassessed once the real interface name and driver are known
-  # (`ethtool -i <iface>`). Don't assume the same erratum applies.
+  # removed/reassessed once the real interface names are confirmed
+  # (`ethtool -i <iface>`) — don't assume the same erratum applies to tg3.
   networking.useDHCP = lib.mkDefault true;
 
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";

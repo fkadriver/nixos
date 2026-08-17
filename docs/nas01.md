@@ -39,8 +39,16 @@ controller.
 
 **Replacement hardware**: Dell PowerEdge T330 tower, service tag `86B3JH2`
 (purchased 2026-08-04, used, $249.99). Xeon E3-1270 v5 (4C/8T), 16GB ECC
-(4 DIMM slots, 3 free for later expansion), 8x 3.5" hot-plug bay chassis,
-dual 495W redundant PSU, iDRAC8.
+(4 DIMM slots, 3 free for later expansion — originally shipped 4x16GB=64GB
+per Dell's factory build sheet, [hosts/nas01/86B3JH2.csv](../hosts/nas01/86B3JH2.csv);
+RAM expansion to 64GB deferred for now — 16GB is plenty for this workload,
+the old ProDesk ran the full NAS stack on just 8GB), 8x 3.5" hot-plug bay
+chassis, dual 495W redundant PSU, **iDRAC8 Enterprise** (confirmed via the
+build sheet —
+supports full remote KVM/virtual media, so future ISO boots can go through
+the iDRAC web GUI instead of writing a physical USB/SD card). Onboard NICs
+are Broadcom BCM5720 (dual-port 1GbE LOM + a second dual-port 1GbE PCIe
+card, 4x 1GbE total, `tg3` driver) — not the ProDesk's Intel e1000e.
 
 **Storage controller — swap the stock PERC H730 for a Dell HBA330
 (Adapter, full-height, non-RAID)**:
