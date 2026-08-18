@@ -75,7 +75,7 @@ inputs.nixpkgs.lib.nixosSystem {
         util-linux  # includes rfkill
         # Pre-bundle disko so it doesn't need to be downloaded at runtime
         inputs.disko.packages.x86_64-linux.disko
-        # Hardware burn-in (t330-burnin.sh below)
+        # Hardware burn-in (hw-burnin.sh below)
         stress-ng
         smartmontools
         lm_sensors
@@ -96,7 +96,7 @@ inputs.nixpkgs.lib.nixosSystem {
           if [ "$burnin" = "yes" ]; then
             read -p "Burn-in duration in minutes (default 240 = 4h): " duration
             duration="''${duration:-240}"
-            /etc/t330-burnin.sh "$duration"
+            /etc/hw-burnin.sh "$duration"
             echo ""
             echo "Burn-in complete. Continuing to installation..."
             echo ""
@@ -209,8 +209,8 @@ inputs.nixpkgs.lib.nixosSystem {
 
       # Hardware burn-in test (CPU/RAM soak + SMART extended self-tests +
       # BMC hardware log check) — run before installing on new/used hardware.
-      environment.etc."t330-burnin.sh" = {
-        source = ./t330-burnin.sh;
+      environment.etc."hw-burnin.sh" = {
+        source = ./hw-burnin.sh;
         mode = "0755";
       };
 
@@ -227,7 +227,7 @@ inputs.nixpkgs.lib.nixosSystem {
         SMART extended self-tests, BMC hardware log check — default 4h)
         before prompting for the git repo/host to install. To run burn-in
         standalone without installing anything, use it directly instead:
-          /etc/t330-burnin.sh [duration_minutes]
+          /etc/hw-burnin.sh [duration_minutes]
 
         Manual installation (using git flake directly):
           1. Partition: nix run github:nix-community/disko -- --mode disko --flake <repo>#<config> --arg device '"/dev/sdX"'

@@ -83,7 +83,7 @@ whether the boot disk needs `mpt3sas` in initrd). It is **not** wired into
    production data.
 4. Boot the NixOS installer USB. **Burn it in before installing** — used
    server hardware, want to catch a marginal DIMM/core/drive/PSU before it
-   holds production data: `/etc/t330-burnin.sh [duration_minutes]` (default
+   holds production data: `/etc/hw-burnin.sh [duration_minutes]` (default
    4h; script + packages are in `hosts/installer/`). It soaks CPU+RAM with
    `stress-ng`, runs SMART extended self-tests on every attached disk,
    checks dmesg and the iDRAC hardware log for faults, and writes a report
