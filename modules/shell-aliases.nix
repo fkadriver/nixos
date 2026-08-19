@@ -29,7 +29,7 @@
         latitude = "tailscale ssh latitude";
         vm01 = "tailscale ssh vm01";
         otworkstation = "tailscale ssh OTworkstation";
-        ot = "tailscale ssh OTworkstation";
+        work-debian = "tailscale ssh sjensen@work-debian";
 
         # Tailscale troubleshooting
         ts-status = "tailscale status";
