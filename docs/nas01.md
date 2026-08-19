@@ -75,12 +75,14 @@ whether the boot disk needs `mpt3sas` in initrd). It is **not** wired into
 **Build runbook once the T330 is in hand**:
 1. Install the HBA330 in place of the H730 (same slot, reuse SAS cables).
 2. Buy + install an OS boot SSD (not yet purchased).
-3. **Update firmware before anything else.** As received (service tag
-   `86B3JH2`), BIOS was 2.0.8, all firmware dated 2017-04-08, and USB boot
-   wasn't offered as a boot option (CD/DVD only) — update BIOS (and iDRAC
-   while at it) from Dell's support site to get USB boot working and to
-   avoid running ~9-year-old firmware on hardware that's about to hold
-   production data.
+3. **Update firmware before anything else.** ✅ Done 2026-08-18 — see
+   [Firmware Update Log](#firmware-update-log-2026-08-18) below for the
+   full story (bridge-update path, gotchas, final versions). As received,
+   BIOS was 2.0.8, all firmware dated 2017-04-08, and USB boot wasn't
+   offered as a boot option (CD/DVD only) — firmware update turned out to
+   not be required for USB boot after all (see IDSDM workaround below),
+   but was still worth doing given ~9-year-old firmware on hardware that's
+   about to hold production data.
 4. Boot the NixOS installer USB. **Burn it in before installing** — used
    server hardware, want to catch a marginal DIMM/core/drive/PSU before it
    holds production data: `/etc/hw-burnin.sh [duration_minutes]` (default
@@ -112,6 +114,104 @@ whether the boot disk needs `mpt3sas` in initrd). It is **not** wired into
     below), retire the HP ProDesk box.
 12. Update this doc's Hardware section and remove this migration section
     once the T330 is the live nas01.
+
+### Firmware Update Log (2026-08-18)
+
+**Why firmware wasn't actually the USB-boot blocker after all**: the T330
+has an **IDSDM** (Internal Dual SD Module) — an SD card slot on the
+external rear of the chassis near the USB ports — which the ancient BIOS
+listed as its own bootable device independent of whatever was gating
+external USB. Writing the NixOS installer ISO to an SD card and booting
+from IDSDM sidestepped the "no USB boot option" problem entirely, without
+needing any firmware update. Firmware was updated anyway afterward since
+this unit is under an Allstate hardware warranty (not Dell ProSupport, so
+no vendor firmware support available through it) and the goal was
+everything current before standing up production.
+
+**iDRAC access**: default `root` / `calvin` still worked (this generation
+predates Dell's per-unit unique default password). iDRAC's SSH shell needs
+a pseudo-terminal (`ssh -tt ...`) — piped one-shot commands without a pty
+hang indefinitely. The iDRAC's own network port was initially cabled to a
+separate, unrouted `192.168.254.0/24` out-of-band management VLAN; moving
+it to the main `192.168.10.0/24` LAN made it reachable for the rest of
+this process.
+
+**The signature-verification wall, and the fix**: every update attempt
+(F10 Lifecycle Controller network-share wizard, `racadm update` over CIFS)
+initially failed with `RED007: Unable to verify Update Package signature`
+— including via two completely different update code paths, which ruled
+out a transport/tooling bug. Root cause: the iDRAC/LC firmware shipped on
+this unit (2.43.43.43, dated 2017) predates Dell's currently-trusted
+signing certificates. Dell documents the fix explicitly: **iDRAC updates
+from below 2.70.70.70 must go through 2.70.70.70 first, then 2.82.82.82,
+before jumping to current** — each step refreshes the LC's trusted-cert
+store enough to validate the next. Bridged 2.43.43.43 → 2.70.70.70 (driver
+`DNH17`) → 2.82.82.82 (`WGNHP`) → 2.86.86.86 (`VWF72`), each via `racadm
+update`, each completing cleanly once on the right version. BIOS and all
+other components validated fine afterward, confirming it was purely an
+LC-side cert-trust gap, not anything wrong with the packages themselves.
+
+**`racadm update` mechanics** (used for every component below, all via a
+throwaway Samba container on vm01 — see conversation/session history for
+the exact `docker run` incantation if recreating it):
+- Single-file updates (`-f <file>`) only accept **CIFS or NFS** shares via
+  `-l //host/share` — FTP (`-e`/`-t FTP`) is only for catalog-based
+  (`Catalog.xml`) repository updates, not single files.
+- Must be the **Windows-format DUP** (`.EXE`), even though nothing here
+  runs Windows — the LC's out-of-band update engine only parses the
+  Windows-wrapped package format. The Linux DUP (`.bin`) is for running
+  directly on a live Linux OS instead (see steam-run note below).
+- iDRAC8's embedded CIFS client needs the legacy **SMB1/NT1** dialect —
+  modern Samba defaults to SMB2+, so the share needs `server min protocol
+  = NT1` explicitly, or the iDRAC gets `RAC0904: remote file location not
+  accessible`.
+- The file must be the **correctly driver-ID-named** package
+  (e.g. `..._VWF72_WN64_...`) — a generically-named file for the same
+  version number got misclassified as job type "Generic" and rejected;
+  the properly-named one worked immediately.
+- BIOS/PERC/PSU/NIC updates land as **Scheduled (Start Time: Next
+  Reboot)**, not applied immediately — trigger with `racadm serveraction
+  powercycle`. iDRAC/LC firmware updates are the exception: they
+  self-reboot the iDRAC automatically, no manual trigger needed.
+- **PSU firmware specifically**: the system powers itself off for 3-10
+  minutes mid-update as a normal part of the process — do not AC-cycle or
+  unplug a cord during that window, or the PSU can end up in an
+  unrecoverable state requiring an LC rollback.
+- **NIC firmware must match the actual chipset**, not just "supports
+  T330" in Dell's compatible-systems list — this unit's NICs are Broadcom
+  **BCM5720** (confirmed via the factory build sheet), and three
+  T330-compatible-but-wrong-chipset firmware files (Intel I350-family,
+  Marvell/Broadcom-57800-family, Intel X710-family) all failed with
+  `RED097: component not in target system inventory` before finding the
+  correct one (driver `RG25N`, Broadcom NetXtreme firmware).
+- Direct DUP downloads work via `curl` against Dell's CDN
+  (`dl.dell.com/FOLDER.../<file>`) even though the JS-rendered product
+  page (`www.dell.com/support/...`) 403s plain `curl` — useful if
+  re-staging any of these later without a browser.
+- Skipped: Dell's "Platform Specific Bootable ISO" (driver `HKW8G`) — it's
+  dated December 2019, would likely *downgrade* BIOS/iDRAC from what's
+  installed now, and doesn't publish a per-component version manifest.
+  The `racadm`-per-component approach gave precise control instead.
+- **Backplane firmware**: checked five different Dell backplane driver
+  pages (`2F90T`, `X3JNV`, `VV85D`, `9WH0P`, `HRP1V`) — none list T330 as
+  compatible. Very likely this chassis's 8-bay backplane is passive/dumb
+  with no separately updatable firmware, unlike larger PowerEdge towers
+  (T440/T640) with expander backplanes. Unresolved; check iDRAC's hardware
+  inventory directly if this needs settling for certain later.
+
+**Final firmware versions (as of 2026-08-18)**:
+
+| Component | Version |
+|---|---|
+| BIOS | 2.20.0 |
+| iDRAC / Lifecycle Controller | 2.86.86.86 |
+| PERC H730 | 25.5.9.0001, A17 |
+| PSU (Delta 495W) | 00.1B.83 |
+| NIC (Broadcom BCM5720, onboard + add-in card) | 21.60.2 |
+
+The H730 will still be pulled for the HBA330 swap per the plan above — it
+was updated anyway since the user plans to sell or reuse the card later
+and wanted it current first.
 
 ---
 
