@@ -49,6 +49,7 @@ supports full remote KVM/virtual media, so future ISO boots can go through
 the iDRAC web GUI instead of writing a physical USB/SD card). Onboard NICs
 are Broadcom BCM5720 (dual-port 1GbE LOM + a second dual-port 1GbE PCIe
 card, 4x 1GbE total, `tg3` driver) — not the ProDesk's Intel e1000e.
+Full Dell owner's manual: [docs/poweredge-t330-owners-manual.pdf](poweredge-t330-owners-manual.pdf).
 
 **Storage controller — swap the stock PERC H730 for a Dell HBA330
 (Adapter, full-height, non-RAID)**:
