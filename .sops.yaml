@@ -2,7 +2,7 @@ keys:
   # Existing systems (from secrets.yaml)
   - &latitude age1p06y94pdxd76p45nuradvjfz24zmywuqua5szhs3etk9jw55g5aqscqved
   # prodesk hardware repurposed as nas01 (Ubuntu) — NixOS config archived
-  - &nas01 age1rkpnjhrkpum9wpgq4pawp2lfq77qfxq0lmk7wprsydwx7jfn2u9sa02xes
+  - &nas01 age16wnxqqxh3r86444pwggclt5qeug57qh2p7tzz6fvlh5ynv9n9utqhhnj7d
   - &vm01 age1fug7k9r8qnuj3q38qy0j8mmwwzzn9qzt3utqytew7z2g8xvj3vns8pjn3j
 
   # macOS darwin
