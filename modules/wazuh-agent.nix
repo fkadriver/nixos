@@ -335,12 +335,28 @@ in
       # without the ordering, first boot races and enrollment fails permanently
       after = [ "network-online.target" "wazuh-agent-install.service" "wazuh-agent-configure.service" "bitwarden-secrets-sync.service" ];
       wants = [ "network-online.target" "bitwarden-secrets-sync.service" ];
-      unitConfig.ConditionFileNotEmpty = "!/var/ossec/etc/client.keys";
+      unitConfig = {
+        ConditionFileNotEmpty = "!/var/ossec/etc/client.keys";
+        # After= only orders the start, it doesn't wait for
+        # bitwarden-secrets-sync to *succeed* — on a brand-new host, sops
+        # secrets (including this enrollment password) may not be
+        # decryptable yet if the machine's age key hasn't been added to
+        # .sops.yaml, so bitwarden-secrets-sync can fail for several
+        # minutes after boot before it starts succeeding. Restart=on-failure
+        # below retries until it eventually lands instead of failing once
+        # and requiring a manual `systemctl start` (seen on nas01's T330
+        # install, 2026-08-20 — enroll failed at boot, secrets sync didn't
+        # succeed until 14 minutes later, enroll never re-ran on its own).
+        StartLimitIntervalSec = 600;
+        StartLimitBurst = 20;
+      };
 
       serviceConfig = {
         Type = "oneshot";
         RemainAfterExit = true;
         ExecStart = enrollScript;
+        Restart = "on-failure";
+        RestartSec = 30;
       };
     };
 
