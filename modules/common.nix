@@ -53,6 +53,7 @@
         lm_sensors    # CPU/board temp (sensors command)
         hddtemp       # Hard drive temperature
         smartmontools # Drive SMART data (smartctl)
+        dmidecode     # DMI/SMBIOS data (service tags, BIOS info, etc.)
 
         # Logging
         rsyslog

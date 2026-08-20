@@ -9,6 +9,7 @@ This document provides a brief overview of all host configurations in this repos
 
 | | |
 |---|---|
+| Service Tag | 3BLBPQ2 |
 | Desktop | KDE Plasma (default), XFCE and minimal variants available |
 | Purpose | Daily driver development laptop |
 | Key Features | Borg backup, 3D printing, Logitech support, multi-monitor, Input Leap KVM server |

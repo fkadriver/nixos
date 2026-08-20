@@ -287,6 +287,7 @@ sops updatekeys secrets/secrets.yaml
   - Bluetooth: SEENDA keyboard and mouse (manual pairing required)
 
 ### Dell Latitude 7480 (latitude)
+- **Service Tag**: 3BLBPQ2
 - **Default config**: Includes Borg backup and 3D printing support
 - **Logitech support**: Mouse button tools (xdotool, xbindkeys)
 
