@@ -43,6 +43,12 @@
     <interface type='network'>
       <source network='default'/>
       <model type='virtio'/>
+      <!-- Pinned: cloud-init baked this MAC into the guest's netplan match
+           rule (/etc/netplan/50-cloud-init.yaml) at first boot. Without a
+           pin here, libvirt assigns a random MAC on every `virsh define`,
+           which stops matching netplan's rule and leaves the interface
+           down with no DHCP lease — happened on the 2026-08-20 T330 restore. -->
+      <mac address='52:54:00:b8:1a:d8'/>
     </interface>
     <!-- Guest agent: enables virsh domifaddr, graceful shutdown, etc. -->
     <channel type='unix'>
