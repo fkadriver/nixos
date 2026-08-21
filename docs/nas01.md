@@ -18,7 +18,7 @@ The Ubuntu-era `apply.sh` deployment is archived at `archive/hosts/nas01-ubuntu/
 |---|---|---|
 | Micron MTFDDAK256TBN 256GB SATA SSD (serial UGXVK01J7C9TJA) | `/` (LVM/ext4 via disko) | OS |
 | 3x HGST HDS724040ALE640 4TB 7200rpm (RAIDZ1) | `/pool` | ZFS pool — NAS data + borg repos (lz4, ashift=12) |
-| WD WD180EDGZ-11BLDS0 18TB 7200rpm | `/mnt/wd18t_1`, `/mnt/wd18t_3` | **FAILING (2026-07)** — mounts kept `nofail` for salvage only |
+| WD WD180EDGZ-11BLDS0 18TB 7200rpm | `/mnt/wd18t_1`, `/mnt/wd18t_3` | **UNDER TEST (2026-08)** — dropped off the SATA bus 2026-07, written off as failing at the time, but now stress-testing clean under SpinRite on the T330 (see Troubleshooting). Status undecided — mounts kept `nofail` in the meantime, no config changes yet |
 
 The ZFS pool and WD drive are **not** managed by disko — they carry data across OS reinstalls.
 
@@ -341,7 +341,7 @@ sudo nixos-rebuild switch --flake ~/git/nixos#nas01
   syncthing/                Syncthing folders (Documents, Downloads, Photos)
   borg/                     Borg backup repos: <hostname> per client
 
-/mnt/wd18t_3/               WD 18TB drive — failing, salvage only
+/mnt/wd18t_3/               WD 18TB drive — under test (SpinRite on T330), status undecided
 ```
 
 ---
@@ -601,6 +601,37 @@ mid-to-late August 2026, it's likely a different NIC/driver and this
 history may not directly apply — check `ethtool -i eno1` (or whatever
 the new interface is named) for the driver in use before assuming the
 same erratum.
+
+### T330 won't boot from external USB ports (only internal USB header works)
+
+As of 2026-08-21, the only USB port confirmed to work for booting nas01 is
+the internal USB header — front/rear external ports haven't been made to
+boot anything (unclear if it's a BIOS setting or dirty/dead ports).
+Untested leads to check next time this comes up:
+
+- **iDRAC "USB Management Port Mode"**: in the iDRAC Settings Utility,
+  confirm it's set to **Automatic** or **Standard OS Use**, not
+  iDRAC-Direct-only. Dell's official T330 troubleshooting guide calls this
+  out specifically — some PowerEdge towers dedicate one front USB port to
+  iDRAC Direct management traffic, in which case the OS/BIOS never sees a
+  device plugged into it regardless of port cleanliness.
+- **BIOS Integrated Devices**: F2 → System BIOS Settings → Integrated
+  Devices → confirm USB Ports is enabled/On for front and rear.
+- **Known T330-specific quirk** (Dell community reports): plain USB flash
+  drives can be unreliable for boot on this model even on working ports,
+  while USB-attached SATA HDD/SSD enclosures boot reliably. Worth testing
+  the same stick via a USB-SATA adapter, or GPT/UEFI-formatting the stick
+  (e.g. via Rufus), before condemning a port.
+- **Isolate hardware vs. BIOS policy without a reboot**: with nas01 already
+  booted into NixOS, plug the USB drive into an external port and watch
+  `dmesg -w` / `lsusb`. If it enumerates, the port is electrically fine and
+  it's a BIOS/iDRAC boot-policy issue (pursue the settings above). If
+  nothing shows up, suspect actually dead/dirty contacts — try compressed
+  air or an isopropyl-dipped contact cleaner before condemning the port.
+
+Current workaround: a SpinRite USB (prepped via both Ventoy and dd) is
+left permanently plugged into the internal USB header for future disk
+maintenance boots.
 
 ### ZFS pool didn't import
 
