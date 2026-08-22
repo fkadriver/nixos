@@ -123,6 +123,11 @@ let
         # Required for ZFS pool import; arbitrary but must never change
         hostId = "9ede3d5d";
         networkmanager.enable = true;
+        # eno2 is the second port of the onboard Broadcom BCM5720 LOM,
+        # unused (no cable). Explicitly unmanaged + forced down so it can't
+        # silently join the network if a cable is ever plugged in later —
+        # NetworkManager would otherwise auto-DHCP any interface it sees.
+        networkmanager.unmanaged = [ "eno2" ];
         firewall = {
           # Samba/NFS for LAN clients (exports/smb.conf restrict per-share access);
           # tailscale0 is trusted via modules/tailscale.nix
@@ -246,18 +251,12 @@ let
         cloud-utils      # cloud-localds for building cloud-init ISOs
         tigervnc         # vncviewer to reach nas01-backup from the RDP/Openbox session
       ];
-      # eno1 is an Intel I219; it's prone to a Tx hang (dmesg: "Detected
-      # Hardware Unit Hang") that the e1000e watchdog can never recover from
-      # — only a hard reboot clears it. Disabling EEE (2026-08-03) did NOT
-      # prevent a recurrence on 2026-08-04 after ~8h uptime under normal
-      # (non-build) load, so TSO/GSO/GRO — the other commonly-cited trigger
-      # for this same e1000e erratum family — are now also disabled. Re-run
-      # on every network start since none of this survives a driver reload.
+      # Force eno2 down at every network start (belt-and-suspenders with
+      # networkmanager.unmanaged above — doesn't survive a driver reload,
+      # hence re-applied here rather than set once).
       networking.localCommands = ''
-        ${pkgs.ethtool}/bin/ethtool --set-eee eno1 eee off 2>/dev/null || true
-        ${pkgs.ethtool}/bin/ethtool -K eno1 tso off gso off gro off 2>/dev/null || true
+        ${pkgs.iproute2}/bin/ip link set eno2 down 2>/dev/null || true
       '';
-
       systemd.tmpfiles.rules = [
         "d /pool/borg 0750 scott users -"
         "d /usr/local/bin 0755 root root -"

@@ -7,129 +7,92 @@ The Ubuntu-era `apply.sh` deployment is archived at `archive/hosts/nas01-ubuntu/
 ## Hardware
 
 - **Role**: NAS — file serving, Borg backup server, Syncthing hub, IDrive360 cloud backup
-- **Model**: HP ProDesk 600 G4 DM (TAA) — Desktop Mini, serial MXL9231YDY, BIOS Q22 Ver. 02.06.03
-- **CPU**: Intel Core i5-8500T @ 2.10GHz (6 cores/6 threads, no HT, turbo to 3.5GHz)
-- **Memory**: 8GB DDR4 SODIMM @ 2667 MT/s (1 of 2 slots populated — expandable)
+- **Model**: Dell PowerEdge T330 tower, service tag `86B3JH2` — migrated
+  from an HP ProDesk 600 G4 Desktop Mini in August 2026 (retired; see
+  [Hardware History](#hardware-history-hp-prodesk--dell-poweredge-t330-2026-08) below)
+- **CPU**: Xeon E3-1270 v5 (4C/8T, 3.6GHz/4.0GHz turbo, 80W)
+- **Memory**: 16GB 2133MHz ECC UDIMM, 2Rx8 (4 DIMM slots, 3 free — originally
+  shipped 4x16GB=64GB per Dell's factory build sheet,
+  [hosts/nas01/86B3JH2.csv](../hosts/nas01/86B3JH2.csv); expansion to 64GB
+  deferred, 16GB has headroom for this workload)
+- **Chassis**: 8x 3.5" hot-plug bay tower, dual 495W redundant PSU
+- **Remote management**: iDRAC8 Enterprise (full remote KVM/virtual media)
+- **Storage controller**: Dell HBA330 (true HBA passthrough, `mpt3sas`
+  driver) — replaced the stock PERC H730 RAID-on-chip card so ZFS gets raw
+  disk access
+- **NICs**: Broadcom BCM5720, onboard dual-port 1GbE (`eno1`/`eno2`,
+  `tg3` driver, confirmed via `ethtool -i eno1` 2026-08-22) — a second
+  BCM5720 PCIe card is listed on the build sheet (4x 1GbE total) but hasn't
+  shown up in `ip link` yet; unconfirmed whether it's installed
 - **Tailscale hostname**: `nas01.warthog-royal.ts.net`
+- Full Dell owner's manual: [docs/poweredge-t330-owners-manual.pdf](poweredge-t330-owners-manual.pdf)
 
 ### Drives
 
 | Drive | Mount | Purpose |
 |---|---|---|
-| Micron MTFDDAK256TBN 256GB SATA SSD (serial UGXVK01J7C9TJA) | `/` (LVM/ext4 via disko) | OS |
-| 3x HGST HDS724040ALE640 4TB 7200rpm (RAIDZ1) | `/pool` | ZFS pool — NAS data + borg repos (lz4, ashift=12) |
-| WD WD180EDGZ-11BLDS0 18TB 7200rpm | `/mnt/wd18t_1`, `/mnt/wd18t_3` | **Functioning normally (confirmed 2026-08-22)** — dropped off the SATA bus 2026-07, written off as failing at the time, but stress-tested clean under SpinRite and now mounted/serving on the T330 with data intact. Mounts kept `nofail` as a precaution |
+| 500GB SATA HDD | `/` (LVM/ext4 via disko) | OS — single disk, not mirrored (a spare 1TB drive is kept as a cold spare instead; mdadm mirroring was considered and declined 2026-08-22) |
+| 3x HGST HDS724040ALE640 4TB 7200rpm (RAIDZ1) | `/pool` | ZFS pool — NAS data + borg repos (lz4, ashift=12). Behind the HBA330; by-id paths still use the `ata-HGST_...` prefix, unchanged from the old controller |
+| WD WD180EDGZ-11BLDS0 18TB 7200rpm | `/mnt/wd18t_1`, `/mnt/wd18t_3` | Functioning normally (confirmed 2026-08-22) — dropped off the SATA bus 2026-07, written off as failing at the time, but stress-tested clean under SpinRite and now mounted/serving with data intact. Mounts kept `nofail` as a precaution |
 
 The ZFS pool and WD drive are **not** managed by disko — they carry data across OS reinstalls.
 
 ---
 
-## Hardware Migration: Dell PowerEdge T330 (in progress, 2026-08)
+## Hardware History: HP ProDesk → Dell PowerEdge T330 (2026-08)
 
-**Status (2026-08-12): urgent.** The HP ProDesk's pool controller — an
-ASM1166 M.2-to-SATA adapter card (the DIY trick used to give the Mini extra
-SATA ports) — started failing: pool drives dropping offline / `zpool`
-hanging, not ZFS-reported checksum errors, so the 3x HGST drives themselves
-are believed intact. nas01 was powered off to stop further pool instability,
-then brought back up on the OS SSD alone (no pool drives attached) so admin
-access still works. **Decision: leave the pool offline and accept NAS
-downtime (Samba/NFS/Borg target) until the T330 replacement is built** — no
-interim ASM1166 replacement, no risky import/export cycles on the flaky
-controller.
+**Trigger**: the HP ProDesk's pool controller — an ASM1166 M.2-to-SATA
+adapter card (the DIY trick used to give the Mini extra SATA ports) — failed
+2026-08-12 (pool drives dropping offline / `zpool` hanging, not ZFS-reported
+checksum errors — the 3x HGST drives themselves were intact). nas01 was
+powered off and brought back up on the OS SSD alone; the pool was left
+offline (NAS downtime accepted) until the replacement was built, rather than
+risk import/export cycles on the flaky controller.
 
-**Replacement hardware**: Dell PowerEdge T330 tower, service tag `86B3JH2`
-(purchased 2026-08-04, used, $249.99). Xeon E3-1270 v5 (4C/8T), 16GB ECC
-(4 DIMM slots, 3 free for later expansion — originally shipped 4x16GB=64GB
-per Dell's factory build sheet, [hosts/nas01/86B3JH2.csv](../hosts/nas01/86B3JH2.csv);
-RAM expansion to 64GB deferred for now — 16GB is plenty for this workload,
-the old ProDesk ran the full NAS stack on just 8GB), 8x 3.5" hot-plug bay
-chassis, dual 495W redundant PSU, **iDRAC8 Enterprise** (confirmed via the
-build sheet —
-supports full remote KVM/virtual media, so future ISO boots can go through
-the iDRAC web GUI instead of writing a physical USB/SD card). Onboard NICs
-are Broadcom BCM5720 (dual-port 1GbE LOM + a second dual-port 1GbE PCIe
-card, 4x 1GbE total, `tg3` driver) — not the ProDesk's Intel e1000e.
-Full Dell owner's manual: [docs/poweredge-t330-owners-manual.pdf](poweredge-t330-owners-manual.pdf).
+**Replacement**: Dell PowerEdge T330 tower, service tag `86B3JH2`, purchased
+used on eBay 2026-08-04 for $249.99 — see the Hardware section above for
+full specs. Went straight from the stock PERC H730 (RAID-on-chip) to a used
+HBA330 (~$25–50, same PCIe slot/bracket family, same SAS cabling) rather
+than running an interim RAID0-per-disk workaround on the H730 — true HBA
+passthrough on day one.
 
-**Storage controller — swap the stock PERC H730 for a Dell HBA330
-(Adapter, full-height, non-RAID)**:
-- Same PCIe slot/bracket family as the H730 (confirmed physically
-  swappable), reuses the same SAS backplane cabling — no new cables needed.
-- True HBA passthrough (not RAID-card-in-non-RAID-mode): ZFS gets raw disk
-  access, full SMART/TRIM, no `megaraid,N` translation quirks the H730
-  workaround would require.
-- LSI SAS3008 chipset, `mpt3sas` driver — in-tree in the Linux kernel, no
-  extra NixOS config needed.
-- ~$25–50 used (eBay). Buy the **Adapter** variant (full-height standalone
-  card), not **Mini** (mezzanine card for a dedicated riser) — confirm with
-  the seller if a listing doesn't specify.
-- Skipping the "H730 RAID0-per-disk workaround, HBA330 later" two-step
-  originally planned — go straight to the HBA330 so ZFS gets clean
-  passthrough on day one.
+**Timeline**:
+- 2026-08-17: box physically arrived. Firmware badly out of date (BIOS
+  2.0.8, all components dated 2017-04-08) — see
+  [Firmware Update Log](#firmware-update-log-2026-08-18) below.
+- 2026-08-18: firmware fully updated (bridge-update path required — see log).
+- 2026-08-20: NixOS installed on a 500GB SATA HDD (not an SSD as originally
+  planned — sourced/used what was on hand) via the installer USB; UEFI boot
+  fixed after a Legacy→UEFI BIOS switch caused missing NVRAM entries — see
+  [UEFI Boot Fix](#uefi-boot-fix-2026-08-20) below. `nas01-backup` VM
+  recovered from the old ProDesk SSD via USB in the interim (pool still
+  disconnected) — see
+  [Troubleshooting](#recovering-the-nas01-backup-vm-from-an-old-os-disk-lvm-vg-name-collision).
+- 2026-08-22: HBA330 installed, all drives reattached. ZFS pool
+  auto-imported cleanly on boot (no manual `zpool import -f` needed —
+  confirms hostId/pool metadata survived the move). `hd-idle`'s by-id paths
+  needed **no changes** — the HGST serials kept their `ata-HGST_...` prefix
+  even behind `mpt3sas` (the anticipated shift to `scsi-.../wwn-...` didn't
+  happen). `hosts/nas01/hardware.nix` regenerated from real
+  `nixos-generate-config --show-hardware-config` output and swapped in
+  (confirmed `mpt3sas` is required — the boot disk is behind the HBA330
+  backplane). The ProDesk's Intel e1000e Tx-hang workaround was removed
+  from `default.nix` (confirmed wrong driver — `tg3`, not `e1000e`; no
+  replacement mitigation added since `tg3` hasn't shown any hang symptoms).
+  OS-disk mirroring was considered (mdadm, using a spare 1TB drive) and
+  declined — kept as a cold spare instead.
 
-**Config scaffolding started**: [hosts/nas01/hardware-t330.nix](../hosts/nas01/hardware-t330.nix)
-is a draft hardware config with TODOs for everything that can't be known
-until the box boots (OS boot disk placement, real NIC name/driver, and
-whether the boot disk needs `mpt3sas` in initrd). It is **not** wired into
-`default.nix` yet — the live HP ProDesk box still uses `hardware.nix`.
+**Burn-in**: `/etc/hw-burnin.sh` was run for the full 4-hour default duration
+before going to production. Note it ran **before** the HBA330 and data
+drives were installed — it soaked CPU/RAM and tested only the OS disk, so
+it doesn't cover the HBA330, SAS backplane, or the 3x HGST/WD drives under
+load. Consider a targeted re-test of those specifically if that coverage
+ever matters (e.g. before trusting the pool under heavy write load).
 
-**Status (2026-08-22): T330 is physically live, repo config swap still
-outstanding.** NixOS is installed and booting on the T330 (since 2026-08-20,
-UEFI-mode — see the UEFI boot fix note below), OS disk is a 500GB SATA HDD
-(not an SSD as originally planned — sourced/used what was on hand), and the
-`nas01-backup` VM was recovered onto it. **But** `default.nix` still imports
-the old `hardware.nix` (HP ProDesk config) — runbook steps 5–7 below (fill in
-`hardware-t330.nix`'s TODOs, confirm via `nixos-generate-config`, swap the
-import) have **not** been done yet, even though the box is up and serving.
-The ZFS pool (3x HGST 4TB) is also still disconnected — HBA330 card hasn't
-arrived, so `zpool import -f pool` (step 9) hasn't run either. OS-disk
-mirroring was considered (mdadm, using a spare 1TB drive) and **declined** —
-kept as a cold spare instead; see the OS disk row in the Hardware table once
-this section is retired.
-
-**Build runbook once the T330 is in hand**:
-1. Install the HBA330 in place of the H730 (same slot, reuse SAS cables).
-2. ✅ Done 2026-08-20 — install an OS boot disk. Ended up a 500GB SATA HDD
-   (not an SSD as originally planned).
-3. **Update firmware before anything else.** ✅ Done 2026-08-18 — see
-   [Firmware Update Log](#firmware-update-log-2026-08-18) below for the
-   full story (bridge-update path, gotchas, final versions). As received,
-   BIOS was 2.0.8, all firmware dated 2017-04-08, and USB boot wasn't
-   offered as a boot option (CD/DVD only) — firmware update turned out to
-   not be required for USB boot after all (see IDSDM workaround below),
-   but was still worth doing given ~9-year-old firmware on hardware that's
-   about to hold production data.
-4. Boot the NixOS installer USB. **Burn it in before installing** — used
-   server hardware, want to catch a marginal DIMM/core/drive/PSU before it
-   holds production data: `/etc/hw-burnin.sh [duration_minutes]` (default
-   4h; script + packages are in `hosts/installer/`). It soaks CPU+RAM with
-   `stress-ng`, runs SMART extended self-tests on every attached disk,
-   checks dmesg and the iDRAC hardware log for faults, and writes a report
-   to `/root/burnin-<timestamp>/`. It does **not** cover PSU failover
-   (pull-test each cord under load manually) or a dedicated MemTest86+ pass
-   (run that separately if you want the most thorough RAM check).
-5. Confirm BIOS is in UEFI mode (not BIOS/Legacy), run
-   `nixos-generate-config --show-hardware-config` and fill in
-   `hardware-t330.nix`'s TODOs (kernel modules, NIC name/driver — don't
-   assume the ProDesk's e1000e Tx-hang workaround applies to a different
-   NIC).
-6. Partition the OS disk with disko (same 1GB boot + LVM layout as every
-   other host — see [Disaster Recovery](#disaster-recovery--os-ssd-sda-failure)
-   below for the exact commands, same idea).
-7. Swap `default.nix`'s import from `./hardware.nix` to
-   `./hardware-t330.nix` (rename it to `hardware.nix` once validated).
-8. First boot: generate a new sops age key, add it to `.sops.yaml`
-   replacing the old nas01 entry, `sops updatekeys secrets/secrets.yaml`.
-9. Move the 3x HGST drives to the T330's backplane, `zpool import -f pool`,
-   verify `zpool status` is clean before trusting the pool.
-10. Re-verify hd-idle's `/dev/disk/by-id/...` paths in `default.nix` — the
-    `ata-HGST_...` prefix will likely change to `scsi-...`/`wwn-...` now that
-    the drives are behind `mpt3sas` instead of onboard SATA.
-11. Restore `/home` + the `nas01-backup` VM disk from the latest Borg backup
-    (same steps as [Disaster Recovery](#disaster-recovery--os-ssd-sda-failure)
-    below), retire the HP ProDesk box.
-12. Update this doc's Hardware section and remove this migration section
-    once the T330 is the live nas01.
+**eno2**: explicitly disabled — `networking.networkmanager.unmanaged` (no
+auto-DHCP if a cable is ever plugged in) plus a forced `ip link set eno2
+down` in `networking.localCommands` (re-applied every network start, same
+pattern used for one-off interface fixes elsewhere in this file).
 
 ### Firmware Update Log (2026-08-18)
 
@@ -258,30 +221,34 @@ shows "No boot loaders listed in EFI Variables"), this is the fix.
 
 ---
 
-## Disaster Recovery — OS SSD (sda) Failure
+## Disaster Recovery — OS Disk Failure
 
-nas01's OS disk (the Micron SSD) is a single, non-redundant drive. Everything
-on it is either declarative (rebuildable from this flake) or backed up to
-`/pool` (the redundant ZFS raidz1 array, which lives on three *other* physical
-disks and survives an OS-SSD failure untouched). The only things that are
-**not** reproducible from git are `/home` and the `nas01-backup` VM's disk —
-both are backed up nightly to `/pool/borg/nas01` (see
+nas01's OS disk (a 500GB SATA HDD, behind the HBA330 backplane — see
+Hardware above) is a single, non-redundant drive; an mdadm mirror was
+considered and declined 2026-08-22, kept as a cold spare instead. Everything
+on the OS disk is either declarative (rebuildable from this flake) or backed
+up to `/pool` (the redundant ZFS raidz1 array, which lives on three *other*
+physical disks and survives an OS-disk failure untouched). The only things
+that are **not** reproducible from git are `/home` and the `nas01-backup`
+VM's disk — both are backed up nightly to `/pool/borg/nas01` (see
 [Borg Backup](#borg-backup-server-side) below) specifically so this runbook
 can restore them.
 
 These same steps also apply to an intentional fresh install (e.g. a new OS
-SSD), not just a failure.
+disk), not just a failure.
 
 ### 1. Partition OS disk and install (from NixOS installer USB)
 
 ```bash
-# Identify the OS SSD by-id (Micron, serial UGXVK01J7C9TJA):
-ls -la /dev/disk/by-id/ | grep -i micron
+# Identify the OS disk by-id (check `ls -la /dev/disk/by-id/` for the
+# right one — exclude the by-id entries for the 3x HGST pool drives and
+# the WD 18TB drive):
+ls -la /dev/disk/by-id/
 
-# Partition ONLY the OS SSD (ZFS/WD drives untouched):
+# Partition ONLY the OS disk (ZFS/WD drives untouched):
 sudo nix run github:nix-community/disko -- --mode disko \
   --flake github:fkadriver/nixos#nas01 \
-  --arg device '"/dev/disk/by-id/ata-Micron_..._UGXVK01J7C9TJA"'
+  --arg device '"/dev/disk/by-id/<os-disk-by-id-path>"'
 
 sudo nixos-install --flake github:fkadriver/nixos#nas01
 sudo reboot
@@ -613,7 +580,12 @@ Network: Tailscale-only (declared in `modules/syncthing-declarative.nix`).
 
 ## Troubleshooting
 
-### eno1 e1000e "Detected Hardware Unit Hang" (RESOLVED 2026-08-06)
+### eno1 e1000e "Detected Hardware Unit Hang" (HISTORICAL — HP ProDesk only, retired 2026-08)
+
+**This section applies to the retired HP ProDesk box, not the current T330**
+(Broadcom BCM5720/`tg3` NICs — confirmed via `ethtool -i eno1` 2026-08-22,
+no hang symptoms observed). Kept for reference in case a similar erratum
+ever shows up on different NIC hardware in the future.
 
 nas01's onboard NIC (Intel I219, `eno1`) was hanging under normal load
 (no builds running) — `dmesg`/journal fills with repeating
@@ -633,16 +605,14 @@ Timeline:
 - **2026-08-06**: confirmed stable for 27+ hours (vs. the previous ~8h
   failure window) — issue considered resolved.
 
-Both fixes live in `hosts/nas01/default.nix` under
+Both fixes lived in `hosts/nas01/default.nix` under
 `networking.localCommands`, applied via `network-local-commands.service`
 on every boot (they don't survive a driver reload, hence re-applied at
-network start rather than set once).
-
-If this recurs on the **replacement hardware** planned for
-mid-to-late August 2026, it's likely a different NIC/driver and this
-history may not directly apply — check `ethtool -i eno1` (or whatever
-the new interface is named) for the driver in use before assuming the
-same erratum.
+network start rather than set once) — **removed 2026-08-22** now that the
+T330 (confirmed `tg3` driver) has replaced the ProDesk. No replacement
+mitigation was added speculatively since `tg3` hasn't shown any hang
+symptoms; if one ever shows up, start by checking `ethtool -i <iface>` for
+the driver in use before assuming this same erratum.
 
 ### T330 won't boot from external USB ports (only internal USB header works)
 
