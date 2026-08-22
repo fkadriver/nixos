@@ -18,7 +18,7 @@ The Ubuntu-era `apply.sh` deployment is archived at `archive/hosts/nas01-ubuntu/
 |---|---|---|
 | Micron MTFDDAK256TBN 256GB SATA SSD (serial UGXVK01J7C9TJA) | `/` (LVM/ext4 via disko) | OS |
 | 3x HGST HDS724040ALE640 4TB 7200rpm (RAIDZ1) | `/pool` | ZFS pool — NAS data + borg repos (lz4, ashift=12) |
-| WD WD180EDGZ-11BLDS0 18TB 7200rpm | `/mnt/wd18t_1`, `/mnt/wd18t_3` | **UNDER TEST (2026-08)** — dropped off the SATA bus 2026-07, written off as failing at the time, but now stress-testing clean under SpinRite on the T330 (see Troubleshooting). Status undecided — mounts kept `nofail` in the meantime, no config changes yet |
+| WD WD180EDGZ-11BLDS0 18TB 7200rpm | `/mnt/wd18t_1`, `/mnt/wd18t_3` | **Functioning normally (confirmed 2026-08-22)** — dropped off the SATA bus 2026-07, written off as failing at the time, but stress-tested clean under SpinRite and now mounted/serving on the T330 with data intact. Mounts kept `nofail` as a precaution |
 
 The ZFS pool and WD drive are **not** managed by disko — they carry data across OS reinstalls.
 
@@ -383,7 +383,7 @@ sudo nixos-rebuild switch --flake ~/git/nixos#nas01
   syncthing/                Syncthing folders (Documents, Downloads, Photos)
   borg/                     Borg backup repos: <hostname> per client
 
-/mnt/wd18t_3/               WD 18TB drive — under test (SpinRite on T330), status undecided
+/mnt/wd18t_3/               WD 18TB drive — functioning normally (confirmed 2026-08-22)
 ```
 
 ---
@@ -768,18 +768,23 @@ sudo exportfs -v             # on nas01
 showmount -e nas01           # on client
 ```
 
-### Salvaging old borg repos from the failing WD drive
+### Salvaging old borg repos from the WD drive (RESOLVED 2026-08-22 — drive is healthy)
 
-If `/mnt/wd18t_3` mounts after the rebuild (nofail — it dropped off the old
-Ubuntu install), copy the old repo history onto the pool before the drive dies:
+The WD 18TB drive dropped off the SATA bus in 2026-07 and was written off as
+failing at the time. It stress-tested clean under SpinRite on the T330 and
+is now mounted normally on both `/mnt/wd18t_1` and `/mnt/wd18t_3` with data
+intact — this section is now historical/precautionary rather than an active
+concern. If it ever drops offline again, copy the old repo history onto the
+pool before further troubleshooting:
 
 ```bash
 sudo rsync -a /mnt/wd18t_3/borg/repos/ /pool/borg/
 sudo chown -R scott /pool/borg
 ```
 
-If the drive is gone, clients simply init fresh repos on their first backup
-(history lost; the IDrive360 cloud copy of `/mnt` may also hold the old repos).
+If the drive is ever lost for good, clients simply init fresh repos on their
+first backup (history lost; the IDrive360 cloud copy of `/mnt` may also hold
+the old repos).
 
 ### IDrive360 VM
 
