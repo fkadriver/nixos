@@ -363,8 +363,14 @@ in
     # borg job's ssh ignores per-user known_hosts (stale entries would
     # otherwise fail the CHANGED-key check) and trusts only this pin.
     # Updated 2026-08-22: nas01 moved to the T330 (fresh install), new host key.
-    programs.ssh.knownHosts."nas01.warthog-royal.ts.net".publicKey =
-      "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPIZPV9hUboOiTvvmg6KnrjxP1c9EfPMIKjwDJmEty3P";
+    # hostNames covers both the FQDN and the bare Tailscale MagicDNS short name —
+    # scripts/sync-nixos-hosts.sh and host-status.sh connect via the bare "nas01",
+    # which was never covered by the FQDN-only pin (or any prior TOFU entry) and
+    # so failed BatchMode's strict check as an unrecognized host.
+    programs.ssh.knownHosts."nas01.warthog-royal.ts.net" = {
+      hostNames = [ "nas01.warthog-royal.ts.net" "nas01" ];
+      publicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPIZPV9hUboOiTvvmg6KnrjxP1c9EfPMIKjwDJmEty3P";
+    };
 
     services.borgbackup.jobs."system" = {
       # Auto-include the canary dir so the restore test works regardless of `paths`.
