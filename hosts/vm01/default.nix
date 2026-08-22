@@ -246,7 +246,6 @@ EOF
         repository = "ssh://scott@nas01.warthog-royal.ts.net/pool/borg/vm01";
         paths = [ "/home" "/mnt/immich" ];
         encryption.passphraseFile = "/run/bitwarden-secrets/borg_passphrase";
-        sshKeyFile = "/home/scott/.ssh/id_ed25519_legacy";
       };
 
       system = {

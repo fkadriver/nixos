@@ -91,12 +91,6 @@ in
       description = "Systemd calendar expression for backup schedule";
     };
 
-    sshKeyFile = mkOption {
-      type = types.nullOr types.path;
-      default = null;
-      description = "SSH private key file for remote repository access";
-    };
-
     remotePath = mkOption {
       type = types.nullOr types.str;
       default = "/run/current-system/sw/bin/borg";
@@ -242,8 +236,7 @@ in
     environment.shellAliases =
       let
         borgEnvStr = concatStringsSep " " (filter (s: s != "") [
-          (optionalString (cfg.sshKeyFile != null)
-            ''BORG_RSH="ssh -i ${cfg.sshKeyFile} -o StrictHostKeyChecking=accept-new"'')
+          ''BORG_RSH="${pkgs.tailscale}/bin/tailscale ssh"''
           (optionalString (cfg.encryption.passphraseFile != null)
             ''BORG_PASSCOMMAND="cat ${cfg.encryption.passphraseFile}"'')
           (optionalString (cfg.remotePath != null)
@@ -351,22 +344,25 @@ in
         BORG_REPO="${cfg.repository}"
       '' + lib.optionalString (cfg.encryption.passphraseFile != null) ''
         BORG_PASSCOMMAND="cat ${cfg.encryption.passphraseFile}"
-      '' + lib.optionalString (cfg.sshKeyFile != null) ''
-        BORG_RSH="ssh -i ${cfg.sshKeyFile} -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=yes"
+      '' + ''
+        BORG_RSH="${pkgs.tailscale}/bin/tailscale ssh"
       '' + lib.optionalString (cfg.remotePath != null) ''
         BORG_REMOTE_PATH="${cfg.remotePath}"
       '';
     };
 
-    # Pin the backup server's host key declaratively so rebuilds are sufficient
-    # after a server reinstall — no manual ssh-keygen -R on each client. The
-    # borg job's ssh ignores per-user known_hosts (stale entries would
-    # otherwise fail the CHANGED-key check) and trusts only this pin.
-    # Updated 2026-08-22: nas01 moved to the T330 (fresh install), new host key.
-    # hostNames covers both the FQDN and the bare Tailscale MagicDNS short name —
-    # scripts/sync-nixos-hosts.sh and host-status.sh connect via the bare "nas01",
-    # which was never covered by the FQDN-only pin (or any prior TOFU entry) and
-    # so failed BatchMode's strict check as an unrecognized host.
+    # NOTE: borg itself no longer uses OpenSSH directly for the nas01 repo — its
+    # BORG_RSH is "tailscale ssh" (below), which checks the destination's host key
+    # against Tailscale's coordination server rather than a static known_hosts
+    # pin, so a reinstall-driven key rotation (like the T330 migration) is picked
+    # up automatically with no manual re-pinning.
+    #
+    # This pin still matters for *plain* ssh to nas01 — scripts/sync-nixos-hosts.sh
+    # and host-status.sh connect via regular `ssh scott@nas01`, not `tailscale
+    # ssh`, so they still rely on this. hostNames covers both the FQDN and the
+    # bare Tailscale MagicDNS short name those scripts use — the bare name was
+    # never covered by the FQDN-only pin (or any prior TOFU entry), so it failed
+    # BatchMode's strict check as an unrecognized host until this was added.
     programs.ssh.knownHosts."nas01.warthog-royal.ts.net" = {
       hostNames = [ "nas01.warthog-royal.ts.net" "nas01" ];
       publicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPIZPV9hUboOiTvvmg6KnrjxP1c9EfPMIKjwDJmEty3P";
@@ -403,10 +399,15 @@ in
           else null;
       };
       environment = mkMerge [
-        { BORG_RELOCATED_REPO_ACCESS_IS_OK = "yes"; }
-        (mkIf (cfg.sshKeyFile != null) {
-          BORG_RSH = "ssh -i ${cfg.sshKeyFile} -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=yes";
-        })
+        {
+          BORG_RELOCATED_REPO_ACCESS_IS_OK = "yes";
+          # Checks the destination's host key against Tailscale's coordination
+          # server instead of a static known_hosts pin — a reinstall-driven key
+          # rotation is picked up automatically, no manual re-pinning needed.
+          # Absolute store path: this unit's PATH is a curated closure that
+          # doesn't include tailscale.
+          BORG_RSH = "${pkgs.tailscale}/bin/tailscale ssh";
+        }
         (mkIf (cfg.remotePath != null) {
           BORG_REMOTE_PATH = cfg.remotePath;
         })
