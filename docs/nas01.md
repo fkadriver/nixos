@@ -219,6 +219,93 @@ layout from disko was already correct.
 BIOS is in Legacy mode and later switched to UEFI (or `bootctl status` ever
 shows "No boot loaders listed in EFI Variables"), this is the fix.
 
+### Post-Migration/Rebuild Verification Checklist
+
+**Applies to any host**, not just nas01: a fresh OS install (new hardware,
+reinstall, or disk replacement) regenerates several machine identities that
+other hosts/services pin *by value*. The pool/data survives fine; it's the
+cross-host trust relationships that silently break until each is re-pinned.
+Check every item below, not just the ones that happen to error loudly —
+several of these fail silent (stale cache, wrong log path, timing) rather
+than throwing an obvious error.
+
+1. **SSH host key** — changes on every fresh install. Anything that pins it
+   declaratively (`programs.ssh.knownHosts` in `modules/borg-backup.nix` for
+   nas01) needs the new key, then a rebuild on every host that has the pin.
+   Also check **each client's own cached known_hosts** separately from the
+   declarative pin — darwin's borg jobs use `StrictHostKeyChecking=accept-new`
+   (not a pin), which only trusts *unseen* hosts; a stale cached entry still
+   has to be removed by hand first (`ssh-keygen -R <host>`), and remember
+   **root's known_hosts is a separate file from the user's**
+   (`/var/root/.ssh/known_hosts` on darwin, `/root/.ssh/known_hosts` on
+   Linux) — the user-level fix doesn't cover anything invoked via `sudo`.
+   Get the real new key with `ssh-keyscan -t ed25519 <host>` and cross-check
+   its fingerprint (`ssh-keygen -lf -`) against what the failing connection
+   itself reports, rather than trusting either blind.
+2. **Syncthing device ID** — regenerated on a fresh install (new cert).
+   Declared in `modules/syncthing-declarative.nix`'s `deviceIds` map; every
+   peer with the old ID hardcoded won't reconnect until it's updated *and*
+   that peer is rebuilt. Pull the live value with the Syncthing REST API
+   (`GET /rest/system/status`, field `myID`) or straight from
+   `~/.config/syncthing/config.xml`'s `<device id=...>` entry for the host's
+   own name.
+3. **sops-nix age key** — normally regenerated fresh on a new install, which
+   would require adding the new pubkey to `.sops.yaml` and
+   `sops updatekeys`. If the old `/var/lib/sops-nix/key.txt` was deliberately
+   restored from the previous box (as happened here), verify the restore
+   actually took: `sudo age-keygen -y /var/lib/sops-nix/key.txt` on the box
+   should match the existing `.sops.yaml` entry — if it does, no
+   `updatekeys` needed; if it doesn't, treat it as a fresh key per above.
+4. **ZFS pool import** — `networking.hostId` is declared in Nix, not
+   hardware-derived, so it survives automatically as long as the same config
+   is deployed — just confirm `zpool status` is clean (`ONLINE`, 0 errors,
+   no unexpected resilver) rather than assuming it imported correctly.
+5. **Disk by-id paths** — anything hardcoded (`hd-idle`, `fileSystems`,
+   pool member paths) should be re-verified against `ls /dev/disk/by-id/`
+   on the real hardware rather than assumed. A controller swap (RAID HBA →
+   true HBA passthrough) *can* change the by-id prefix
+   (`ata-...` → `scsi-...`/`wwn-...`) but doesn't always — confirm instead
+   of guessing either way.
+6. **Wazuh agent enrollment** — a fresh install gets a new agent identity;
+   confirm it actually re-enrolled (`client.keys` non-empty,
+   `journalctl -u wazuh-agent` free of repeated connect/enroll errors) not
+   just that the service reports `active`.
+7. **Borg backup jobs** — expect every repo to show `STALE` immediately
+   after any outage/migration window (no completed backup during the
+   downtime) — that's normal, not a fault. Confirm it clears after the next
+   scheduled run actually completes (`status=OK`, not just that the timer
+   fired), and separately run `borg check` against every repo at least once
+   — a period of flaky hardware upstream of the pool (like the failing
+   ASM1166 here) can put questionable data in a repo without the ordinary
+   nightly `create`/`prune` path ever objecting.
+8. **VM/container workloads** (e.g. the IDrive360 `nas01-backup` libvirt VM)
+   — confirm running state, network reachability, and that whatever it
+   backs up to externally is still actually receiving uploads, not just
+   `virsh domstate` == running.
+9. **File shares** (Samba/NFS) — confirm reachable from an **actual
+   client**, not just `systemctl is-active`; a same-host `smbclient -L
+   localhost` loopback probe is not a reliable substitute and can fail on
+   protocol negotiation even when the service is fine for real clients.
+10. **Network interface names/drivers** — don't carry over
+    hardware-specific workarounds (Tx-hang mitigations, driver-specific
+    quirks) onto new hardware unverified; confirm the driver
+    (`ethtool -i <iface>`) actually matches before assuming an old
+    workaround still applies.
+11. **Docs** — update the Hardware section (service tag, specs) and this
+    doc's migration history once everything above is confirmed; remove any
+    "in progress" language.
+
+**nas01 T330 (2026-08-22) — result of running this checklist**: SSH host
+key pin and Syncthing device ID were both stale (fixed — see the
+`modules/borg-backup.nix` and `modules/syncthing-declarative.nix` commit
+from this date); sops age key survived the restore intact (verified match,
+no `updatekeys` needed); ZFS pool clean; `hd-idle` by-id paths needed no
+changes; Wazuh agent re-enrolled cleanly; borg staleness across all 5 repos
+was the expected outage artifact, not a new fault. `latitude`/`vm01`/`log01`
+still need a rebuild to pick up the two fixed pins; airbook needs
+`sudo ssh-keygen -R nas01.warthog-royal.ts.net` (root's known_hosts
+specifically) plus a `darwin-rebuild switch`.
+
 ---
 
 ## Disaster Recovery — OS Disk Failure
