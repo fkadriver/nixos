@@ -73,9 +73,24 @@ until the box boots (OS boot disk placement, real NIC name/driver, and
 whether the boot disk needs `mpt3sas` in initrd). It is **not** wired into
 `default.nix` yet — the live HP ProDesk box still uses `hardware.nix`.
 
+**Status (2026-08-22): T330 is physically live, repo config swap still
+outstanding.** NixOS is installed and booting on the T330 (since 2026-08-20,
+UEFI-mode — see the UEFI boot fix note below), OS disk is a 500GB SATA HDD
+(not an SSD as originally planned — sourced/used what was on hand), and the
+`nas01-backup` VM was recovered onto it. **But** `default.nix` still imports
+the old `hardware.nix` (HP ProDesk config) — runbook steps 5–7 below (fill in
+`hardware-t330.nix`'s TODOs, confirm via `nixos-generate-config`, swap the
+import) have **not** been done yet, even though the box is up and serving.
+The ZFS pool (3x HGST 4TB) is also still disconnected — HBA330 card hasn't
+arrived, so `zpool import -f pool` (step 9) hasn't run either. OS-disk
+mirroring was considered (mdadm, using a spare 1TB drive) and **declined** —
+kept as a cold spare instead; see the OS disk row in the Hardware table once
+this section is retired.
+
 **Build runbook once the T330 is in hand**:
 1. Install the HBA330 in place of the H730 (same slot, reuse SAS cables).
-2. Buy + install an OS boot SSD (not yet purchased).
+2. ✅ Done 2026-08-20 — install an OS boot disk. Ended up a 500GB SATA HDD
+   (not an SSD as originally planned).
 3. **Update firmware before anything else.** ✅ Done 2026-08-18 — see
    [Firmware Update Log](#firmware-update-log-2026-08-18) below for the
    full story (bridge-update path, gotchas, final versions). As received,
@@ -213,6 +228,33 @@ the exact `docker run` incantation if recreating it):
 The H730 will still be pulled for the HBA330 swap per the plan above — it
 was updated anyway since the user plans to sell or reuse the card later
 and wanted it current first.
+
+### UEFI Boot Fix (2026-08-20)
+
+NixOS was installed on the T330's boot disk while BIOS was still in
+Legacy/CSM mode, then BIOS was switched to native UEFI afterward. The box
+booted, but POST showed several "Unable to find UEFI device at ..." errors.
+
+Root cause: `bootctl`/systemd-boot's NixOS activation had written the loader
+binaries to the ESP, but couldn't register EFI NVRAM boot variables while
+booted under Legacy mode (no `/sys/firmware/efi` at install time) — so it
+was booting only via the generic UEFI fallback path
+(`\EFI\BOOT\BOOTX64.EFI`), with no real NVRAM boot entry
+(`bootctl status` showed "No boot loaders listed in EFI Variables"). That's
+what threw the stale-entry POST errors.
+
+Fix — once actually booted in UEFI mode:
+```bash
+sudo bootctl install
+```
+This creates proper `Linux Boot Manager` / `Fallback Linux Boot Manager`
+NVRAM entries. Clean up any stale entries afterward in BIOS (F2 → Boot
+Settings → UEFI Boot Sequence). No reinstall/reformat needed — the GPT+ESP
+layout from disko was already correct.
+
+**Applies to any host**, not just nas01: if a NixOS box is installed while
+BIOS is in Legacy mode and later switched to UEFI (or `bootctl status` ever
+shows "No boot loaders listed in EFI Variables"), this is the fix.
 
 ---
 
@@ -632,6 +674,76 @@ Untested leads to check next time this comes up:
 Current workaround: a SpinRite USB (prepped via both Ventoy and dd) is
 left permanently plugged into the internal USB header for future disk
 maintenance boots.
+
+### Recovering the nas01-backup VM from an old OS disk (LVM VG name collision)
+
+While waiting on the HBA330 (ZFS pool not yet connected), the old nas01
+box's OS SSD was pulled and connected to the T330 via a USB adapter purely
+to recover the `nas01-backup` VM (IDrive360 agent) without needing the
+pool/Borg repo.
+
+Problem: the old disk's LVM VG is also named `main_vg` — same as
+`disko-config.nix`'s layout on every host — so it collides with the new
+install's own root VG.
+
+```bash
+# Identify the old disk's VG by UUID, never by name (ambiguous with two
+# VGs sharing the same name):
+sudo pvs -o pv_name,vg_name,vg_uuid
+
+sudo vgrename <old-vg-uuid> old_nas01_vg
+sudo vgchange -ay old_nas01_vg
+
+# Mount read-only and copy the VM's disk + cidata + base cloud image —
+# all three needed, the qcow2 is copy-on-write against the base image:
+sudo mount -o ro /dev/old_nas01_vg/root /mnt/old
+sudo cp /mnt/old/var/lib/libvirt/images/{nas01-backup.qcow2,nas01-backup-cidata.iso,ubuntu-24.04-cloud.img} \
+  /var/lib/libvirt/images/
+
+sudo virsh define /etc/nas01-backup/domain.xml
+sudo virsh start nas01-backup
+```
+
+### nas01-backup VM has no network after recovery/redefine
+
+VM boots fine (VNC shows a login screen) but never gets a DHCP lease — no
+Tailscale, Wazuh agent unreachable. Cause: `hosts/nas01/nas01-backup-domain.xml`
+had no pinned `<mac address>`, so `virsh define` assigns a random MAC each
+time. The guest's cloud-init-baked netplan
+(`/etc/netplan/50-cloud-init.yaml`) matches on a specific MAC
+(`52:54:00:b8:1a:d8`) — mismatch means the NIC comes up `state DOWN` with no
+lease, even though the VM otherwise boots normally.
+
+Diagnose with the QEMU guest agent even with zero network:
+```bash
+virsh domifaddr --source agent nas01-backup
+virsh qemu-agent-command nas01-backup '{"execute":"guest-exec", ...}'
+```
+
+Fixed by pinning `<mac address='52:54:00:b8:1a:d8'/>` in `domain.xml`
+(commit `0370822`) — already fixed going forward, but worth knowing if
+`domain.xml` is ever hand-edited or the VM redefined from scratch.
+
+### Borg timers won't stay masked across reboots (read-only `/etc`)
+
+While the ZFS pool is disconnected (waiting on the HBA330), the three borg
+timers (`borgbackup-job-system.timer`, `borg-status.timer`,
+`borg-restore-test.timer`) need to stay masked so they don't fire against a
+nonexistent `/pool/borg/nas01`. A normal persistent `systemctl mask` fails
+with "Read-only file system" — this host has NixOS's read-only-`/etc`
+protection enabled. Only a runtime mask works, and it does **not survive a
+reboot**:
+
+```bash
+sudo systemctl mask --runtime borgbackup-job-system.timer borg-status.timer borg-restore-test.timer
+```
+
+Re-check `systemctl is-active borgbackup-job-system.timer` after every
+reboot until the pool is actually imported, and re-run the mask if it's
+back to active. Unmask once `/pool/borg` is real:
+```bash
+sudo systemctl unmask --runtime borgbackup-job-system.timer borg-status.timer borg-restore-test.timer
+```
 
 ### ZFS pool didn't import
 
