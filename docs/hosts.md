@@ -51,17 +51,19 @@ ssh scott@log01 'sudo age-keygen -y /var/lib/sops-nix/key.txt'
 Then add to `.sops.yaml` and run `sops updatekeys secrets/secrets.yaml`.
 
 ### nas01
-**HP ProDesk 600 G4 DM** - File serving and backup hub (converted from Ubuntu, July 2026)
+**Dell PowerEdge T330** - File serving and backup hub (migrated from an HP ProDesk 600 G4 Desktop Mini, August 2026; that box was itself converted from Ubuntu, July 2026)
 
 | | |
 |---|---|
-| CPU / Memory | Intel Core i5-8500T @ 2.10GHz (6c/6t), 8GB DDR4-2667 SODIMM (1 of 2 slots populated) |
+| Service Tag | 86B3JH2 |
+| CPU / Memory | Xeon E3-1270 v5 (4C/8T, 3.6/4.0GHz turbo, 80W), 16GB 2133MHz ECC UDIMM |
 | Purpose | NAS: Samba/NFS file serving, Borg backup server, Syncthing hub, IDrive360 cloud backup |
-| Storage | 256GB Micron SSD (OS), 3x 4TB HGST ZFS RAIDZ1 (`/pool`, incl. borg repos), WD 18TB (failing — salvage only) |
+| Storage | 500GB SATA HDD (OS), 3x 4TB HGST ZFS RAIDZ1 (`/pool`, incl. borg repos), WD 18TB (confirmed healthy 2026-08-22, kept `nofail`) |
+| Storage controller | Dell HBA330 (true HBA passthrough, `mpt3sas`) — replaced the stock PERC H730 RAID-on-chip card |
 | Key Features | ZFS (autoScrub/TRIM), Samba, NFS, syncthing-declarative, hd-idle spindown, Wazuh agent, IDrive360 in Docker |
-| Borg Repos | `/pool/borg/{latitude,vm01,log01,airbook-darwin}` |
+| Borg Repos | `/pool/borg/{nas01,latitude,vm01,log01,airbook-darwin}` |
 
-**Note:** Headless server. ZFS pool and WD drive are not disko-managed — they survive OS reinstalls (`zpool import -f pool` once after install). IDrive360 runs in an `ubuntu:24.04` container because its installer self-updates at runtime. See [nas01.md](nas01.md) for full reference.
+**Note:** Headless server. ZFS pool and WD drive are not disko-managed — they survive OS reinstalls (`zpool import -f pool` once after install). IDrive360 runs in an `ubuntu:24.04` container because its installer self-updates at runtime. Borg's `BORG_RSH` uses `tailscale ssh` rather than pinned OpenSSH, so a future host-key rotation (e.g. another hardware swap) won't need manual re-pinning. See [nas01.md](nas01.md) for full reference, including the T330 migration history.
 
 ### pihole01
 **Raspberry Pi 3B** - Primary Pi-hole DNS server

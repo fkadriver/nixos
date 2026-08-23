@@ -28,7 +28,7 @@ nix build .#nixosConfigurations.<hostname>.config.system.build.vm
 | `OTworkstation` | Dell Latitude 5480 | XFCE | OT lab VM workstation |
 | `vm01` | Dell Latitude E7270 | Headless | Immich photo server |
 | `log01` | Shuttle Zingbox GL014G128W10 | Headless | Centralized syslog collector |
-| `nas01` | HP ProDesk 600 G4 DM | Headless | NAS / Borg backup hub |
+| `nas01` | Dell PowerEdge T330 | Headless | NAS / Borg backup hub |
 | `pihole01` | Raspberry Pi 3B | Headless | Primary Pi-hole DNS |
 | `pihole02` | Raspberry Pi 3B | Headless | Secondary Pi-hole DNS |
 | `installer` | N/A | N/A | Bootable installation ISO |
