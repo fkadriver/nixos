@@ -18,7 +18,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-HOSTS=(latitude otworkstation vm01 nas01 log01 pihole01 pihole02)
+HOSTS=(latitude log01 nas01 otworkstation pihole01 pihole02 vm01)
 SSH_OPTS=(-o ConnectTimeout=5 -o BatchMode=yes)
 
 for arg in "$@"; do
@@ -30,13 +30,19 @@ done
 
 CURRENT_HOST="$(hostname -s | tr '[:upper:]' '[:lower:]')"
 
-# Runs a shell snippet on $host, either locally or via SSH (BatchMode).
+# Runs a shell snippet on $host, either locally or via Tailscale SSH.
+#
+# `tailscale ssh` is used instead of plain `ssh` so host-key verification goes
+# through the Tailscale coordination server rather than local known_hosts —
+# no manual key acceptance needed for new/reinstalled hosts. It's a wrapper
+# around the system ssh: any ssh options must come *after* the host, where
+# tailscale forwards them to the underlying ssh command.
 run_on() {
     local host="$1"; shift
     if [[ "$host" == "$CURRENT_HOST" ]]; then
         bash -c "$*"
     else
-        ssh "${SSH_OPTS[@]}" "scott@${host}" "$*"
+        tailscale ssh "scott@${host}" "${SSH_OPTS[@]}" "$*"
     fi
 }
 

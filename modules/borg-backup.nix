@@ -372,8 +372,9 @@ in
     # already provides a second, independent copy of critical data).
     #
     # hostNames covers both the FQDN and the bare Tailscale MagicDNS short
-    # name — scripts/sync-nixos-hosts.sh and host-status.sh connect via the
-    # bare "nas01", which isn't covered by an FQDN-only pin.
+    # name — scripts/sync-nixos-hosts.sh connects via the bare "nas01", which
+    # isn't covered by an FQDN-only pin. (host-status.sh now uses `tailscale
+    # ssh` and no longer depends on this pin.)
     programs.ssh.knownHosts."nas01.warthog-royal.ts.net" = {
       hostNames = [ "nas01.warthog-royal.ts.net" "nas01" ];
       publicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPIZPV9hUboOiTvvmg6KnrjxP1c9EfPMIKjwDJmEty3P";
