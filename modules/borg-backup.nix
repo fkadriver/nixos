@@ -1,5 +1,5 @@
 { inputs, ... }@flakeContext:
-{ config, lib, pkgs, ... }:
+{ config, lib, pkgs, options, ... }:
 
 with lib;
 
@@ -97,6 +97,12 @@ in
       description = "Path to borg executable on remote server (for SSH repos)";
     };
 
+    sshKeyFile = mkOption {
+      type = types.nullOr types.path;
+      default = null;
+      description = "SSH private key file for remote repository access";
+    };
+
     preHook = mkOption {
       type = types.lines;
       default = "";
@@ -151,23 +157,6 @@ in
     canaryFile = cfg.restoreTest.canaryFile;
     canaryDir  = builtins.dirOf canaryFile;
     logFile    = cfg.restoreTest.logFile;
-
-    # Tailscale SSH's non-interactive exec path (used for "borg serve" over
-    # BORG_RSH="tailscale ssh") doesn't reliably set HOME the way a real login
-    # shell / OpenSSH session does (tailscale/tailscale#9368, #12080, #16711) —
-    # borg then aborts remotely with "neither XDG_CONFIG_HOME nor HOME are
-    # defined". `env` is a real binary (not a shell builtin), so prefixing the
-    # remote executable with it works whether or not the far end runs the
-    # command through a shell. Only applies to ssh:// repos with a user@ — the
-    # local nas01 repo doesn't go over BORG_RSH at all.
-    remoteSshUser = builtins.head (
-      let m = builtins.match "ssh://([^@]+)@.*" cfg.repository;
-      in if m != null then m else [ null ]
-    );
-    effectiveRemotePath =
-      if cfg.remotePath != null && remoteSshUser != null
-      then "env HOME=/home/${remoteSshUser} ${cfg.remotePath}"
-      else cfg.remotePath;
 
     # Self-contained restore verification: delete the live canary, recover it from
     # the newest archive, verify, and put it back. Reads the same /etc/wazuh/borg.conf
@@ -253,11 +242,12 @@ in
     environment.shellAliases =
       let
         borgEnvStr = concatStringsSep " " (filter (s: s != "") [
-          ''BORG_RSH="${pkgs.tailscale}/bin/tailscale ssh"''
+          (optionalString (cfg.sshKeyFile != null)
+            ''BORG_RSH="ssh -i ${cfg.sshKeyFile} -o StrictHostKeyChecking=accept-new"'')
           (optionalString (cfg.encryption.passphraseFile != null)
             ''BORG_PASSCOMMAND="cat ${cfg.encryption.passphraseFile}"'')
           (optionalString (cfg.remotePath != null)
-            ''BORG_REMOTE_PATH="${effectiveRemotePath}"'')
+            ''BORG_REMOTE_PATH=${cfg.remotePath}'')
         ]);
         borgCmd = op: "sudo env ${borgEnvStr} borg ${op} ${cfg.repository}";
       in {
@@ -365,25 +355,25 @@ in
         BORG_REPO="${cfg.repository}"
       '' + lib.optionalString (cfg.encryption.passphraseFile != null) ''
         BORG_PASSCOMMAND="cat ${cfg.encryption.passphraseFile}"
-      '' + ''
-        BORG_RSH="${pkgs.tailscale}/bin/tailscale ssh"
+      '' + lib.optionalString (cfg.sshKeyFile != null) ''
+        BORG_RSH="ssh -i ${cfg.sshKeyFile} -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=yes"
       '' + lib.optionalString (cfg.remotePath != null) ''
-        BORG_REMOTE_PATH="${effectiveRemotePath}"
+        BORG_REMOTE_PATH="${cfg.remotePath}"
       '';
     };
 
-    # NOTE: borg itself no longer uses OpenSSH directly for the nas01 repo — its
-    # BORG_RSH is "tailscale ssh" (below), which checks the destination's host key
-    # against Tailscale's coordination server rather than a static known_hosts
-    # pin, so a reinstall-driven key rotation (like the T330 migration) is picked
-    # up automatically with no manual re-pinning.
+    # Pin the backup server's host key declaratively so rebuilds are sufficient
+    # after a server reinstall — no manual ssh-keygen -R on each client. The
+    # borg job's ssh ignores per-user known_hosts (stale entries would
+    # otherwise fail the CHANGED-key check) and trusts only this pin. If nas01
+    # gets reinstalled, update the publicKey below and rebuild every client
+    # (tailscale-ssh's auto-rekey-detection was tried and reverted — see git
+    # history around 2026-08-23 — for less overall complexity, since Syncthing
+    # already provides a second, independent copy of critical data).
     #
-    # This pin still matters for *plain* ssh to nas01 — scripts/sync-nixos-hosts.sh
-    # and host-status.sh connect via regular `ssh scott@nas01`, not `tailscale
-    # ssh`, so they still rely on this. hostNames covers both the FQDN and the
-    # bare Tailscale MagicDNS short name those scripts use — the bare name was
-    # never covered by the FQDN-only pin (or any prior TOFU entry), so it failed
-    # BatchMode's strict check as an unrecognized host until this was added.
+    # hostNames covers both the FQDN and the bare Tailscale MagicDNS short
+    # name — scripts/sync-nixos-hosts.sh and host-status.sh connect via the
+    # bare "nas01", which isn't covered by an FQDN-only pin.
     programs.ssh.knownHosts."nas01.warthog-royal.ts.net" = {
       hostNames = [ "nas01.warthog-royal.ts.net" "nas01" ];
       publicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPIZPV9hUboOiTvvmg6KnrjxP1c9EfPMIKjwDJmEty3P";
@@ -420,17 +410,12 @@ in
           else null;
       };
       environment = mkMerge [
-        {
-          BORG_RELOCATED_REPO_ACCESS_IS_OK = "yes";
-          # Checks the destination's host key against Tailscale's coordination
-          # server instead of a static known_hosts pin — a reinstall-driven key
-          # rotation is picked up automatically, no manual re-pinning needed.
-          # Absolute store path: this unit's PATH is a curated closure that
-          # doesn't include tailscale.
-          BORG_RSH = "${pkgs.tailscale}/bin/tailscale ssh";
-        }
+        { BORG_RELOCATED_REPO_ACCESS_IS_OK = "yes"; }
+        (mkIf (cfg.sshKeyFile != null) {
+          BORG_RSH = "ssh -i ${cfg.sshKeyFile} -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=yes";
+        })
         (mkIf (cfg.remotePath != null) {
-          BORG_REMOTE_PATH = effectiveRemotePath;
+          BORG_REMOTE_PATH = cfg.remotePath;
         })
       ];
       compression = "auto,zstd";
@@ -486,6 +471,9 @@ in
 
     # Ship restore-test results to Wazuh by tailing its log (same mechanism as the
     # status probe's log on nas01). Merges with any host-level extraLocalFiles.
+    # Guarded on the option existing — hosts without wazuh-agent imported (e.g.
+    # OTworkstation) can still use borg-backup, they just skip Wazuh shipping.
+  } // optionalAttrs (options.services ? wazuh-agent) {
     services.wazuh-agent.extraLocalFiles = mkIf cfg.restoreTest.enable [
       { location = logFile; logFormat = "syslog"; }
     ];

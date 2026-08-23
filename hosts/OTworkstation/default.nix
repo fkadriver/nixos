@@ -71,6 +71,7 @@ let
       inputs.sops-nix.nixosModules.sops
       inputs.self.nixosModules.bitwarden
       inputs.self.nixosModules.bitwarden-scott
+      inputs.self.nixosModules.borg-backup
       inputs.self.nixosModules.common
       inputs.self.nixosModules.syncthing
       inputs.self.nixosModules.laptop-minimal
@@ -118,6 +119,14 @@ let
       networking.firewall.interfaces.eno1 = {
         allowedUDPPorts = [ 53 67 ];
         allowedTCPPorts = [ 53 ];
+      };
+
+      # Borg backup to nas01
+      services.borg-backup = {
+        enable = true;
+        repository = "ssh://scott@nas01.warthog-royal.ts.net/pool/borg/OTworkstation";
+        encryption.passphraseFile = "/run/bitwarden-secrets/borg_passphrase";
+        sshKeyFile = "/home/scott/.ssh/id_ed25519_legacy";
       };
 
       # SSH server — key-only auth

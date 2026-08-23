@@ -230,6 +230,7 @@ let
         repository = "ssh://scott@nas01.warthog-royal.ts.net/pool/borg/log01";
         paths = [ "/home" "/var/log" ];
         encryption.passphraseFile = "/run/bitwarden-secrets/borg_passphrase";
+        sshKeyFile = "/home/scott/.ssh/id_ed25519_legacy";
       };
 
       # Logrotate — 1 month retention for remote syslog collection
