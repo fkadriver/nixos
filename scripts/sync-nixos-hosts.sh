@@ -14,12 +14,16 @@
 # each reachable, clean host. Hosts that are behind origin prompt first.
 # Remote apply uses an interactive TTY so sudo prompts work.
 #
+# --host <name> limits the run to one or more hosts (repeat the flag or
+# pass a comma-separated list); names must be in the HOSTS array.
+#
 # Usage:
 #   ./scripts/sync-nixos-hosts.sh                       # status only
 #   ./scripts/sync-nixos-hosts.sh --sync                # status, then sync
 #   ./scripts/sync-nixos-hosts.sh --apply               # status, then apply
 #   ./scripts/sync-nixos-hosts.sh --sync --apply        # sync, then apply
 #   ./scripts/sync-nixos-hosts.sh --sync --apply --yes  # no prompts
+#   ./scripts/sync-nixos-hosts.sh --host vm01 --apply   # just one host
 #
 # Exit 0 if every reachable host ends in-sync (or check-only completes).
 # Exit 1 if any host was left out of sync (dirty tree, unreachable, or
@@ -46,15 +50,32 @@ declare -A FLAKE_CONFIG=(
 SYNC=false
 APPLY=false
 ASSUME_YES=false
-for arg in "$@"; do
-    case "$arg" in
+HOST_FILTER=()
+while [[ $# -gt 0 ]]; do
+    case "$1" in
         --sync) SYNC=true ;;
         --apply) APPLY=true ;;
         --yes|-y) ASSUME_YES=true ;;
-        -h|--help) sed -n '2,22p' "$0" | sed 's/^# \?//'; exit 0 ;;
-        *) echo "Unknown argument: $arg" >&2; exit 2 ;;
+        --host)
+            shift; [[ $# -gt 0 ]] || { echo "--host requires a hostname" >&2; exit 2; }
+            IFS=',' read -ra _hs <<<"$1"; HOST_FILTER+=("${_hs[@]}") ;;
+        --host=*)
+            IFS=',' read -ra _hs <<<"${1#--host=}"; HOST_FILTER+=("${_hs[@]}") ;;
+        -h|--help) sed -n '2,26p' "$0" | sed 's/^# \?//'; exit 0 ;;
+        *) echo "Unknown argument: $1" >&2; exit 2 ;;
     esac
+    shift
 done
+
+# Narrow HOSTS to --host selections, validating each against the full list.
+if [[ ${#HOST_FILTER[@]} -gt 0 ]]; then
+    declare -A _known=()
+    for h in "${HOSTS[@]}"; do _known[$h]=1; done
+    for h in "${HOST_FILTER[@]}"; do
+        [[ -n "${_known[$h]:-}" ]] || { echo "Unknown host: $h (not in HOSTS: ${HOSTS[*]})" >&2; exit 2; }
+    done
+    HOSTS=("${HOST_FILTER[@]}")
+fi
 
 CURRENT_HOST="$(hostname -s | tr '[:upper:]' '[:lower:]')"
 
