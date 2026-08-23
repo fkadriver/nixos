@@ -152,6 +152,23 @@ in
     canaryDir  = builtins.dirOf canaryFile;
     logFile    = cfg.restoreTest.logFile;
 
+    # Tailscale SSH's non-interactive exec path (used for "borg serve" over
+    # BORG_RSH="tailscale ssh") doesn't reliably set HOME the way a real login
+    # shell / OpenSSH session does (tailscale/tailscale#9368, #12080, #16711) —
+    # borg then aborts remotely with "neither XDG_CONFIG_HOME nor HOME are
+    # defined". `env` is a real binary (not a shell builtin), so prefixing the
+    # remote executable with it works whether or not the far end runs the
+    # command through a shell. Only applies to ssh:// repos with a user@ — the
+    # local nas01 repo doesn't go over BORG_RSH at all.
+    remoteSshUser = builtins.head (
+      let m = builtins.match "ssh://([^@]+)@.*" cfg.repository;
+      in if m != null then m else [ null ]
+    );
+    effectiveRemotePath =
+      if cfg.remotePath != null && remoteSshUser != null
+      then "env HOME=/home/${remoteSshUser} ${cfg.remotePath}"
+      else cfg.remotePath;
+
     # Self-contained restore verification: delete the live canary, recover it from
     # the newest archive, verify, and put it back. Reads the same /etc/wazuh/borg.conf
     # the status probe uses (BORG_REPO/PASSCOMMAND/RSH/REMOTE_PATH). Never exits
@@ -240,7 +257,7 @@ in
           (optionalString (cfg.encryption.passphraseFile != null)
             ''BORG_PASSCOMMAND="cat ${cfg.encryption.passphraseFile}"'')
           (optionalString (cfg.remotePath != null)
-            ''BORG_REMOTE_PATH=${cfg.remotePath}'')
+            ''BORG_REMOTE_PATH="${effectiveRemotePath}"'')
         ]);
         borgCmd = op: "sudo env ${borgEnvStr} borg ${op} ${cfg.repository}";
       in {
@@ -347,7 +364,7 @@ in
       '' + ''
         BORG_RSH="${pkgs.tailscale}/bin/tailscale ssh"
       '' + lib.optionalString (cfg.remotePath != null) ''
-        BORG_REMOTE_PATH="${cfg.remotePath}"
+        BORG_REMOTE_PATH="${effectiveRemotePath}"
       '';
     };
 
@@ -409,7 +426,7 @@ in
           BORG_RSH = "${pkgs.tailscale}/bin/tailscale ssh";
         }
         (mkIf (cfg.remotePath != null) {
-          BORG_REMOTE_PATH = cfg.remotePath;
+          BORG_REMOTE_PATH = effectiveRemotePath;
         })
       ];
       compression = "auto,zstd";
