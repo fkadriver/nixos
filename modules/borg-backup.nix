@@ -265,6 +265,10 @@ in
         borg-logs   = "sudo journalctl -u borgbackup-job-system.service -n 50";
         borg-timer  = "systemctl list-timers | grep borg";
         borg-run    = "sudo systemctl start borgbackup-job-system.service";
+        # One-shot test: runs the same read-only status probe Wazuh polls hourly
+        # (checks the repo is reachable and the last archive isn't stale) and
+        # prints the result immediately instead of waiting for the next check-in.
+        borg-test   = "sudo /usr/local/bin/wazuh-borg-status";
         borg-list   = borgCmd "list";
         borg-info   = borgCmd "info";
         borg-check  = borgCmd "check";
