@@ -371,10 +371,12 @@ in
     # history around 2026-08-23 — for less overall complexity, since Syncthing
     # already provides a second, independent copy of critical data).
     #
-    # hostNames covers both the FQDN and the bare Tailscale MagicDNS short
-    # name — scripts/sync-nixos-hosts.sh connects via the bare "nas01", which
-    # isn't covered by an FQDN-only pin. (host-status.sh now uses `tailscale
-    # ssh` and no longer depends on this pin.)
+    # Only the borg job's plain OpenSSH relies on this pin now, and it connects
+    # via the FQDN (ssh://scott@nas01.warthog-royal.ts.net/...). The helper
+    # scripts (host-status.sh, sync-nixos-hosts.sh) all use `tailscale ssh`,
+    # which verifies keys via Tailscale's coordination server and doesn't touch
+    # known_hosts at all. The bare "nas01" hostName is kept as a harmless alias
+    # in case anything is ever pointed at the short name.
     programs.ssh.knownHosts."nas01.warthog-royal.ts.net" = {
       hostNames = [ "nas01.warthog-royal.ts.net" "nas01" ];
       publicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPIZPV9hUboOiTvvmg6KnrjxP1c9EfPMIKjwDJmEty3P";

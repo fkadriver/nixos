@@ -58,13 +58,19 @@ done
 
 CURRENT_HOST="$(hostname -s | tr '[:upper:]' '[:lower:]')"
 
-# Runs a shell snippet on $host, either locally or via SSH (BatchMode).
+# Runs a shell snippet on $host, either locally or via Tailscale SSH.
+#
+# `tailscale ssh` (rather than plain ssh) lets these checks run from anywhere
+# on the tailnet — e.g. either daily driver while on the road — and verifies
+# host keys via the Tailscale coordination server instead of local known_hosts.
+# It's a wrapper around the system ssh: any ssh options must come *after* the
+# host, where tailscale forwards them to the underlying ssh command.
 run_on() {
     local host="$1"; shift
     if [[ "$host" == "$CURRENT_HOST" ]]; then
         bash -c "$*"
     else
-        ssh "${SSH_OPTS[@]}" "scott@${host}" "$*"
+        tailscale ssh "scott@${host}" "${SSH_OPTS[@]}" "$*"
     fi
 }
 
@@ -74,7 +80,7 @@ run_on_tty() {
     if [[ "$host" == "$CURRENT_HOST" ]]; then
         bash -c "$*"
     else
-        ssh -t -o ConnectTimeout=5 "scott@${host}" "$*"
+        tailscale ssh "scott@${host}" -t -o ConnectTimeout=5 "$*"
     fi
 }
 
