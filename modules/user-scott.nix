@@ -62,6 +62,15 @@
       }
     ];
 
+    # Pin GitHub's SSH host key declaratively so `git push`/`git fetch` over SSH
+    # works on hosts (e.g. nas01) that have never manually accepted it into
+    # ~/.ssh/known_hosts. Key verified against GitHub's published ed25519
+    # fingerprint (SHA256:+DiY3wvvV6TuJJhbpZisF/zLDA0zPMSvHdkr4UvCOqU).
+    programs.ssh.knownHosts.github-com = {
+      hostNames = [ "github.com" ];
+      publicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl";
+    };
+
     # SSH configuration (agent started by desktop environment)
     programs.ssh = {
       extraConfig = ''
