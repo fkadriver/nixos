@@ -245,7 +245,11 @@ in
         ExecStart = syncScript;
         RemainAfterExit = true;
         RuntimeDirectory = "bitwarden-secrets";
-        RuntimeDirectoryMode = "0700";
+        # Execute-only for "other" so non-root consumers named via a secret's
+        # `owner` (e.g. syncthing-gui-auth running as scott) can open a file
+        # they were individually chown'd/chmod'd for. Traversal doesn't grant
+        # listing (no read bit) or access to files still owned root:0400.
+        RuntimeDirectoryMode = "0711";
         CacheDirectory = "bitwarden-cli";
         CacheDirectoryMode = "0700";
         Environment = "HOME=/var/cache/bitwarden-cli";
