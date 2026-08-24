@@ -236,7 +236,8 @@ in
         emit "status=ERROR repo=$REPO archive=$LAST verify=mismatch"
       fi
     '';
-   in {
+   in
+   lib.recursiveUpdate {
     environment.systemPackages = with pkgs; [ borgbackup ];
 
     environment.shellAliases =
@@ -476,9 +477,14 @@ in
     # status probe's log on nas01). Merges with any host-level extraLocalFiles.
     # Guarded on the option existing — hosts without wazuh-agent imported (e.g.
     # OTworkstation) can still use borg-backup, they just skip Wazuh shipping.
-  } // optionalAttrs (options.services ? wazuh-agent) {
+  } (optionalAttrs (options.services ? wazuh-agent) {
+    # `//` here would shallow-clobber the whole `services` key from the
+    # attrset above (wiping services.borgbackup.jobs."system" on every host
+    # with wazuh-agent imported — confirmed broke nightly backups fleet-wide
+    # for two days, 2026-08-23/24). lib.recursiveUpdate merges nested keys
+    # instead of replacing the top-level attribute wholesale.
     services.wazuh-agent.extraLocalFiles = mkIf cfg.restoreTest.enable [
       { location = logFile; logFormat = "syslog"; }
     ];
-   });
+   }));
 }
