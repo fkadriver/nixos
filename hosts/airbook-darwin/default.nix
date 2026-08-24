@@ -808,13 +808,26 @@ wazuh_command.remote_commands=1'
       # activation needed. (Only the brew tailscaled required the workaround.)
     ];
 
+    # Pin nas01's SSH host key declaratively — same rationale as
+    # modules/borg-backup.nix on the NixOS clients: `accept-new` only trusts an
+    # *unknown* host, it does not override a *changed* one, so a stale entry in
+    # ~/.ssh/known_hosts from before a nas01 reinstall silently blocks every ssh
+    # attempt (no auth is ever attempted, so nothing shows up in nas01's sshd
+    # log either — confirmed the cause of a week-long airbook-darwin backup gap
+    # after the 2026-08-20 nas01 T330 reinstall). Pointing BORG_RSH at this
+    # static, root-owned file instead of the user's mutable known_hosts means a
+    # future nas01 reinstall only needs the publicKey below updated + rebuild,
+    # no manual `ssh-keygen -R` on airbook.
+    environment.etc."ssh/nas01_known_hosts".text =
+      "nas01.warthog-royal.ts.net,nas01 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPIZPV9hUboOiTvvmg6KnrjxP1c9EfPMIKjwDJmEty3P\n";
+
     # Wazuh borg-status telemetry — repo/env for the status probe. Declarative so
     # `darwin-rebuild switch` reproduces the same config on any fresh install.
     environment.etc."wazuh/borg.conf" = {
       text = ''
         BORG_REPO="ssh://scott@nas01.warthog-royal.ts.net/pool/borg/airbook-darwin"
         BORG_PASSCOMMAND="cat /etc/wazuh/borg.pass"
-        BORG_RSH="ssh -i /Users/scott/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new"
+        BORG_RSH="ssh -i /Users/scott/.ssh/id_ed25519_legacy -o UserKnownHostsFile=/etc/ssh/nas01_known_hosts -o StrictHostKeyChecking=yes"
         BORG_REMOTE_PATH=/run/current-system/sw/bin/borg
       '';
     };
@@ -869,7 +882,8 @@ wazuh_command.remote_commands=1'
           # kernel-level probes. Repeat drops on the first ~35GB upload to nas01 traced
           # back to the connection dying with no sshd log on either end.
           export BORG_RSH="${pkgs.openssh}/bin/ssh -i /Users/scott/.ssh/id_ed25519_legacy \
-            -o StrictHostKeyChecking=accept-new \
+            -o UserKnownHostsFile=/etc/ssh/nas01_known_hosts \
+            -o StrictHostKeyChecking=yes \
             -o ServerAliveInterval=30 \
             -o ServerAliveCountMax=6 \
             -o TCPKeepAlive=yes"
