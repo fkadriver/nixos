@@ -63,9 +63,13 @@
     <console type='pty'>
       <target type='serial' port='0'/>
     </console>
-    <!-- VNC bound to localhost; access via SSH tunnel or from nas01 RDP session -->
-    <graphics type='vnc' port='-1' autoport='yes' listen='127.0.0.1'>
-      <listen type='address' address='127.0.0.1'/>
+    <!-- VNC bound to nas01's tailscale IP only. No VNC password: tailscale0 is a
+         trustedInterfaces entry (modules/tailscale.nix), so reachability is already
+         gated by tailnet membership — matches the in-guest x11vnc's security model,
+         which relies on a password since it listens on the guest's tailscale IP
+         directly rather than the host's. -->
+    <graphics type='vnc' port='-1' autoport='yes' listen='100.73.114.76'>
+      <listen type='address' address='100.73.114.76'/>
     </graphics>
     <video>
       <model type='virtio' heads='1' primary='yes'/>

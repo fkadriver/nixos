@@ -9,13 +9,20 @@
 #   4. Defines the VM in libvirt and starts it
 #
 # After cloud-init completes (~5 min): the VM joins the tailnet as its own node
-# (MagicDNS: nas01-backup), so it's reachable directly from any tailnet machine —
-# no jump host and no SSH tunnel needed (x11vnc binds 0.0.0.0:5901):
+# (MagicDNS: nas01-backup), so SSH is reachable directly from any tailnet machine:
 #   - SSH:  ssh scott@nas01-backup.warthog-royal.ts.net
-#   - VNC:  point a viewer at nas01-backup.warthog-royal.ts.net::5901
-#           From nas01 itself, the `idrive-vnc` alias does the NAT-IP equivalent
-#           (vncviewer <VM-NAT-IP>:5901); the NAT IP is only routable on nas01.
-#   Default password for both SSH and VNC: changeme  — change it after first login.
+#
+# Graphical console: lightdm auto-logs scott into LXDE on :0 at boot (no password —
+# scott is in the nopasswdlogin group), which is what keeps IDrive360's GUI running
+# unattended. Reach that desktop via QEMU's own console VNC, exposed on nas01's
+# tailscale IP (see hosts/nas01/nas01-backup-domain.xml's <graphics> listen address
+# and default.nix's `idrive-console-vnc` alias) — not from inside this VM at all.
+# There is deliberately no in-guest VNC server (x11vnc/Xvfb) anymore: it duplicated
+# the console, ran outside logind's seat management, and caused a PolicyKit
+# "No session for pid" failure mode. See git history around 2026-08-24 for the
+# full incident if this ever needs re-deriving.
+#   Account password (SSH fallback only — console login needs none): changeme
+#   — change with `passwd` after first login.
 #
 # To install IDrive360 inside the VM after it's up:
 #   1. Copy the DEB into the VM: scp -o ProxyJump=nas01 /path/to/IDrive360_*.deb scott@<VM-IP>:
@@ -86,7 +93,7 @@ ssh_pwauth: true
 users:
   - name: scott
     uid: 1000
-    groups: [sudo, adm]
+    groups: [sudo, adm, nopasswdlogin]
     sudo: 'ALL=(ALL) NOPASSWD:ALL'
     shell: /bin/bash
     lock_passwd: false
@@ -97,8 +104,6 @@ users:
 packages:
   - lxde-core
   - lxterminal
-  - x11vnc
-  - xvfb
   - dbus-x11
   - curl
   - wget
@@ -110,40 +115,18 @@ write_files:
     content: |
       virtiofs
 
-  # Desktop session + VNC startup script
-  - path: /usr/local/bin/start-vnc-desktop
-    permissions: '0755'
+  # Auto-login scott into LXDE on the real console (:0) at boot — this is what
+  # keeps IDrive360's GUI running unattended, viewed via QEMU's own console VNC
+  # (bound to nas01's tailscale IP; see nas01-backup-domain.xml) rather than a
+  # second in-guest VNC server. No password: scott is in the nopasswdlogin group,
+  # so lightdm's PAM stack (pam_succeed_if.so user ingroup nopasswdlogin) skips
+  # the prompt for both autologin and any later manual re-login at the greeter.
+  - path: /etc/lightdm/lightdm.conf.d/50-autologin.conf
     content: |
-      #!/bin/bash
-      pkill Xvfb 2>/dev/null || true
-      rm -f /tmp/.X1-lock /tmp/.X11-unix/X1
-      sleep 1
-
-      Xvfb :1 -screen 0 1280x800x16 -nolisten tcp &
-      sleep 2
-
-      export DISPLAY=:1
-      xset s off 2>/dev/null || true
-      xset s noblank 2>/dev/null || true
-      dbus-launch --exit-with-session startlxde &
-      sleep 3
-
-      exec x11vnc -display :1 -forever -rfbport 5901 -usepw -shared
-
-  - path: /etc/systemd/system/vnc-desktop.service
-    content: |
-      [Unit]
-      Description=LXDE desktop session with VNC
-      After=network.target
-
-      [Service]
-      User=scott
-      ExecStart=/usr/local/bin/start-vnc-desktop
-      Restart=on-failure
-      RestartSec=10
-
-      [Install]
-      WantedBy=multi-user.target
+      [Seat:*]
+      autologin-user=scott
+      autologin-user-timeout=0
+      autologin-session=LXDE
 
   # Wazuh visibility for IDrive360's backup status (never touches the
   # IDrive360 install itself — read-only).
@@ -248,19 +231,11 @@ runcmd:
   - mkdir -p /etc/xdg/autostart
   - printf '[Desktop Entry]\nHidden=true\n' > /etc/xdg/autostart/light-locker.desktop
 
-  # VNC password (change after first login with: vncpasswd)
-  - mkdir -p /home/scott/.vnc
-  - chown 1000:1000 /home/scott/.vnc
-  - su - scott -c "x11vnc -storepasswd changeme ~/.vnc/passwd"
-  - chmod 600 /home/scott/.vnc/passwd
-  - chown 1000:1000 /home/scott/.vnc/passwd
-
   # Enable services
   - systemctl daemon-reload
-  - systemctl enable vnc-desktop.service
   - systemctl enable qemu-guest-agent.service
   - systemctl start qemu-guest-agent.service
-  - systemctl start vnc-desktop.service
+  - systemctl restart lightdm
 
   # Wazuh agent (monitoring for this VM / IDrive360). Installs and points at
   # the manager, but does NOT enroll — that needs the enrollment password,
@@ -317,10 +292,10 @@ if [ -n "$VM_IP" ]; then
     echo "  VM NAT IP: $VM_IP  (only routable on nas01)"
 fi
 echo "  Reach it directly over the tailnet (VM is its own node, MagicDNS: nas01-backup):"
-echo "  SSH:   ssh scott@nas01-backup.warthog-royal.ts.net"
-echo "  VNC:   point a viewer at nas01-backup.warthog-royal.ts.net::5901"
-echo "         From nas01 itself:  idrive-vnc   (vncviewer <VM-NAT-IP>:5901)"
-echo "  Default password (SSH + VNC): changeme  — change with passwd / vncpasswd"
+echo "  SSH:      ssh scott@nas01-backup.warthog-royal.ts.net"
+echo "  Console:  idrive-console-vnc   (QEMU's own console VNC, on nas01's tailscale"
+echo "            IP — scott auto-logs into LXDE, no password needed)"
+echo "  SSH password fallback: changeme  — change with passwd"
 echo ""
 echo "To install IDrive360:"
 echo "  1. Get the DEB download link from the IDrive360 web console"

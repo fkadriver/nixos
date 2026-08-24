@@ -21,19 +21,25 @@ idrive-ssh          # alias: ssh scott@$(virsh domifaddr nas01-backup | awk '/ip
 idrive-console
 
 # VM status / power
-idrive-status       # virsh domstate nas01-backup
+idrive-status       # virsh domstate nas01-backup --reason
 idrive-start        # sudo virsh start nas01-backup
 idrive-stop         # sudo virsh shutdown nas01-backup
 ```
 
-VNC from a remote Tailscale machine (e.g. Remmina):
+Graphical console from any Tailscale machine (TigerVNC, Remmina, etc. — no
+tunnel needed, no password):
 ```bash
-# On the remote machine, open an SSH tunnel (keep this terminal open):
-ssh -L 5901:192.168.122.54:5901 -N scott@nas01.warthog-royal.ts.net
-
-# Connect Remmina to localhost:5901, password: changeme
-# Disable Remmina's built-in SSH tunnel (Tailscale SSH is incompatible with libssh)
+idrive-console-vnc   # alias: vncviewer nas01.warthog-royal.ts.net:5900
 ```
+This is QEMU's own console VNC (the guest's actual virtual monitor), bound to
+nas01's tailscale IP — reachability is gated by tailnet membership, same as
+everything else in the fleet. scott auto-logs into LXDE at boot (no password:
+scott is in the `nopasswdlogin` group), which is what keeps the IDrive360 GUI
+running unattended. There is deliberately no in-guest VNC server (x11vnc/Xvfb)
+anymore — an earlier design ran one on port 5901 as a second, separate
+desktop session outside logind's seat management, which caused a PolicyKit
+"No session for pid" failure mode. See git history around 2026-08-24 if this
+ever needs re-deriving.
 
 ---
 
@@ -70,8 +76,8 @@ just `/home`.
 The IDrive360 GUI client already autostarts on login — the vendor's `.deb`
 installer drops `~/.config/autostart/idrive360client.desktop`
 (`idrive360-client --hidden`), which LXDE runs automatically every time
-`vnc-desktop.service` (re)starts the desktop session. No changes needed
-there; confirmed running via `ps aux | grep idrive360-client`.
+scott's console session (auto-)starts. No changes needed there; confirmed
+running via `ps aux | grep idrive360-client`.
 
 ---
 

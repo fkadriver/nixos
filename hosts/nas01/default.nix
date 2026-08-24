@@ -84,15 +84,20 @@ let
 
           # IDrive360 — nas01-backup VM (Ubuntu 24.04 / QEMU/KVM)
           # VMs live in qemu:///system; LIBVIRT_DEFAULT_URI is set in initExtra below.
-          idrive-status   = "virsh domstate nas01-backup";
+          idrive-status   = "virsh domstate nas01-backup --reason";
           idrive-ip       = "virsh domifaddr nas01-backup";
           idrive-start    = "sudo virsh start nas01-backup";
           idrive-stop     = "sudo virsh shutdown nas01-backup";
           idrive-ssh      = ''ssh scott@$(virsh domifaddr nas01-backup | awk '/ipv4/{print $4}' | cut -d/ -f1)'';
-          # VNC is on the VM's NAT IP (192.168.122.x:5901), not nas01 localhost.
-          # From laptop: configure Remmina with Server=192.168.122.54:5901, SSH tunnel=nas01
-          idrive-vnc      = ''vncviewer $(virsh domifaddr nas01-backup | awk '/ipv4/{print $4}' | cut -d/ -f1):5901'';
           idrive-console  = "sudo virsh console nas01-backup";
+          # QEMU's graphical console (the guest's actual virtual monitor / lightdm
+          # session, which auto-logs scott into LXDE at boot — no in-guest VNC
+          # server anymore, that duplicate session caused PolicyKit "No session
+          # for pid" failures). Reachable directly over tailscale (no SSH tunnel):
+          # listen is nas01's own tailscale IP, gated by tailscale0 being a
+          # trustedInterfaces entry. Any tailnet device with a VNC viewer
+          # (TigerVNC, Remmina, ...) can point straight at this address.
+          idrive-console-vnc = "vncviewer nas01.warthog-royal.ts.net:5900";
           # Restart the IDrive360 agent service inside the VM (over the tailnet —
           # the VM is its own tailnet node, same path latitude/airbook use).
           idrive-restart  = "ssh scott@nas01-backup.warthog-royal.ts.net sudo systemctl restart idrive360cron";
@@ -185,8 +190,6 @@ let
         enable = true;
         settings.PasswordAuthentication = false;
       };
-
-      security.sudo.wheelNeedsPassword = false;
 
       # Samba: data share + read-only borg repo browsing
       # (borg clients back up via SSH, not SMB)
