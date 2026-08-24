@@ -468,7 +468,10 @@ QEMU/KVM VM named `nas01-backup` instead of a Docker container.
 
 - **VM disk**: `/var/lib/libvirt/images/nas01-backup.qcow2` (20 GB, persists across reboots)
 - **Data access**: `/pool` and `/mnt` mounted via virtiofs into the VM
-- **Desktop**: LXDE + x11vnc on port 5901 (bound to VM NAT IP, not nas01 localhost)
+- **Desktop**: LXDE on the guest's real console (`:0`), lightdm auto-logs in
+  scott at boot with no password (`nopasswdlogin` group) — reached via QEMU's
+  own console VNC, bound to nas01's tailscale IP (`idrive-console-vnc` alias),
+  not an in-guest VNC server
 - **VM definition**: `hosts/nas01/nas01-backup-domain.xml` deployed to `/etc/nas01-backup/domain.xml`
 - **Setup script**: `hosts/nas01/nas01-backup-setup.sh` deployed to `/etc/nas01-backup/setup.sh`
 
@@ -479,12 +482,13 @@ sudo bash /etc/nas01-backup/setup.sh
 
 Useful aliases (available in scott's shell on nas01):
 ```bash
-idrive-status    # virsh domstate nas01-backup
-idrive-start     # sudo virsh start nas01-backup
-idrive-stop      # sudo virsh shutdown nas01-backup
-idrive-ssh       # ssh directly into the VM
-idrive-console   # serial console (Ctrl+] to exit)
-idrive-restart   # restart the idrive360cron service inside the VM (also on latitude, airbook-darwin)
+idrive-status       # virsh domstate nas01-backup --reason
+idrive-start        # sudo virsh start nas01-backup
+idrive-stop         # sudo virsh shutdown nas01-backup
+idrive-ssh          # ssh directly into the VM
+idrive-console      # serial console (Ctrl+] to exit)
+idrive-console-vnc  # graphical console (QEMU's own console VNC, tailscale-reachable, no password)
+idrive-restart      # restart the idrive360cron service inside the VM (also on latitude, airbook-darwin)
 ```
 
 ### Monitoring (Wazuh agent inside the VM)
@@ -587,14 +591,18 @@ idrive-vm-restore  # sudo bash /etc/nas01-backup/vm-restore.sh — restore + sta
 Full disaster-recovery use of `vm-restore.sh` is covered in
 [Disaster Recovery](#disaster-recovery--os-ssd-sda-failure) above.
 
-VNC access from a remote machine (e.g. Remmina on Tailscale):
+Graphical console access from any Tailscale machine (TigerVNC, Remmina, etc.
+— no SSH tunnel, no password):
 ```bash
-# Open SSH tunnel on the remote machine (keep open while using VNC):
-ssh -L 5901:192.168.122.54:5901 -N scott@nas01.warthog-royal.ts.net
-
-# Connect Remmina to localhost:5901, password: changeme
-# (disable Remmina's built-in SSH tunnel — Tailscale SSH is incompatible with libssh)
+idrive-console-vnc   # alias: vncviewer nas01.warthog-royal.ts.net:5900
 ```
+This is QEMU's own console VNC (the guest's actual virtual monitor, bound to
+nas01's tailscale IP — see `<graphics>` in `nas01-backup-domain.xml`), not an
+in-guest VNC server. scott auto-logs into LXDE at boot with no password
+(`nopasswdlogin` group), which is what keeps the IDrive360 GUI running
+unattended. An earlier design ran a second, in-guest VNC server (x11vnc on
+port 5901) as its own desktop session outside logind's seat management,
+which caused PolicyKit "No session for pid" failures — removed 2026-08-24.
 
 Manage backups via the [IDrive360 web console](https://www.idrive360.com/enterprise/login).
 See [idrive360.md](idrive360.md) for CLI reference (commands run inside the VM).
