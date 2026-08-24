@@ -3,6 +3,9 @@
     enable = true;
     deviceName = "nas01";
 
+    guiUser = "syncthing";
+    guiPasswordFile = "/run/bitwarden-secrets/syncthing_gui_password";
+
     folders = {
       Documents = {
         path = "/pool/syncthing/Documents";

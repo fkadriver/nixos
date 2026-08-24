@@ -103,9 +103,32 @@ in
         }
       '';
     };
+
+    guiUser = mkOption {
+      type = types.nullOr types.str;
+      default = null;
+      description = "Username for Syncthing GUI/API basic-auth login. Only gates direct browser access to the web GUI — API-key auth (used by syncthingtray) bypasses it.";
+    };
+
+    guiPasswordFile = mkOption {
+      type = types.nullOr types.path;
+      default = null;
+      description = ''
+        Path to a runtime-deployed file (sops-nix or Bitwarden secrets — never
+        a literal string) containing the plaintext GUI password. Applied to
+        Syncthing's REST API at boot by a oneshot service, so the password
+        itself never lands in the Nix store.
+      '';
+    };
   };
 
   config = mkIf cfg.enable {
+    assertions = [
+      {
+        assertion = (cfg.guiPasswordFile != null) -> (cfg.guiUser != null);
+        message = "services.syncthing-declarative.guiUser must be set when guiPasswordFile is set";
+      }
+    ];
     # Basic Syncthing service
     services.syncthing = {
       enable = true;
@@ -158,6 +181,51 @@ in
     # Ensure syncthing user can access home directory
     systemd.services.syncthing.serviceConfig = {
       UMask = "0077";
+    };
+
+    # Sets GUI basic-auth credentials via the REST API rather than
+    # settings.gui.{user,password} — that path would bake the plaintext
+    # password into the world-readable Nix store (the update script that
+    # applies settings.* embeds the JSON verbatim in a generated unit file).
+    systemd.services.syncthing-gui-auth = mkIf (cfg.guiPasswordFile != null) {
+      description = "Set Syncthing GUI/API basic-auth credentials";
+      after = [ "syncthing.service" "bitwarden-secrets-sync.service" ];
+      wants = [ "syncthing.service" ];
+      wantedBy = [ "multi-user.target" ];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        User = "scott";
+      };
+      script = ''
+        set -euo pipefail
+
+        API_KEY=""
+        for i in $(seq 1 30); do
+          API_KEY=$(${pkgs.libxml2}/bin/xmllint --xpath 'string(configuration/gui/apikey)' \
+            "${config.services.syncthing.configDir}/config.xml" 2>/dev/null || true)
+          [ -n "$API_KEY" ] && break
+          sleep 1
+        done
+        if [ -z "$API_KEY" ]; then
+          echo "syncthing-gui-auth: could not read API key from config.xml" >&2
+          exit 1
+        fi
+
+        PASSWORD=$(cat ${cfg.guiPasswordFile})
+        BODY=$(${pkgs.jq}/bin/jq -n --arg user "${cfg.guiUser}" --arg password "$PASSWORD" \
+          '{user: $user, password: $password}')
+
+        ${pkgs.curl}/bin/curl -sSf -X PUT -H "X-API-Key: $API_KEY" -H "Content-Type: application/json" \
+          -d "$BODY" "http://127.0.0.1:8384/rest/config/gui" >/dev/null
+
+        if ${pkgs.curl}/bin/curl -sSf -H "X-API-Key: $API_KEY" \
+            "http://127.0.0.1:8384/rest/config/restart-required" \
+            | ${pkgs.jq}/bin/jq -e .requiresRestart >/dev/null 2>&1; then
+          ${pkgs.curl}/bin/curl -sSf -X POST -H "X-API-Key: $API_KEY" \
+            "http://127.0.0.1:8384/rest/system/restart" >/dev/null
+        fi
+      '';
     };
   };
 }

@@ -140,6 +140,17 @@ let
       # Syncthing GUI reachable over Tailscale (firewall restricts 8384 to tailscale0)
       services.syncthing.guiAddress = lib.mkForce "0.0.0.0:8384";
 
+      # Syncthing GUI basic-auth (browser login only — syncthingtray's API-key
+      # access on latitude/airbook is unaffected). Password lives in Bitwarden
+      # ("syncthing" item), not the Nix store — see syncthing-declarative.nix.
+      services.bitwarden.secrets.syncthing_gui_password = {
+        name = "syncthing_gui_password";
+        itemId = "0a30616d-a1dc-458b-bfd9-b4b001113d39";  # BW_Name: syncthing
+        field = "password";
+        mode = "0400";
+        owner = "scott";
+      };
+
       # ZFS: pool "pool" (raidz1, 3x HGST 4TB) created on Ubuntu, re-imported here.
       # First boot after reinstall needs a manual `zpool import -f pool`.
       boot.supportedFilesystems = [ "zfs" ];
