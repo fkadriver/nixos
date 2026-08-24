@@ -74,10 +74,18 @@ backed up nightly (see [nas01.md](nas01.md#vm-disk-backup-and-restore)), not
 just `/home`.
 
 The IDrive360 GUI client already autostarts on login — the vendor's `.deb`
-installer drops `~/.config/autostart/idrive360client.desktop`
-(`idrive360-client --hidden`), which LXDE runs automatically every time
-scott's console session (auto-)starts. No changes needed there; confirmed
-running via `ps aux | grep idrive360-client`.
+installer drops `~/.config/autostart/idrive360client.desktop`, which LXDE
+runs automatically every time scott's console session (auto-)starts.
+
+**Manually edited (2026-08-24)**: removed `--hidden` from that file's `Exec=`
+line (originally `idrive360-client --hidden`). Since this VM's only purpose
+is running IDrive360, there's no reason to hide the window — the console
+(`idrive-console-vnc`) is only ever opened to look at this app. This is a
+vendor-installed file, not managed by `nas01-backup-setup.sh`, so it won't
+survive a fresh install from that script — only a full disk restore (see
+[nas01.md](nas01.md#vm-disk-backup-and-restore)) preserves it. If IDrive360
+is ever reinstalled from scratch, redo this by editing
+`~/.config/autostart/idrive360client.desktop` to drop `--hidden`.
 
 ---
 
