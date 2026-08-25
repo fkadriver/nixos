@@ -164,6 +164,17 @@ let
       # sensor/SEL/power access via ipmitool.
       boot.kernelModules = [ "ipmi_si" "ipmi_devintf" "ipmi_msghandler" ];
 
+      # iDRAC8's virtual console went "No Signal" partway through boot.
+      # journalctl -k showed the kernel starting on the EFI GOP framebuffer
+      # (simpledrm) then, ~1min later, mgag200 (the Matrox G200 chip iDRAC
+      # itself uses for KVM/video capture) taking over and doing its own
+      # modeset — a mode iDRAC's video-capture engine doesn't sync to
+      # reliably. Blacklisting mgag200 keeps simpledrm driving the console
+      # for the whole boot instead, which iDRAC displays fine (SSH/racadm
+      # were unaffected either way — this is a physical/remote-KVM-only
+      # symptom).
+      boot.blacklistedKernelModules = [ "mgag200" ];
+
       # ZFS: pool "pool" (raidz1, 3x HGST 4TB) created on Ubuntu, re-imported here.
       # First boot after reinstall needs a manual `zpool import -f pool`.
       boot.supportedFilesystems = [ "zfs" ];
