@@ -403,6 +403,13 @@ let
         # managed-save on host shutdown leaves an unrestorable image (SIGPIPE on
         # resume). ACPI-shutdown the guest instead so it always cold boots.
         onShutdown = "shutdown";
+        # Default is 300s. 2026-08-25: nas01-backup's guest agent didn't
+        # respond to a shutdown request and the host sat waiting most of
+        # the way to the full 5 minutes (looked hung, got power-cycled via
+        # iDRAC before the timeout would've expired on its own). The guest
+        # already tolerates an ungraceful stop by design (comment above),
+        # so there's no reason to wait that long before giving up.
+        shutdownTimeout = 60;
       };
       # VM definition and setup script deployed to /etc/nas01-backup/
       environment.etc."nas01-backup/domain.xml" = {
