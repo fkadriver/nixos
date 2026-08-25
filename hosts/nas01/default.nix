@@ -156,6 +156,14 @@ let
         owner = "scott";
       };
 
+      # In-band IPMI to the iDRAC8's management controller. Dell's iDRAC
+      # Service Module (iSM) has no NixOS package (RPM/DEB-only, bundles a
+      # kernel module built against specific distro kernels), so this
+      # doesn't clear iDRAC's RAC0690 "Service Module not installed"
+      # message or give in-band update/OS-name reporting — just local
+      # sensor/SEL/power access via ipmitool.
+      boot.kernelModules = [ "ipmi_si" "ipmi_devintf" "ipmi_msghandler" ];
+
       # ZFS: pool "pool" (raidz1, 3x HGST 4TB) created on Ubuntu, re-imported here.
       # First boot after reinstall needs a manual `zpool import -f pool`.
       boot.supportedFilesystems = [ "zfs" ];
@@ -257,6 +265,7 @@ let
         hd-idle
         zfs
         ethtool
+        ipmitool
         # Remote desktop session
         openbox
         firefox
