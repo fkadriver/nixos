@@ -117,8 +117,13 @@ let
       exit 1
     fi
 
+    # $SECRETS_DIR is systemd's RuntimeDirectory; it already exists with
+    # RuntimeDirectoryMode = "0711" set on the service. Don't chmod it here —
+    # that would clobber the 0711 needed for non-root secret owners (e.g.
+    # syncthing-gui-auth running as scott) to traverse in and open their
+    # individually chown'd/chmod'd secret file. mkdir -p is kept as a
+    # harmless no-op defensive fallback.
     mkdir -p "$SECRETS_DIR"
-    chmod 700 "$SECRETS_DIR"
 
     ${bwServeHelper} "$CLIENT_ID_FILE" "$CLIENT_SECRET_FILE" "$MASTER_PASSWORD_FILE" ${syncInnerScript}
   '';
