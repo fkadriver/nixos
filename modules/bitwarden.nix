@@ -144,7 +144,6 @@ let
         KEY_FILE="$SSH_DIR/${key.keyName}"
         mkdir -p "$SSH_DIR"
         chown ${key.user}:users "$SSH_DIR"
-        chmod 700 "$SSH_DIR"
 
         ITEM_JSON=$($CURL -sf "http://127.0.0.1:$BW_PORT/object/item/${key.itemId}" 2>&1)
         KEY_CONTENT=$(echo "$ITEM_JSON" | $JQ -r '.data | (.sshKey.privateKey // .notes // empty)')
