@@ -19,6 +19,27 @@ of 2026-08-26) still owns everything actually backed up so far. Before trusting
 any device hash you find on disk, cross-check it against the MSP API
 (below) — don't assume the newest-looking enrollment is the right one.
 
+**🔧 Open issue (as of 2026-08-26, not yet investigated)**: the local
+console GUI (`idrive-console-vnc` → LXDE → `idrive360-client`) shows
+**"Your account is cancelled. Contact your administrator"** when attempting
+to authenticate. Deliberately left uninvestigated while the full backup
+kicked off this session is still running — don't want to risk disrupting it.
+Notably, actual backups are working fine through the CLI/cron path in the
+meantime (confirmed via the MSP API: device `online`, jobs completing) — so
+whatever's wrong is specific to the GUI's auth flow, not the account or the
+backup pipeline itself. Revisit once the current full backup finishes; start
+by checking
+`~/.trace/app.log` in the GUI's profile dir for the exact error at the moment
+the message appears (see "GUI crash-loops" section below for that log's
+usual location/format), and consider whether it's related to the
+`rememberme` file that was cleared during today's incident (see
+"Problem 1 — corrupted vendor state files" below) or a separate,
+new issue. Also worth checking: an earlier session flagged the GUI showing
+an "administrator change" message that the user was going to chase down via
+the web console — this "cancelled" message could be a related/resulting
+account-state issue rather than a local bug, so check the web console's
+account/device settings too, not just local files.
+
 ---
 
 ## VM access
