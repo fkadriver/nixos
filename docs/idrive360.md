@@ -9,6 +9,16 @@ All CLI access goes through SSH into the VM. The web console is at
 the device is ever re-registered — confirm the current value with
 `ls /opt/IDrive360/idriveIt/user_profile/scott/` before trusting the examples below)
 
+**⚠️ There can be more than one device identity on disk at once.** IDrive360
+ties backup history to a `device_id`/`MUID` generated at enrollment time — not
+to the VM itself. If the VM is ever rebuilt/restored in a way that triggers a
+fresh enrollment (this happened around 2026-08-20, likely during a hardware
+migration), the *new* identity has zero backup history, while the *old* one
+(`he9zabssi3wm3gids9btlrnci8a4qbkjvqbc5qoacuoo7jgets` — confirmed current as
+of 2026-08-26) still owns everything actually backed up so far. Before trusting
+any device hash you find on disk, cross-check it against the MSP API
+(below) — don't assume the newest-looking enrollment is the right one.
+
 ---
 
 ## VM access
@@ -40,6 +50,34 @@ anymore — an earlier design ran one on port 5901 as a second, separate
 desktop session outside logind's seat management, which caused a PolicyKit
 "No session for pid" failure mode. See git history around 2026-08-24 if this
 ever needs re-deriving.
+
+---
+
+## Checking status via the IDrive360 MSP API
+
+Faster/more authoritative than reading local logs, since it's the server's own
+view — use this first when triaging.
+
+- Base URL: `https://api.idrive360.com/api/msp`
+- Auth: `Authorization: Bearer <api-key>` header
+- API key: stored in Bitwarden, **not** in this repo — grab it from there,
+  never commit it
+- Docs: https://www.idrive.com/endpoint-backup/api-collections
+
+```bash
+curl -s -H "Authorization: Bearer $IDRIVE360_API_KEY" \
+     -H "Content-Type: application/json" \
+     "https://api.idrive360.com/api/msp/device/summary"
+```
+
+Returns a JSON array, one entry per device on the account:
+`device_id`, `status` (`online`/`offline`/`blocked`/`archived`),
+`backup_status` (`Success`/`Failure`/`In Progress`/`Cancelled`),
+`last_backup`, `next_backup` (both ISO timestamps), `backup_failure_reason`.
+
+There is **no documented endpoint to trigger an on-demand backup** — only
+plan/status management. To force a backup, use the local CLI
+(`--backup CDP <id>` / `--backup SCHEDULED <id>`) — see below.
 
 ---
 
@@ -126,6 +164,46 @@ Run this when the web console shows a job as "running" but nothing is uploading.
 
 ```bash
 /opt/IDrive360/idrive360 --install update
+```
+
+### Check job status (reliable — talks to the real backend)
+
+```bash
+/opt/IDrive360/idrive360 --job-status
+```
+
+Prints real quota (`Storage Used: X GB of Y GB`) and either
+`Unable to find any active job.` or details of a running one. Unlike
+`--backup CDP/SCHEDULED <id>` (below), this one reliably produces output —
+good first check to confirm the binary can actually reach IDrive's servers at
+all before chasing anything else.
+
+### Manually trigger a backup
+
+```bash
+/opt/IDrive360/idrive360 --backup CDP <device-id>          # continuous
+/opt/IDrive360/idrive360 --backup SCHEDULED <device-id>    # full/scheduled
+```
+
+**Gotcha**: with a valid `<device-id>`, these exit 0 with **zero output**
+whether they actually did something or silently no-op'd — the only way to
+tell is to check `ps` for new `idevsutil_dedup` worker processes and tail the
+newest file in `.../Backup/DefaultBackupSet/LOGS/`. If nothing happens, it's
+almost always a stale lock file (see the corrupted-state-files section below)
+— check that before assuming the command itself is broken.
+
+Without a device-id, `--backup CDP` / `--backup SCHEDULED` print
+`Incorrect Backup Type in CONFIGURATION_FILE.` — that's the type-check
+failing, not a launch failure; it's not diagnostic of anything, just confirms
+the flag itself is recognized.
+
+### Discovering other CLI flags
+
+`--help`/`--usage` produce no output on this build. `strings` isn't installed
+on this Ubuntu image (`binutils` missing) — use `grep -a` instead:
+
+```bash
+grep -a -oE '\-\-[a-z][a-z-]{2,25}' /opt/IDrive360/idrive360 | sort -u
 ```
 
 ---
@@ -297,6 +375,145 @@ Fixed there as well; see that repo's commit history for details.
 
 ---
 
+## Troubleshooting: device shows offline / GUI crash-loops / nothing uploads (corrupted state files)
+
+**Symptom**: web console shows a job "In Progress" but the device itself
+shows offline (or via API: `status` is `offline`, or `backup_status` stuck on
+`Failure` with an old `last_backup`). Locally: `idrive360-client` GUI
+launches then quits within seconds/minutes every time; `traceLog.txt` fills
+with `Unable to start CDP client server` repeating every few seconds;
+`idrive360cron.service` restarts itself every few minutes for no obvious
+reason (`journalctl -u idrive360cron` shows repeated Started/Stopped with no
+real gap).
+
+This happened 2026-08-26 and took most of a session to fully root-cause. Two
+independent problems, usually present together:
+
+### Problem 1 — corrupted vendor state files
+
+**Root cause**: IDrive360 writes several state files
+(`CONFIGURATION_FILE` — both the per-account copy and a top-level
+`user_profile/scott/CONFIGURATION_FILE` — `BACKUPID_FILE`,
+`notification.json`, `/etc/idrive360crontab.json`, `rememberme`) as a single
+base64-encoded JSON blob, opened without `O_TRUNC` and without a real lock.
+When two writers land at once (most likely cause: duplicate/orphaned
+`idrive360cron` processes — see the `pkill`/orphan-process notes in
+[nas01.md](nas01.md)), their writes interleave, producing a file that's
+**multiple base64 blobs concatenated**, sometimes with raw un-encoded
+fragments spliced in too. The app's JSON parser then fails with something
+like `Unexpected token 'd', "d.com"},"B"... is not valid JSON` — the exact
+garbage token differs by which file/offset broke.
+
+**Diagnose** — try decoding each suspect file; genuine corruption shows up as
+a decode failure or, if you disable strict validation, garbage binary instead
+of clean JSON:
+
+```bash
+python3 -c "
+import base64, json
+raw = open('CONFIGURATION_FILE').read().replace(chr(10),'')
+try:
+    print(json.loads(base64.b64decode(raw, validate=True)).keys())
+except Exception as e:
+    print('CORRUPT:', e)
+"
+```
+
+**Fix — don't hand-reconstruct from scratch if you can help it.** Pull a
+clean copy of the same file from a Borg VM-disk backup that predates the
+corruption (see the next section for how, without doing a full VM restore).
+Cross-check the recovered `MUID`/`USERNAME` against the device-identity
+warning at the top of this doc before trusting it. Hand-reconstruction (base64
+shift-decoding around the splice points, matching `"KEY":{"VALUE":...}`
+fragments across multiple corrupted copies to build one clean JSON object) is
+possible but slow, error-prone, and risks recovering a stale value for a
+field that changes often (e.g. an auth `TOKEN` or `nextschedule` timestamp) —
+only do it if no clean backup copy exists.
+
+### Problem 2 — stale lock files (separate from the `ENGINE_LOCKE_FILE`/`LOGPID` pair documented above)
+
+**Root cause**: several *other* lock files hold a bare PID and are never
+validated against `ps` before being trusted — if that PID no longer exists
+(process died uncleanly, or the VM rebooted without a graceful shutdown), the
+app still treats the lock as held and silently refuses to proceed, with
+**no error message at all**. This is what made CDP never start even after
+Problem 1 was fixed: `CDP/watcher.lock` and the top-level `cron.lock` both
+pointed at PIDs from before the last reboot. Same story for
+`Backup/DefaultBackupSet/BackupsetFile.enc.json.lock` — a stale copy of that
+one silently blocks `--backup CDP/SCHEDULED <id>` from doing anything (exit 0,
+zero output, no new process, nothing in the trace log).
+
+**Diagnose:**
+
+```bash
+PROFILE="/opt/IDrive360/idriveIt/user_profile/scott/<device-id>"
+for f in "$PROFILE/CDP/watcher.lock" \
+         /opt/IDrive360/idriveIt/user_profile/cron.lock \
+         "$PROFILE/Backup/DefaultBackupSet/BackupsetFile.enc.json.lock"; do
+  pid=$(cat "$f" 2>/dev/null)
+  [ -n "$pid" ] && ! ps -p "$pid" >/dev/null 2>&1 && echo "STALE: $f -> dead PID $pid"
+done
+```
+
+**Fix:**
+
+```bash
+sudo systemctl stop idrive360cron.service
+sudo -u scott rm -f "$PROFILE/CDP/watcher.lock" \
+                     /opt/IDrive360/idriveIt/user_profile/cron.lock \
+                     "$PROFILE/Backup/DefaultBackupSet/BackupsetFile.enc.json.lock"
+sudo systemctl start idrive360cron.service
+```
+
+Then retry `--backup CDP <id>` / wait for the next scheduled run and confirm
+via `ps` (new `idevsutil_dedup` workers) or `--job-status`.
+
+### Recovering a specific file from a Borg VM-disk backup without a full restore
+
+`idrive-vm-restore` (on nas01) swaps the *entire* VM disk — it also reverts
+anything else done inside the guest since that backup (autologin config,
+etc.) and, worse, can land you on a **stale device enrollment** if the
+corruption predates every recent nightly backup (it did, here — see the
+device-identity warning up top). Prefer extracting just the files you need:
+
+```bash
+# On nas01 (needs sudo password — not passwordless):
+REPO=/pool/borg/nas01
+ARCHIVE=nas01-system-YYYY-MM-DDTHH:MM:SS   # pick one from: borg list $REPO
+DOMAIN=nas01-backup
+
+export BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase"
+sudo mkdir -p /tmp/vm-extract && cd /tmp/vm-extract
+sudo env BORG_PASSCOMMAND="$BORG_PASSCOMMAND" borg extract \
+  "$REPO::$ARCHIVE" "var/lib/libvirt/images/$DOMAIN.qcow2"
+
+sudo modprobe nbd max_part=16
+sudo qemu-nbd -c /dev/nbd8 --read-only \
+  "/tmp/vm-extract/var/lib/libvirt/images/$DOMAIN.qcow2"
+sudo lsblk -f /dev/nbd8                 # find the ext4 root partition
+
+MNT=$(sudo mktemp -d)
+# noload is required — mounting read-only still tries to replay the journal
+# otherwise, which fails against a --read-only nbd device
+sudo mount -t ext4 -o ro,noload /dev/nbd8p1 "$MNT"
+
+# copy out just what you need, e.g.:
+sudo cp -a "$MNT/opt/IDrive360/idriveIt/user_profile/scott" ~/idrive-extract/
+
+sudo umount "$MNT"
+sudo qemu-nbd -d /dev/nbd8
+```
+
+If you do end up needing a full `idrive-vm-restore`: **immediately** check
+the restored disk's device-id against the MSP API (`device/summary`) before
+letting `idrive360cron` run — an old-enough backup may predate the current
+enrollment, or (less likely) may itself already contain the corruption.
+Also expect to have to redo any live-guest-only fixes newer than the chosen
+backup — check git-blame/dates in this doc and [nas01.md](nas01.md) for
+what's been changed directly on the guest vs. what's declarative.
+
+---
+
 ## Logs
 
 ```bash
@@ -318,6 +535,10 @@ find /opt/IDrive360 -name '*.log' 2>/dev/null
 | `/opt/IDrive360/idriveIt/user_profile/scott/` | User profile, device registration, logs |
 | `…/Backup/DefaultBackupSet/ENGINE_LOCKE_FILE` | Backup engine lock — if stale, delete it |
 | `…/Backup/DefaultBackupSet/LOGPID` | Path to active log; if stale, clear it |
+| `…/Backup/DefaultBackupSet/BackupsetFile.enc.json.lock` | Holds a PID; if dead, silently blocks all `--backup` triggers — delete if stale |
+| `…/CDP/watcher.lock` | Holds a PID; if dead, blocks CDP server startup — delete if stale |
+| `/opt/IDrive360/idriveIt/user_profile/cron.lock` | Top-level cron lock; holds a PID; if dead, blocks scheduled jobs — delete if stale |
+| `…/CONFIGURATION_FILE`, `…/BACKUPID_FILE`, `…/rememberme` | Base64-encoded JSON state — vulnerable to concurrent-write corruption, see troubleshooting below |
 | `…/Backup/DefaultBackupSet/LOGS/` | Per-run logs named `<timestamp>_<Status>_<type>` |
 | `…/.userInfo/lastBackupStatus.txt` | JSON: last job status (Failure / Success / Running) |
 | `/etc/idrive360crontab.json` | Active job schedule (written by agent) |

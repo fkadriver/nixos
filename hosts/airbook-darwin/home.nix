@@ -211,6 +211,7 @@ in
 
         # Tailscale SSH shortcuts
         nas01 = "tailscale ssh nas01";
+        backup = "tailscale ssh nas01-backup";
         log01 = "tailscale ssh log01";
         pihole01 = "tailscale ssh pihole01";
         pihole02 = "tailscale ssh pihole02";
@@ -331,6 +332,7 @@ in
 
         # Tailscale SSH shortcuts
         nas01 = "tailscale ssh nas01";
+        backup = "tailscale ssh nas01-backup";
         log01 = "tailscale ssh log01";
         pihole01 = "tailscale ssh pihole01";
         pihole02 = "tailscale ssh pihole02";
