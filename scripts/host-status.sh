@@ -65,7 +65,10 @@ run_on() {
 # <linux version> is /etc/os-release's PRETTY_NAME (works for NixOS, Ubuntu,
 # or anything else — no OS-specific command needed).
 # <gen>/<built> come from the current `nixos-rebuild list-generations` entry
-# (generation number and its build date/time) — NixOS-only, "-" elsewhere.
+# (generation number and its build date/time) on NixOS hosts. On non-NixOS
+# hosts <gen> is "-" and <built> is instead the last successful `apt update`
+# time (from /var/lib/apt/periodic/update-success-stamp, falling back to
+# /var/lib/apt/lists' mtime if that stamp file doesn't exist).
 probe_host() {
     local host="$1"
     local out
@@ -80,7 +83,11 @@ probe_host() {
     if is_non_nixos "$host"; then
         if ! out="$(run_on "$host" "\
             $common_cmd \
-            echo \"reachable|\$uptime|\$osver|-|-|\$kernel|\$disk\"" 2>/dev/null)"; then
+            stamp=/var/lib/apt/periodic/update-success-stamp; \
+            [[ -f \$stamp ]] || stamp=/var/lib/apt/lists; \
+            aptupd=\$(date -d @\$(stat -c %Y \"\$stamp\" 2>/dev/null) '+%Y-%m-%d %H:%M:%S' 2>/dev/null); \
+            [[ -z \$aptupd ]] && aptupd='-'; \
+            echo \"reachable|\$uptime|\$osver|-|\$aptupd|\$kernel|\$disk\"" 2>/dev/null)"; then
             echo "unreachable|-|-|-|-|-|-"
             return
         fi
