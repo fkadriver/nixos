@@ -74,7 +74,9 @@
     <video>
       <model type='virtio' heads='1' primary='yes'/>
     </video>
-    <!-- virtiofs shares: /pool (IDrive360 backup source) and /mnt (extra drives) -->
+    <!-- virtiofs shares: /pool (IDrive360 backup source), /mnt (extra drives),
+         and /home/scott/git (repo access from the guest). All read-write —
+         accessmode='passthrough' with no <readonly/> tag. -->
     <filesystem type='mount' accessmode='passthrough'>
       <driver type='virtiofs'/>
       <source dir='/pool'/>
@@ -84,6 +86,11 @@
       <driver type='virtiofs'/>
       <source dir='/mnt'/>
       <target dir='mnt'/>
+    </filesystem>
+    <filesystem type='mount' accessmode='passthrough'>
+      <driver type='virtiofs'/>
+      <source dir='/home/scott/git'/>
+      <target dir='git'/>
     </filesystem>
     <memballoon model='virtio'/>
     <rng model='virtio'>

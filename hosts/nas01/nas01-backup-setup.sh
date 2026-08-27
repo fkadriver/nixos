@@ -221,9 +221,10 @@ write_files:
 
 runcmd:
   # Mount points for virtiofs shares
-  - mkdir -p /pool /mnt
-  - echo 'pool    /pool   virtiofs  defaults,_netdev,nofail  0  0' >> /etc/fstab
-  - echo 'mnt     /mnt    virtiofs  defaults,_netdev,nofail  0  0' >> /etc/fstab
+  - mkdir -p /pool /mnt /home/scott/git
+  - echo 'pool    /pool           virtiofs  defaults,_netdev,nofail  0  0' >> /etc/fstab
+  - echo 'mnt     /mnt            virtiofs  defaults,_netdev,nofail  0  0' >> /etc/fstab
+  - echo 'git     /home/scott/git virtiofs  defaults,_netdev,nofail  0  0' >> /etc/fstab
   - mount -a 2>/dev/null || true
 
   # Disable screensaver/locker (no physical display; would lock VNC sessions)
