@@ -1,4 +1,4 @@
-Subject: Desktop client login fails ("Failed to get server address" / access denied) — device online per API, backup plan intact, fresh reinstall did not resolve
+Subject: Desktop client (1.4.0) fails to log in — reproducible "Password decoding failed" internal error, never surfaced to the user, occurs for any password
 
 Account email: hoot-glowing24@icloud.com
 Company ID: 36136
@@ -10,75 +10,94 @@ Client version: 1.4.0 (auto-updated from 1.3.0 on 2026-08-27; issue predates the
 
 Summary
 -------
-The IDrive360 desktop client cannot complete login on this device. The MSP
-API (device/summary) shows the device as status "online" with an intact
-backup plan, but the desktop client itself cannot authenticate — it hangs
-indefinitely on "Connecting..." after a manual sign-in attempt, or (in an
-earlier state, before we reset local credential caches) showed "Access to
-the full suite desktop application is denied. Please contact your
-administrator." The account's console/billing settings have been checked
-and appear correct, with no cancellation or policy restriction visible on
-our end.
+The IDrive360 desktop client cannot complete login on this device. The UI
+gets stuck on "Connecting..." indefinitely after a sign-in attempt and never
+shows an error. Using Chrome DevTools Protocol to inspect the client's own
+internal state (it's an Electron app), we found the actual login response
+object the renderer receives from the app's login handler:
+
+    {"LoginResp":{"desc":false,"message":"Password decoding failed"},
+     "userInfo": { ...local device config... }}
+
+This exact response occurs identically for:
+- A deliberately wrong, plain alphanumeric test password
+- The real, correct account password
+
+Since the failure is identical regardless of what's typed, this is a
+client-side bug in the password handling path (likely in the IPC hand-off
+between the renderer's login form and the main process, or in whatever
+routine is expected to encode/decode the password locally) that fails
+*before* any credential is ever sent to your servers for verification. The
+account itself is not the problem — the client simply never gets far enough
+to check it. The UI also never surfaces this "Password decoding failed"
+message to the user; it just hangs on "Connecting..." forever, which made
+this very hard to diagnose without instrumenting the app directly.
 
 Timeline
 --------
 - 2026-08-26 ~16:01 UTC: Desktop client's background session first starts
   failing a websocket reconnect with "Invalid close opcode" — recurring
-  every 30-70s from this point forward, never once succeeding since. This
-  is the earliest sign of trouble we can find, and predates everything
-  below.
+  every 30-70s from this point forward. Earliest sign of trouble.
 - 2026-08-26 ~23:50 UTC: A login attempt via the desktop GUI shows "Your
-  account is cancelled. Contact your administrator."
+  account is cancelled. Contact your administrator." (Likely also a
+  symptom of the same underlying client bug, not a real account state —
+  see below.)
 - 2026-08-27 ~17:01 UTC: VM rebooted; client auto-updated 1.3.0 -> 1.4.0 in
   the process. Same symptoms persisted post-update.
-- 2026-08-27: Confirmed via MSP API (device/summary) that the device shows
-  status "online", backup_status alternating Success/Failure, and a real,
-  named backup plan ("Linux Servers", id 480395) still attached — i.e. the
-  backend clearly still recognizes this device and account.
 - 2026-08-27: Performed a clean uninstall (apt remove) and reinstall of the
   1.4.0 .deb client, preserving the existing local device-identity cache
   (device_id he9zabssi3wm3gids9btlrnci8a4qbkjvqbc5qoacuoo7jgets) so the
   reinstall would reattach to the existing device rather than creating a
   new enrollment. Same login failure persists on the fresh install.
+- 2026-08-27: Used Chrome DevTools Protocol (--remote-debugging-port) to
+  inspect the running client directly and captured the actual internal
+  login response shown above, isolating the failure to client-side
+  password decoding rather than network or account state.
 
 What we've ruled out
 ---------------------
-- Network/DNS/firewall: api.idrive360.com and wsn4.idrive360.com resolve
-  correctly; TCP/TLS connections to the resolved IPs succeed and respond
-  as expected (confirmed via curl and raw socket tests, including a raw
-  banner grab from the EVS-related server on port 443 returning a valid
-  "@IDEVSD" protocol response, not a connection failure).
-- Local credential-file corruption: we found and worked around a real,
-  separate, unrelated bug where several vendor state files
-  (CONFIGURATION_FILE, rememberme, BACKUPID_FILE, notification.json, etc.)
-  get corrupted by what looks like unsynchronized concurrent writes (byte-
-  interleaved/spliced content, reproducible across multiple days and
-  multiple nightly backups). We fully reinstalled the client and restored
-  a clean local profile, which did not change the login outcome.
-- Wrong device enrollment: verified via MSP API and manually corrected the
-  local device-identity cache (.device_id / .uuid_cache under
-  idriveIt/cache) before the reinstall's first launch, to ensure the
-  client would reattach to the existing device_id rather than mint a new
-  one. Confirmed post-reinstall that no new device folder was created.
+- Network/DNS/firewall: api.idrive360.com, wsn4.idrive360.com, and the
+  account's assigned EVS server (evs5497.idrive.com, matching the
+  SERVERADDRESS already cached locally) all resolve correctly; TCP/TLS
+  connections succeed and respond as expected (confirmed via curl and raw
+  socket tests, including a raw banner grab from the EVS server on port 443
+  returning a valid "@IDEVSD" protocol response).
+- Account/device state: the MSP API (device/summary) shows this device as
+  status "online" with an intact, correctly-named backup plan attached, so
+  the backend recognizes the device and account fine.
+- Local config file "corruption": we initially suspected CONFIGURATION_FILE
+  and related state files were corrupted (they looked like binary garbage
+  under a naive base64 decode). That was a red herring on our end — we
+  reverse-engineered the client's actual encode/decode scheme (base64, then
+  the first quarter of the string swapped with the last quarter) from an
+  older CLI-based client install we had on hand, and confirmed the current
+  CONFIGURATION_FILE decodes to fully valid, correct JSON. No corruption is
+  present.
+- Wrong device enrollment: verified via MSP API and the local device
+  identity cache (.device_id / .uuid_cache) before the reinstall's first
+  launch; confirmed no new device folder was created.
 
-Current failure signature (fresh install, correct device identity, manual
-login submitted through the GUI with correct account credentials):
-```
-[Common.pm] EVS domain failed & need to retry with IP
-[Common.pm] Failed to get server address.   (repeats every ~5 min)
-```
-No credential/session file (IDPWD, IDPWD_SCH, IDENPWD, rememberme) is ever
-written locally when this happens — the login attempt appears to fail
-before completing any handshake with the server, despite the underlying
-network path being confirmed healthy.
+Reproduction
+------------
+1. Launch idrive360-client 1.4.0.
+2. On the login form, enter any password (tested with both a simple wrong
+   password and the real correct one) and click Sign In.
+3. UI shows "Connecting..." and never changes state.
+4. Inspecting via CDP (Runtime.consoleAPICalled on the client's own
+   "Login response received:" console.log call, then
+   Runtime.callFunctionOn + JSON.stringify on the logged object) shows:
+   LoginResp.message == "Password decoding failed" in both cases.
 
 Request
 -------
-Could you check this device/account on your end for anything stuck in a
-bad session, entitlement, or policy state? Given the backend clearly still
-recognizes the device (MSP API shows it online with an intact backup plan)
-but the desktop client can never successfully authenticate — even after a
-completely fresh install — this looks like something server-side rather
-than a local software issue.
+This looks like a genuine bug in the 1.4.0 Linux desktop client's login
+handling, not an account or server-side issue. Could you:
+1. Check whether there's a known issue with password decoding in 1.4.0 on
+   Linux, and whether a fix or a rollback to a known-good build (we were
+   previously on 1.3.0) is available?
+2. Confirm the account itself (hoot-glowing24@icloud.com) has no actual
+   restriction, in case the earlier "account is cancelled" message was more
+   than a client-side artifact.
 
-Happy to provide additional logs (trace logs, dashboard.log) on request.
+Happy to provide additional logs (trace logs, dashboard.log, CDP capture)
+on request.
