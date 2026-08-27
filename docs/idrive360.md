@@ -206,17 +206,53 @@ all before chasing anything else.
 /opt/IDrive360/idrive360 --backup SCHEDULED <device-id>    # full/scheduled
 ```
 
-**Gotcha**: with a valid `<device-id>`, these exit 0 with **zero output**
-whether they actually did something or silently no-op'd — the only way to
-tell is to check `ps` for new `idevsutil_dedup` worker processes and tail the
-newest file in `.../Backup/DefaultBackupSet/LOGS/`. If nothing happens, it's
-almost always a stale lock file (see the corrupted-state-files section below)
-— check that before assuming the command itself is broken.
+**Gotcha 1 — no useful output over a non-interactive SSH session**: both this
+and `--job-status` are interactive TUI progress displays (they call
+`stty`/`tput`). Over `tailscale ssh ... "command"` (no real TTY) they don't
+exit — they loop indefinitely, spamming `TERM environment variable not set`,
+`stty: 'standard input': Inappropriate ioctl for device`, etc. Real data does
+land in there between the noise (e.g. `--job-status` printed
+`Storage Used: X GB of Y GB` and `Preparing File list...` before the spam
+started), but don't wait for it to return — it won't. Give it a few seconds,
+grab what you need from the captured output, then kill it (the local
+`tailscale ssh` client can be stopped freely; the remote process it spawned
+is independent and will keep running/looping — kill it on the VM directly by
+PID if you want it gone, e.g. `pkill -f 'idrive360 --job-status'`).
+
+**Gotcha 2 — a second invocation while a job is already running doesn't
+queue, it defers silently**: if a backup is already active (e.g. one you
+started from the web console), invoking `--backup SCHEDULED <device-id>`
+again does *not* launch a second job. It updates
+`Backup/pid.txt` to point at the new process's own PID, but the actual
+`Backup/DefaultBackupSet/BackupsetFile.enc.json.lock` stays held by the
+original job's `--utilities --db-writer-service` PID, and the new process
+just sits idle (~0% CPU) forever without spawning any `idevsutil_dedup`
+workers of its own. Check `cat .../Backup/DefaultBackupSet/BackupsetFile.enc.json.lock`
+against `ps` to see which PID actually owns the running job before assuming
+your trigger did nothing — it may just mean a backup was already in flight.
+
+**Gotcha 3**: with a valid `<device-id>` and no job already running, these
+exit 0 with **zero output** whether they actually did something or silently
+no-op'd — the only way to tell is to check `ps` for new `idevsutil_dedup`
+worker processes and tail the newest file in
+`.../Backup/DefaultBackupSet/LOGS/`. If nothing happens, it's almost always a
+stale lock file (see the corrupted-state-files section below) — check that
+before assuming the command itself is broken.
 
 Without a device-id, `--backup CDP` / `--backup SCHEDULED` print
 `Incorrect Backup Type in CONFIGURATION_FILE.` — that's the type-check
 failing, not a launch failure; it's not diagnostic of anything, just confirms
 the flag itself is recognized.
+
+### `--rescan-backup-set` isn't a general rescan trigger
+
+It looks like the obvious "force a rescan" flag but it's CDP-specific: it
+re-syncs the real-time file-watch list (`cdpRescan()` internally), and its
+args are a day-interval + start-time pair meant to be invoked periodically by
+cron, not a one-shot "walk the folders now." To force a full walk of every
+folder in the backup set (which is what you want after adding a new folder
+to the plan, e.g. `/pool/syncthing`), use `--backup SCHEDULED <device-id>`
+above instead — see Gotcha 2 if one's already running.
 
 ### Discovering other CLI flags
 
