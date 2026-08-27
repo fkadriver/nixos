@@ -19,26 +19,31 @@ of 2026-08-26) still owns everything actually backed up so far. Before trusting
 any device hash you find on disk, cross-check it against the MSP API
 (below) — don't assume the newest-looking enrollment is the right one.
 
-**🔧 Open issue (as of 2026-08-26, not yet investigated)**: the local
-console GUI (`idrive-console-vnc` → LXDE → `idrive360-client`) shows
-**"Your account is cancelled. Contact your administrator"** when attempting
-to authenticate. Deliberately left uninvestigated while the full backup
-kicked off this session is still running — don't want to risk disrupting it.
-Notably, actual backups are working fine through the CLI/cron path in the
-meantime (confirmed via the MSP API: device `online`, jobs completing) — so
-whatever's wrong is specific to the GUI's auth flow, not the account or the
-backup pipeline itself. Revisit once the current full backup finishes; start
-by checking
-`~/.trace/app.log` in the GUI's profile dir for the exact error at the moment
-the message appears (see "GUI crash-loops" section below for that log's
-usual location/format), and consider whether it's related to the
-`rememberme` file that was cleared during today's incident (see
-"Problem 1 — corrupted vendor state files" below) or a separate,
-new issue. Also worth checking: an earlier session flagged the GUI showing
-an "administrator change" message that the user was going to chase down via
-the web console — this "cancelled" message could be a related/resulting
-account-state issue rather than a local bug, so check the web console's
-account/device settings too, not just local files.
+**✅ Resolved 2026-08-27** (was: GUI login stuck forever on "Connecting...",
+sometimes preceded by "Your account is cancelled. Contact your
+administrator."). Root cause turned out to be a **client-side bug in the
+1.4.0 GUI's login handler**, not the account or network: using Chrome
+DevTools Protocol (`idrive360-client --remote-debugging-port=9222`) to
+inspect the app's own internal state, the actual login response object was
+`{"LoginResp":{"message":"Password decoding failed"}, "userInfo": {...}}` —
+identical whether the real password or a deliberately wrong throwaway
+password was typed, and identical regardless of local config state. The
+failure happened before any credential was ever sent to IDrive's servers,
+and the GUI never surfaced this message to the user — it just hung on
+"Connecting..." forever. **Fix that actually worked**: a clean
+`apt remove` + reinstall of the same 1.4.0 `.deb` (again preserving the
+existing `.device_id`/`.uuid_cache` so it reattached to the existing device
+rather than creating a new enrollment — see warning above). Whatever local
+Electron/renderer state was wedged, the reinstall cleared it; login,
+`idrive360cron`, and scheduled backups are all confirmed working again
+(check via the MSP API section below — `backup_status: "In Progress"` with
+a fresh `last_backup` timestamp is the tell). Full writeup and diagnostic
+technique (including the CDP approach and the real `CONFIGURATION_FILE`
+encoding, which we'd previously misdiagnosed as corrupted — see Problem 1
+below) is in `idrive360-support-ticket-2026-08-27.md` in this same
+directory. If this recurs: don't bother re-debugging the password-decode
+path from scratch, just try a clean reinstall first — it's a five-minute
+fix and worked immediately last time.
 
 ---
 
@@ -446,46 +451,61 @@ real gap).
 This happened 2026-08-26 and took most of a session to fully root-cause. Two
 independent problems, usually present together:
 
-### Problem 1 — corrupted vendor state files
+### Problem 1 — ~~corrupted vendor state files~~ (misdiagnosis — see correction)
 
-**Root cause**: IDrive360 writes several state files
-(`CONFIGURATION_FILE` — both the per-account copy and a top-level
-`user_profile/scott/CONFIGURATION_FILE` — `BACKUPID_FILE`,
-`notification.json`, `/etc/idrive360crontab.json`, `rememberme`) as a single
-base64-encoded JSON blob, opened without `O_TRUNC` and without a real lock.
-When two writers land at once (most likely cause: duplicate/orphaned
-`idrive360cron` processes — see the `pkill`/orphan-process notes in
-[nas01.md](nas01.md)), their writes interleave, producing a file that's
-**multiple base64 blobs concatenated**, sometimes with raw un-encoded
-fragments spliced in too. The app's JSON parser then fails with something
-like `Unexpected token 'd', "d.com"},"B"... is not valid JSON` — the exact
-garbage token differs by which file/offset broke.
-
-**Diagnose** — try decoding each suspect file; genuine corruption shows up as
-a decode failure or, if you disable strict validation, garbage binary instead
-of clean JSON:
+**⚠️ Correction (2026-08-27): this was a misdiagnosis.** The files below are
+**not** plain base64 — decoding them with plain base64 (as the snippet
+originally here did) produces exactly the "interleaved garbage" pattern that
+looked like corruption. The real encoding (reverse-engineered from an older
+CLI-based client's Perl source, `Common.pm::encryptString`/`decryptString`)
+is: **base64-encode, then swap the first quarter of the resulting string
+with the last quarter** (the middle half stays in place). Decoding correctly
+(swap back, then base64-decode) showed the "corrupted" files on
+`nas01-backup` were actually fully valid, correct JSON the whole time. If
+you hit garbled-looking output from one of these files, decode it properly
+before assuming corruption:
 
 ```bash
-python3 -c "
-import base64, json
-raw = open('CONFIGURATION_FILE').read().replace(chr(10),'')
-try:
-    print(json.loads(base64.b64decode(raw, validate=True)).keys())
-except Exception as e:
-    print('CORRUPT:', e)
-"
+# Correct decode (Perl, using the vendor's own algorithm)
+perl -MMIME::Base64 -e '
+  local $/; my $s = <STDIN>; chomp($s);
+  my $n = length $s; my $sw = $n - ($n % 4); my $sh = $sw/4;
+  my $a = substr($s, 0, $sh); my $b = substr($s, (3*$sh), $sh);
+  substr($s, (3*$sh), $sh) = $a; substr($s, 0, $sh) = $b;
+  print decode_base64($s);
+' < CONFIGURATION_FILE
+
+# Correct re-encode (for patching a field and writing back)
+perl -MMIME::Base64 -e '
+  local $/; my $s = <STDIN>;
+  $s = encode_base64($s); chomp($s);
+  my $n = length $s; my $sw = $n - ($n % 4); my $sh = $sw/4;
+  my $a = substr($s, 0, $sh); my $b = substr($s, (3*$sh), $sh);
+  substr($s, (3*$sh), $sh) = $a; substr($s, 0, $sh) = $b;
+  print $s;
+' < patched.json > CONFIGURATION_FILE.new
 ```
 
-**Fix — don't hand-reconstruct from scratch if you can help it.** Pull a
-clean copy of the same file from a Borg VM-disk backup that predates the
-corruption (see the next section for how, without doing a full VM restore).
-Cross-check the recovered `MUID`/`USERNAME` against the device-identity
-warning at the top of this doc before trusting it. Hand-reconstruction (base64
-shift-decoding around the splice points, matching `"KEY":{"VALUE":...}`
-fragments across multiple corrupted copies to build one clean JSON object) is
-possible but slow, error-prone, and risks recovering a stale value for a
-field that changes often (e.g. an auth `TOKEN` or `nextschedule` timestamp) —
-only do it if no clean backup copy exists.
+Applies to: `CONFIGURATION_FILE` (both the per-account copy and the
+top-level `user_profile/scott/CONFIGURATION_FILE`), `BACKUPID_FILE`. Files
+under `.userInfo/` (`IDPWD`, `IDPWD_SCH`, `IDENPWD`) use a *different*
+mechanism (the vendor's `idevsutil` binary's own `STRINGENCODE` operation,
+not `encryptString`) — don't try to decode those with the algorithm above.
+
+If a file genuinely doesn't decode even with the correct algorithm (decode
+throws, or the result isn't valid JSON), *then* it's real corruption — pull
+a clean copy from a Borg VM-disk backup that predates the corruption (see
+the next section for how, without doing a full VM restore), or, failing
+that, hand-reconstruct as a last resort (slow, error-prone, risks recovering
+a stale value for a field that changes often like an auth `TOKEN` or
+`nextschedule` timestamp).
+
+See `idrive360-support-ticket-2026-08-27.md` for the full story: what
+actually turned out to be broken (2026-08-27) was a client-side
+"Password decoding failed" bug in the 1.4.0 GUI's login handler, unrelated
+to these state files — fixed by a plain reinstall. Don't assume every
+"IDrive360 broken" symptom is state-file corruption; check with the CDP
+technique documented there first.
 
 ### Problem 2 — stale lock files (separate from the `ENGINE_LOCKE_FILE`/`LOGPID` pair documented above)
 
@@ -595,7 +615,8 @@ find /opt/IDrive360 -name '*.log' 2>/dev/null
 | `…/Backup/DefaultBackupSet/BackupsetFile.enc.json.lock` | Holds a PID; if dead, silently blocks all `--backup` triggers — delete if stale |
 | `…/CDP/watcher.lock` | Holds a PID; if dead, blocks CDP server startup — delete if stale |
 | `/opt/IDrive360/idriveIt/user_profile/cron.lock` | Top-level cron lock; holds a PID; if dead, blocks scheduled jobs — delete if stale |
-| `…/CONFIGURATION_FILE`, `…/BACKUPID_FILE`, `…/rememberme` | Base64-encoded JSON state — vulnerable to concurrent-write corruption, see troubleshooting below |
+| `…/CONFIGURATION_FILE`, `…/BACKUPID_FILE` | JSON state, encoded as base64-then-quarter-swapped (not plain base64 — see "Problem 1" below before assuming corruption) |
+| `…/rememberme` | Auto-login state; presence/absence affects whether the GUI skips the login form |
 | `…/Backup/DefaultBackupSet/LOGS/` | Per-run logs named `<timestamp>_<Status>_<type>` |
 | `…/.userInfo/lastBackupStatus.txt` | JSON: last job status (Failure / Success / Running) |
 | `/etc/idrive360crontab.json` | Active job schedule (written by agent) |
