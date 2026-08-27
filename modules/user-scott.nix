@@ -58,6 +58,26 @@
             command = "/nix/store/*/bin/switch-to-configuration *";
             options = [ "NOPASSWD" ];
           }
+          {
+            command = "/run/current-system/sw/bin/borg *";
+            options = [ "NOPASSWD" ];
+          }
+          {
+            command = "/nix/store/*/bin/borg *";
+            options = [ "NOPASSWD" ];
+          }
+          # Covers `sudo env BORG_PASSCOMMAND=... borg ...`, used to feed borg
+          # its repo passphrase without it appearing in shell history/argv.
+          # sudo matches on the literal command (env), not the borg it execs,
+          # so this needs its own rule distinct from the plain "borg *" ones above.
+          {
+            command = "/run/current-system/sw/bin/env BORG_PASSCOMMAND=* /run/current-system/sw/bin/borg *";
+            options = [ "NOPASSWD" ];
+          }
+          {
+            command = "/run/current-system/sw/bin/env BORG_PASSCOMMAND=* /nix/store/*/bin/borg *";
+            options = [ "NOPASSWD" ];
+          }
         ];
       }
     ];
