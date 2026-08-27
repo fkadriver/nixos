@@ -109,6 +109,8 @@ packages:
   - wget
   - ca-certificates
   - qemu-guest-agent
+  - tree
+  - binutils
 
 write_files:
   - path: /etc/modules-load.d/virtiofs.conf
@@ -237,6 +239,14 @@ runcmd:
   - systemctl enable qemu-guest-agent.service
   - systemctl start qemu-guest-agent.service
   - systemctl restart lightdm
+
+  # Claude Desktop (GUI app, used for troubleshooting directly from this VM's
+  # own desktop session rather than SSHing in from elsewhere). Adds Anthropic's
+  # apt repo + signing key, then installs from it.
+  - curl -fsSLo /usr/share/keyrings/claude-desktop-archive-keyring.asc https://downloads.claude.ai/claude-desktop/key.asc
+  - echo "deb [arch=amd64,arm64 signed-by=/usr/share/keyrings/claude-desktop-archive-keyring.asc] https://downloads.claude.ai/claude-desktop/apt/stable stable main" > /etc/apt/sources.list.d/claude-desktop.list
+  - apt-get update
+  - apt-get install -y claude-desktop
 
   # Wazuh agent (monitoring for this VM / IDrive360). Installs and points at
   # the manager, but does NOT enroll — that needs the enrollment password,
