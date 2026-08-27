@@ -79,6 +79,32 @@ ever needs re-deriving.
 
 ---
 
+## Manually installed packages (VM is Ubuntu — not declarative, not tracked anywhere else)
+
+Unlike the NixOS hosts, `nas01-backup` has no flake/module manifest, so
+anything installed here via `apt` only exists as installed state on the VM
+disk — this doc is the only record. Sudo is passwordless for `scott` on this
+VM (`(ALL) NOPASSWD: ALL`), so it's easy to install things ad hoc; keep this
+list current when that happens.
+
+| Package | Installed | Why | Pulled in as deps |
+|---|---|---|---|
+| `tshark` | 2026-08-27 | Debugging the IDrive360 login hang — decrypted the client's own HTTPS traffic (via Chromium's `SSLKEYLOGFILE`) to confirm no real login request was ever being sent | `wireshark-common`, `libwireshark17t64`, `libwireshark-data`, and their transitive libs (`libssh-gcrypt-4`, `libnghttp3-3`, `libsbc1`, `libsmi2t64`, `libbcg729-0`, `libcares2`, `libspandsp2t64`, `liblua5.2-0`, `libopencore-amrnb0`, `libwsutil15t64`, `libwiretap14t64`) |
+
+`tcpdump` was already present on the base Ubuntu image — not something we
+added.
+
+Note: `tshark` was installed non-interactively (`DEBIAN_FRONTEND=noninteractive`),
+which skips the debconf prompt that normally creates a `wireshark` group for
+non-root packet capture. No such group exists on this VM — `tshark`/`tcpdump`
+here only work via `sudo`.
+
+Neither is required for normal IDrive360 operation; both are safe to
+`apt remove tshark` (and its now-orphaned deps via `apt autoremove`) if you'd
+rather not have a packet-capture toolchain sitting on a backup VM long-term.
+
+---
+
 ## Checking status via the IDrive360 MSP API
 
 Faster/more authoritative than reading local logs, since it's the server's own
