@@ -90,6 +90,7 @@ list current when that happens.
 | Package | Installed | Why | Pulled in as deps |
 |---|---|---|---|
 | `tshark` | 2026-08-27 | Debugging the IDrive360 login hang — decrypted the client's own HTTPS traffic (via Chromium's `SSLKEYLOGFILE`) to confirm no real login request was ever being sent | `wireshark-common`, `libwireshark17t64`, `libwireshark-data`, and their transitive libs (`libssh-gcrypt-4`, `libnghttp3-3`, `libsbc1`, `libsmi2t64`, `libbcg729-0`, `libcares2`, `libspandsp2t64`, `liblua5.2-0`, `libopencore-amrnb0`, `libwsutil15t64`, `libwiretap14t64`) |
+| `epiphany-browser` | 2026-08-27 | Needed a system browser so Claude Desktop's "Continue with Google" (which hands off OAuth to the system default browser — see below) had somewhere to go | — |
 
 `tcpdump` was already present on the base Ubuntu image — not something we
 added.
@@ -98,6 +99,29 @@ Note: `tshark` was installed non-interactively (`DEBIAN_FRONTEND=noninteractive`
 which skips the debconf prompt that normally creates a `wireshark` group for
 non-root packet capture. No such group exists on this VM — `tshark`/`tcpdump`
 here only work via `sudo`.
+
+**⚠️ `epiphany-browser` (WebKitGTK) crashes on any page load in this VM,
+including `about:blank`** — not a network/content issue, a fatal trap inside
+`libglib-2.0.so` itself (`dmesg`: `trap int3 ... in libglib-2.0.so`),
+happening even with `LIBGL_ALWAYS_SOFTWARE=1`,
+`WEBKIT_DISABLE_COMPOSITING_MODE=1`, `WEBKIT_DISABLE_DMABUF_RENDERER=1`
+(this last one is set system-wide in `/etc/environment` — helps with an
+unrelated DRI3 warning but doesn't fix the crash), and
+`WEBKIT_DISABLE_SANDBOX_THIS_IS_DANGEROUS=1` all set. CPU is
+`host-passthrough` (not a feature-mismatch issue), plenty of free RAM after
+closing other GUI apps — root cause not found. For contrast, this VM's two
+Electron/Chromium apps (`idrive360-client`, and `claude-desktop` while it was
+installed) never had this problem — the crash is specific to WebKitGTK here.
+We tried Google Chrome (`google-chrome-stable` .deb, no snap) as a
+workaround and it worked immediately (clean login page, no crashes), but it
+was removed at the user's request (OAuth-via-Google wasn't worth the
+hassle) along with `claude-desktop` itself — Claude Desktop login on this VM
+is parked, not solved. If revisited: either root-cause the epiphany/glib
+trap, or reinstall `google-chrome-stable` (same steps as `claude-desktop`
+below, just Google's official `.deb` from
+`https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb`)
+and set it as default browser (`xdg-settings set default-web-browser
+google-chrome.desktop`).
 
 Neither is required for normal IDrive360 operation; both are safe to
 `apt remove tshark` (and its now-orphaned deps via `apt autoremove`) if you'd
