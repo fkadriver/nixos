@@ -654,6 +654,27 @@ find /opt/IDrive360 -name '*.log' 2>/dev/null
 
 ---
 
+## Network ports
+
+IDrive360 uses two distinct outbound ports — if backups stall or the device
+drops offline, check both before assuming an IDrive360-side problem (this
+has happened at least once from an unrelated outbound firewall change on the
+DSL router upstream of nas01, not anything wrong here):
+
+| Port | Purpose | Host(s) | Notes |
+|---|---|---|---|
+| **443** | Control/API/notifications | `api.idrive360.com` (MSP API), `wsn4.idrive360.com` / `wsn4s.idrive360.com` (notification server), EVS server (e.g. `evs5497.idrive.com`) for session handshake | Not real TLS on the EVS/notification hosts — raw banner is `@IDEVSD: 29`, a custom protocol reusing port 443 |
+| **4437** | Actual backup data transfer | EVS server (same host as above, e.g. `evs5497.idrive.com` / `148.51.209.57` — check current value via `SERVERADDRESS`/`EVSSRVR` in `CONFIGURATION_FILE`, see "Problem 1" below for how to decode it) | Used by `idevsutil_dedup`, the real upload engine. Quick live check: `sudo ss -tnp \| grep idevsutil_dedup` — should show `ESTAB` with nonzero Recv-Q/Send-Q while a backup is running; stuck `SYN-SENT` here means port 4437 is being blocked somewhere upstream |
+
+Quick end-to-end check when something seems stuck:
+```bash
+# From inside the VM
+timeout 6 bash -c 'echo > /dev/tcp/<EVS-IP>/4437 && echo CONNECTED'
+sudo ss -tnp | grep -E 'idevsutil|idrive360'
+```
+
+---
+
 ## Key paths (inside the VM)
 
 | Path | Contents |
