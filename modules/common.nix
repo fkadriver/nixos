@@ -36,6 +36,10 @@
         # Disk Tools
         parted        # partition management
 
+        # Hardware Diagnostic Tools
+        usbutils      # lsusb
+        pciutils      # lspci
+
         # Network & Diagnostic Tools
         bind          # dig, nslookup
         curl
