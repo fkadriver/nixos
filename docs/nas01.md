@@ -605,7 +605,7 @@ port 5901) as its own desktop session outside logind's seat management,
 which caused PolicyKit "No session for pid" failures — removed 2026-08-24.
 
 Manage backups via the [IDrive360 web console](https://www.idrive360.com/enterprise/login).
-See [idrive360.md](idrive360.md) for CLI reference (commands run inside the VM).
+See [idrive360.md](idrive360.md) → [fkadriver/idrive360](https://github.com/fkadriver/idrive360) for CLI reference (commands run inside the VM).
 
 ---
 
@@ -858,8 +858,9 @@ idrive-status    # virsh domstate nas01-backup — VM running?
 idrive-ssh       # ssh into the VM
 ```
 
-See `docs/idrive360.md` for full IDrive360 operations (VM-based since the
-Docker containers were removed — see commit b20740e).
+See `docs/idrive360.md` → [fkadriver/idrive360](https://github.com/fkadriver/idrive360)
+for full IDrive360 operations (VM-based since the Docker containers were
+removed — see commit b20740e).
 
 ### `virsh start nas01-backup` fails with "unexpected fatal signal 13"
 
