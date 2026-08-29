@@ -88,7 +88,7 @@
     <video>
       <!-- 1440x900 matches the airbook's native panel (MacBook Air 7,2, 13"
            non-Retina) 1:1 — the primary console viewer. Confirmed available
-           in the guest's virtio-gpu EDID mode list via `xrandr --query`. -->
+           in the guest's virtio-gpu EDID mode list via xrandr's query mode. -->
       <model type='virtio' heads='1' primary='yes'>
         <resolution x='1440' y='900'/>
       </model>
