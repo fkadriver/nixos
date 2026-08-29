@@ -301,8 +301,16 @@ in
 
         # Single-window remote view of just the IDrive360 GUI, no VNC — attaches over SSH
         # to the idrive360-xpra seamless session on the nas01-backup VM (same alias as
-        # latitude). Requires an xpra client — verify/install with `brew search xpra`
-        # (not added to Brewfile here since the cask name couldn't be confirmed live).
+        # latitude). Renders natively in xpra's own Quartz client — no XQuartz needed —
+        # and works over Tailscale SSH (xpra tunnels its protocol over the ssh stdio
+        # channel, so it doesn't need X11 forwarding, which Tailscale SSH can't do).
+        # Requires the xpra macOS client. The Homebrew `xpra` cask is deprecated (fails
+        # Gatekeeper, disabled 2026-09-01), so install the official (un-notarized) DMG:
+        #   curl -fLO https://xpra.org/stable/MacOS/x86_64/Xpra-Light-x86_64-6.5.3-r0.dmg
+        #   hdiutil attach Xpra-Light-x86_64-6.5.3-r0.dmg
+        #   cp -R /Volumes/Xpra/Xpra-Light.app /Applications/ && hdiutil detach /Volumes/Xpra
+        #   xattr -rd com.apple.quarantine /Applications/Xpra-Light.app
+        # The `xpra` command resolves to the ~/.local/bin/xpra wrapper managed below.
         idrive-app = "xpra attach ssh://scott@nas01-backup.warthog-royal.ts.net/100";
         # Restart the IDrive360 agent service inside the nas01-backup VM (same alias as nas01/latitude)
         idrive-restart = "ssh scott@nas01-backup.warthog-royal.ts.net sudo systemctl restart idrive360cron";
@@ -423,8 +431,16 @@ in
 
         # Single-window remote view of just the IDrive360 GUI, no VNC — attaches over SSH
         # to the idrive360-xpra seamless session on the nas01-backup VM (same alias as
-        # latitude). Requires an xpra client — verify/install with `brew search xpra`
-        # (not added to Brewfile here since the cask name couldn't be confirmed live).
+        # latitude). Renders natively in xpra's own Quartz client — no XQuartz needed —
+        # and works over Tailscale SSH (xpra tunnels its protocol over the ssh stdio
+        # channel, so it doesn't need X11 forwarding, which Tailscale SSH can't do).
+        # Requires the xpra macOS client. The Homebrew `xpra` cask is deprecated (fails
+        # Gatekeeper, disabled 2026-09-01), so install the official (un-notarized) DMG:
+        #   curl -fLO https://xpra.org/stable/MacOS/x86_64/Xpra-Light-x86_64-6.5.3-r0.dmg
+        #   hdiutil attach Xpra-Light-x86_64-6.5.3-r0.dmg
+        #   cp -R /Volumes/Xpra/Xpra-Light.app /Applications/ && hdiutil detach /Volumes/Xpra
+        #   xattr -rd com.apple.quarantine /Applications/Xpra-Light.app
+        # The `xpra` command resolves to the ~/.local/bin/xpra wrapper managed below.
         idrive-app = "xpra attach ssh://scott@nas01-backup.warthog-royal.ts.net/100";
         # Restart the IDrive360 agent service inside the nas01-backup VM (same alias as nas01/latitude)
         idrive-restart = "ssh scott@nas01-backup.warthog-royal.ts.net sudo systemctl restart idrive360cron";
@@ -613,6 +629,19 @@ in
     # the top-level ~/.ssh/config is a writable stub that `Include`s our managed
     # file (created by the writableSshConfig activation script).
     ssh.enable = false;
+  };
+
+  # `xpra` on PATH -> the manually-installed Xpra-Light.app bundle CLI (see the
+  # idrive-app alias for the DMG install steps). Must *exec* the real binary, not
+  # symlink to it: the bundle launcher locates Contents/ from its own executable
+  # path, so a symlink resolves to ~/.local/bin and dies with "cannot locate
+  # Contents/". ~/.local/bin is on sessionPath. Harmless if the app isn't installed.
+  home.file.".local/bin/xpra" = {
+    executable = true;
+    text = ''
+      #!/bin/sh
+      exec /Applications/Xpra-Light.app/Contents/Helpers/Xpra "$@"
+    '';
   };
 
   # Managed SSH client hosts — used for outbound git, borg (nas01), and
