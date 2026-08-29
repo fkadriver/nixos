@@ -98,6 +98,10 @@ let
           # trustedInterfaces entry. Any tailnet device with a VNC viewer
           # (TigerVNC, Remmina, ...) can point straight at this address.
           idrive-console-vnc = "vncviewer nas01.warthog-royal.ts.net:5900";
+          # Single-window remote view of just the IDrive360 GUI, no VNC — attaches over
+          # SSH to the idrive360-xpra seamless session on the VM (same alias as
+          # latitude/airbook-darwin).
+          idrive-app      = "xpra attach ssh://scott@nas01-backup.warthog-royal.ts.net/100";
           # Restart the IDrive360 agent service inside the VM (over the tailnet —
           # the VM is its own tailnet node, same path latitude/airbook use).
           idrive-restart  = "ssh scott@nas01-backup.warthog-royal.ts.net sudo systemctl restart idrive360cron";
@@ -284,6 +288,7 @@ let
         # QEMU/KVM: nas01-backup VM (IDrive360 backup agent)
         cloud-utils      # cloud-localds for building cloud-init ISOs
         tigervnc         # vncviewer to reach nas01-backup from the RDP/Openbox session
+        xpra             # xpra client for idrive-app alias — single-window remote view of IDrive360
       ];
       # Force eno2 down at every network start (belt-and-suspenders with
       # networkmanager.unmanaged above — doesn't survive a driver reload,

@@ -3,7 +3,21 @@
   <uuid>843679ec-786b-42fc-87eb-868a66bb4dc4</uuid>
   <memory unit='MiB'>2048</memory>
   <currentMemory unit='MiB'>2048</currentMemory>
-  <vcpu placement='static'>2</vcpu>
+  <vcpu placement='static'>3</vcpu>
+  <!-- nas01 is a Xeon E3-1270 v5, 4C/8T (lscpu -e: core0=cpus 0,4; core1=1,5;
+       core2=2,6; core3=3,7). Pin the VM's 3 vcpus to cores 1-3, leaving core0
+       (cpus 0,4) untouched by qemu so nas01's own ZFS/Samba/Borg work always
+       has a full physical core free. shares=512 (half of the host default
+       1024) means the VM only wins scheduling on cores 1-3 when nas01 isn't
+       contending for them — it can burst up to all 3 cores when idle, but
+       backs off under host load rather than starving it. -->
+  <cputune>
+    <vcpupin vcpu='0' cpuset='1,5'/>
+    <vcpupin vcpu='1' cpuset='2,6'/>
+    <vcpupin vcpu='2' cpuset='3,7'/>
+    <emulatorpin cpuset='1,2,3,5,6,7'/>
+    <shares>512</shares>
+  </cputune>
   <cpu mode='host-passthrough' check='none'/>
   <os>
     <type arch='x86_64' machine='q35'>hvm</type>
@@ -72,7 +86,12 @@
       <listen type='address' address='100.73.114.76'/>
     </graphics>
     <video>
-      <model type='virtio' heads='1' primary='yes'/>
+      <!-- 1440x900 matches the airbook's native panel (MacBook Air 7,2, 13"
+           non-Retina) 1:1 — the primary console viewer. Confirmed available
+           in the guest's virtio-gpu EDID mode list via `xrandr --query`. -->
+      <model type='virtio' heads='1' primary='yes'>
+        <resolution x='1440' y='900'/>
+      </model>
     </video>
     <!-- virtiofs shares: /pool (IDrive360 backup source), /mnt (extra drives),
          and /home/scott/git (repo access from the guest). All read-write —

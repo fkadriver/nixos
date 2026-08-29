@@ -28,6 +28,15 @@
 #   1. Copy the DEB into the VM: scp -o ProxyJump=nas01 /path/to/IDrive360_*.deb scott@<VM-IP>:
 #   2. SSH into VM and run:  sudo apt install -y ./IDrive360_*.deb
 #   3. The installer registers the device and starts the idrive360cron service.
+#   4. The installer also drops ~/.config/autostart/idrive360client.desktop, which
+#      launches its own GUI --hidden on :0 at login. Disable it — the idrive360-xpra
+#      systemd service (written by this script) needs to be the ONLY thing that ever
+#      starts idrive360-client, since Electron's single-instance lock means a second
+#      launch just signals the first and exits (confirmed live 2026-08-29):
+#        echo 'Hidden=true' >> ~/.config/autostart/idrive360client.desktop
+#        sudo systemctl enable --now idrive360-xpra.service
+#   5. View just the IDrive360 window from a daily driver (no VNC, no full desktop):
+#        idrive-app   (alias on nas01/latitude/airbook-darwin: xpra attach ssh://...)
 set -euo pipefail
 
 [[ $EUID -eq 0 ]] || { echo "Run as root: sudo bash $0" >&2; exit 1; }
@@ -89,6 +98,7 @@ META
 hostname: nas01-backup
 manage_etc_hosts: true
 ssh_pwauth: true
+timezone: America/Chicago
 
 users:
   - name: scott
@@ -111,6 +121,8 @@ packages:
   - qemu-guest-agent
   - tree
   - binutils
+  - x11-xserver-utils
+  - xpra
 
 write_files:
   - path: /etc/modules-load.d/virtiofs.conf
@@ -189,6 +201,52 @@ write_files:
 
       echo "idrive360_backup: status=${STATUS} time=${TIME} files_backed_up=${FILES_BACKED_UP} size_backed_up=${SIZE_BACKED_UP} files_failed=${FILES_FAILED} log=${LOG_NAME}"
 
+  # Seamless single-window remote view of the IDrive360 GUI over SSH (no VNC,
+  # no full desktop) — attach from a daily driver with:
+  #   xpra attach ssh://scott@nas01-backup.warthog-royal.ts.net/100
+  # Uses xpra's "start" (seamless) mode: it spins up its own private Xvfb-
+  # backed display (:100, independent of the :0 LXDE console) and launches
+  # idrive360-client as its only child, so only that one window is exported —
+  # never a full desktop. No new listening port: xpra's ssh:// transport
+  # tunnels over the box's existing sshd.
+  #
+  # This has to be the ONLY running idrive360-client: confirmed live
+  # (2026-08-29) that Electron's single-instance lock is real here — a second
+  # launch just signals the first instance and exits within ~30s, so :100
+  # would go dark. That's why the vendor's own autostart entry
+  # (~/.config/autostart/idrive360client.desktop, installed by the .deb) gets
+  # Hidden=true added after install — see the "To install IDrive360" steps
+  # below. The backup agent itself (idrive360cron, --cdp-server,
+  # --watcher-service, etc.) is a separate binary/process tree, untouched by
+  # any of this.
+  #
+  # Also disables the Debian xpra package's default 'start' command
+  # (/etc/X11/Xsession true) in /etc/xpra/conf.d/60_server.conf: it errored
+  # under this minimal env and threw a stray xmessage error popup alongside
+  # the real IDrive360 window — confirmed live 2026-08-29. Passing --start=
+  # on the command line does NOT override it (list-type config value), so it
+  # has to be commented out in the config file itself.
+  - path: /etc/systemd/system/idrive360-xpra.service
+    content: |
+      [Unit]
+      Description=Xpra seamless session for IDrive360 GUI (remote view without VNC)
+      After=network-online.target
+      Wants=network-online.target
+
+      [Service]
+      Type=simple
+      User=scott
+      Environment=HOME=/home/scott
+      # '+' prefix: runs as root regardless of the unit's User=, needed since
+      # this file is root-owned 0644.
+      ExecStartPre=+/usr/bin/sed -i 's|^start = /etc/X11/Xsession true|#start = /etc/X11/Xsession true|' /etc/xpra/conf.d/60_server.conf
+      ExecStart=/usr/bin/xpra start :100 --daemon=no --systemd-run=no --exit-with-children=yes --start-child=/opt/IDrive360/idrive360-client --socket-dir=/home/scott/.xpra --html=off --pulseaudio=no --notifications=no --mdns=no
+      Restart=always
+      RestartSec=5
+
+      [Install]
+      WantedBy=multi-user.target
+
   # Idempotent — skips if already patched, so it's safe if re-run after a
   # manual restore.
   - path: /usr/local/bin/idrive360-wazuh-command.py
@@ -233,6 +291,20 @@ runcmd:
   - apt-get remove -y xscreensaver xscreensaver-data xscreensaver-gl 2>/dev/null || true
   - mkdir -p /etc/xdg/autostart
   - printf '[Desktop Entry]\nHidden=true\n' > /etc/xdg/autostart/light-locker.desktop
+
+  # LXSession loads ~/.config/lxsession/LXDE/autostart INSTEAD of the system
+  # one when present (not merged) — so this has to carry lxpanel/pcmanfm too,
+  # not just the new xrandr line. Forces the console's fixed resolution every
+  # login; matches the <resolution> hint in nas01-backup-domain.xml's virtio
+  # video model, which only takes effect on a cold boot (not a soft reboot).
+  - mkdir -p /home/scott/.config/lxsession/LXDE
+  - |
+    cat > /home/scott/.config/lxsession/LXDE/autostart << 'AUTOSTART'
+    @lxpanel --profile LXDE
+    @pcmanfm --desktop --profile LXDE
+    @xrandr --output Virtual-1 --mode 1440x900
+    AUTOSTART
+  - chown -R scott:scott /home/scott/.config/lxsession
 
   # Enable services
   - systemctl daemon-reload

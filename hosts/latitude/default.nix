@@ -142,10 +142,17 @@ let
         pkgs.syncthingtray-minimal
         pkgs.tigervnc  # vncviewer for nas01-backup-vnc alias (direct tailnet VNC)
         pkgs.x2goclient  # remote X sessions to OTworkstation
+        pkgs.xpra  # xpra client for idrive-app alias — single-window remote view of IDrive360
       ];
 
-      # Direct tailnet VNC to the nas01-backup VM (same alias name as airbook-darwin)
+      # Direct tailnet VNC to the nas01-backup VM (same alias name as airbook-darwin).
+      # NOTE (2026-08-29): this points at the guest's own in-guest x11vnc on port 5901,
+      # which was removed (see nas01-backup-setup.sh) — currently non-functional. The
+      # working full-desktop fallback is nas01's `idrive-console-vnc` alias instead.
       environment.shellAliases.nas01-backup-vnc = "vncviewer nas01-backup.warthog-royal.ts.net::5901";
+      # Single-window remote view of just the IDrive360 GUI, no VNC — attaches over SSH
+      # to the idrive360-xpra seamless session on the nas01-backup VM (same alias as airbook-darwin)
+      environment.shellAliases.idrive-app = "xpra attach ssh://scott@nas01-backup.warthog-royal.ts.net/100";
       # Restart the IDrive360 agent service inside the nas01-backup VM (same alias as nas01/airbook-darwin)
       environment.shellAliases.idrive-restart = "ssh scott@nas01-backup.warthog-royal.ts.net sudo systemctl restart idrive360cron";
 
