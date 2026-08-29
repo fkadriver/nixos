@@ -299,11 +299,6 @@ in
         # macOS-specific
         flush-dns = "sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder";
 
-        # Remote desktop — nas01-backup VM (IDrive360 host).
-        # NOTE (2026-08-29): this pointed at the guest's own in-guest x11vnc on port
-        # 5901, which was removed (see nas01-backup-setup.sh) — currently non-functional.
-        # The working full-desktop fallback is nas01's `idrive-console-vnc` alias instead.
-        nas01-backup-vnc = "/Applications/TigerVNC.app/Contents/MacOS/vncviewer nas01-backup.warthog-royal.ts.net::5901 >/dev/null 2>&1 &";
         # Single-window remote view of just the IDrive360 GUI, no VNC — attaches over SSH
         # to the idrive360-xpra seamless session on the nas01-backup VM (same alias as
         # latitude). Requires an xpra client — verify/install with `brew search xpra`
@@ -426,11 +421,6 @@ in
         # macOS-specific
         flush-dns = "sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder";
 
-        # Remote desktop — nas01-backup VM (IDrive360 host).
-        # NOTE (2026-08-29): this pointed at the guest's own in-guest x11vnc on port
-        # 5901, which was removed (see nas01-backup-setup.sh) — currently non-functional.
-        # The working full-desktop fallback is nas01's `idrive-console-vnc` alias instead.
-        nas01-backup-vnc = "/Applications/TigerVNC.app/Contents/MacOS/vncviewer nas01-backup.warthog-royal.ts.net::5901 >/dev/null 2>&1 &";
         # Single-window remote view of just the IDrive360 GUI, no VNC — attaches over SSH
         # to the idrive360-xpra seamless session on the nas01-backup VM (same alias as
         # latitude). Requires an xpra client — verify/install with `brew search xpra`
