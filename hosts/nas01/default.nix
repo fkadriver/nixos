@@ -138,10 +138,10 @@ let
         # NetworkManager would otherwise auto-DHCP any interface it sees.
         networkmanager.unmanaged = [ "eno2" ];
         firewall = {
-          # Samba/NFS for LAN clients (exports/smb.conf restrict per-share access);
+          # NFS for LAN clients (exports restrict per-share access);
           # tailscale0 is trusted via modules/tailscale.nix
-          allowedTCPPorts = [ 111 139 445 2049 4000 4001 20048 ];
-          allowedUDPPorts = [ 111 137 138 2049 4000 4001 20048 ];
+          allowedTCPPorts = [ 111 2049 4000 4001 20048 ];
+          allowedUDPPorts = [ 111 2049 4000 4001 20048 ];
           interfaces."tailscale0".allowedTCPPorts = [ 8384 ];
         };
       };
@@ -214,46 +214,7 @@ let
         settings.PasswordAuthentication = false;
       };
 
-      # Samba: data share + read-only borg repo browsing
-      # (borg clients back up via SSH, not SMB)
-      users.groups.nas = { };
-      users.users.scott.extraGroups = [ "nas" "libvirtd" "kvm" ];
-      services.samba = {
-        enable = true;
-        settings = {
-          global = {
-            workgroup = "WORKGROUP";
-            "server string" = "nas01";
-            "server role" = "standalone server";
-            security = "user";
-            "map to guest" = "never";
-            "hosts allow" = "192.168.1.0/24 100.64.0.0/10 127.0.0.1";
-            "hosts deny" = "ALL";
-            "socket options" = "TCP_NODELAY IPTOS_LOWDELAY SO_RCVBUF=131072 SO_SNDBUF=131072";
-            "use sendfile" = "yes";
-            "aio read size" = "0";
-            "aio write size" = "0";
-            "multicast dns register" = "yes";
-          };
-          data = {
-            comment = "NAS Data";
-            path = "/pool/data";
-            "valid users" = "scott";
-            "read only" = "no";
-            browsable = "yes";
-            "create mask" = "0664";
-            "directory mask" = "0775";
-            "force group" = "nas";
-          };
-          borg = {
-            comment = "Borg Backup Repositories";
-            path = "/pool/borg";
-            "valid users" = "scott";
-            "read only" = "yes";
-            browsable = "yes";
-          };
-        };
-      };
+      users.users.scott.extraGroups = [ "libvirtd" "kvm" ];
 
       # NFS exports (LAN + Tailscale, same as Ubuntu-era /etc/exports)
       services.nfs.server = {

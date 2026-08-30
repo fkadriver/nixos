@@ -57,10 +57,10 @@ Then add to `.sops.yaml` and run `sops updatekeys secrets/secrets.yaml`.
 |---|---|
 | Service Tag | 86B3JH2 |
 | CPU / Memory | Xeon E3-1270 v5 (4C/8T, 3.6/4.0GHz turbo, 80W), 16GB 2133MHz ECC UDIMM |
-| Purpose | NAS: Samba/NFS file serving, Borg backup server, Syncthing hub, IDrive360 cloud backup |
+| Purpose | NAS: NFS file serving, Borg backup server, Syncthing hub, IDrive360 cloud backup |
 | Storage | 500GB SATA HDD (OS), 3x 4TB HGST ZFS RAIDZ1 (`/pool`, incl. borg repos), WD 18TB (confirmed healthy 2026-08-22, kept `nofail`) |
 | Storage controller | Dell HBA330 (true HBA passthrough, `mpt3sas`) — replaced the stock PERC H730 RAID-on-chip card |
-| Key Features | ZFS (autoScrub/TRIM), Samba, NFS, syncthing-declarative, hd-idle spindown, Wazuh agent, IDrive360 in Docker |
+| Key Features | ZFS (autoScrub/TRIM), NFS, syncthing-declarative, hd-idle spindown, Wazuh agent, IDrive360 in Docker |
 | Borg Repos | `/pool/borg/{nas01,latitude,vm01,log01,airbook-darwin}` |
 
 **Note:** Headless server. ZFS pool and WD drive are not disko-managed — they survive OS reinstalls (`zpool import -f pool` once after install). IDrive360 runs in an `ubuntu:24.04` container because its installer self-updates at runtime. Borg's `BORG_RSH` uses `tailscale ssh` rather than pinned OpenSSH, so a future host-key rotation (e.g. another hardware swap) won't need manual re-pinning. See [nas01.md](nas01.md) for full reference, including the T330 migration history.

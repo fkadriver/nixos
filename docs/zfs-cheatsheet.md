@@ -110,7 +110,7 @@ du -sh /pool/data/*                 # Standard disk usage within dataset
 | Dataset     | Mount       | Notes                              |
 |-------------|-------------|------------------------------------|
 | `pool`      | `/pool`     | RAIDZ1 across 3x 4TB HGST drives  |
-| `pool/data` | `/pool/data`| SMB shares, NFS exports            |
+| `pool/data` | `/pool/data`| NFS exports                         |
 
 Borg repos: `/mnt/wd18t_3/borg/repos/` (WD 18TB drive, not on ZFS pool)
 

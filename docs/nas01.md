@@ -1,6 +1,6 @@
 # nas01 — NAS Server Reference
 
-nas01 is a NixOS host (converted from Ubuntu in July 2026 after a permissions accident broke sudo/root). The entire system — ZFS, Samba, NFS, Syncthing, Borg server, Tailscale, IDrive360 — is declared in [hosts/nas01/default.nix](../hosts/nas01/default.nix).
+nas01 is a NixOS host (converted from Ubuntu in July 2026 after a permissions accident broke sudo/root). The entire system — ZFS, NFS, Syncthing, Borg server, Tailscale, IDrive360 — is declared in [hosts/nas01/default.nix](../hosts/nas01/default.nix).
 
 The Ubuntu-era `apply.sh` deployment is archived at `archive/hosts/nas01-ubuntu/`.
 
@@ -282,10 +282,10 @@ than throwing an obvious error.
    — confirm running state, network reachability, and that whatever it
    backs up to externally is still actually receiving uploads, not just
    `virsh domstate` == running.
-9. **File shares** (Samba/NFS) — confirm reachable from an **actual
-   client**, not just `systemctl is-active`; a same-host `smbclient -L
-   localhost` loopback probe is not a reliable substitute and can fail on
-   protocol negotiation even when the service is fine for real clients.
+9. **File shares** (NFS) — confirm reachable from an **actual client**,
+   not just `systemctl is-active`; a same-host loopback probe is not a
+   reliable substitute and can fail on protocol negotiation even when the
+   service is fine for real clients.
 10. **Network interface names/drivers** — don't carry over
     hardware-specific workarounds (Tx-hang mitigations, driver-specific
     quirks) onto new hardware unverified; confirm the driver
@@ -403,17 +403,10 @@ specific point instead of the latest — list them with
 `idrive-vm-list`. See [IDrive360](#idrive360-cloud-backup-qemukvm-vm) below
 for details on what is/isn't captured.
 
-### 6. Samba password (not declarative)
-
-```bash
-sudo smbpasswd -a scott
-```
-
-### 7. Verify
+### 6. Verify
 
 ```bash
 zpool status                        # pool healthy
-sudo systemctl status samba-smbd    # file sharing up
 idrive-status                       # nas01-backup VM running
 borg-repos                          # other hosts' repos visible under /pool/borg
 ```
@@ -432,7 +425,7 @@ sudo nixos-rebuild switch --flake ~/git/nixos#nas01
 
 ```
 /pool/                      ZFS RAIDZ1 (3x 4TB HGST)
-  data/                     Main NAS data — SMB share [data], NFS export
+  data/                     Main NAS data — NFS export
   shares/                   SANS + photos NFS exports
   syncthing/                Syncthing folders (Documents, Downloads, Photos)
   borg/                     Borg backup repos: <hostname> per client
@@ -448,7 +441,6 @@ All declared in [hosts/nas01/default.nix](../hosts/nas01/default.nix):
 
 | Service | NixOS option | Notes |
 |---|---|---|
-| Samba | `services.samba` | shares `[data]` rw, `[borg]` ro; LAN + Tailscale |
 | NFS | `services.nfs.server` | fixed ports 4000/4001/20048 for firewall |
 | Syncthing | `services.syncthing-declarative` | Tailscale-only, device ID preserved |
 | ZFS | `boot.zfs.extraPools` | weekly autoScrub + TRIM enabled |
@@ -610,15 +602,6 @@ See [idrive360.md](idrive360.md) → [fkadriver/idrive360](https://github.com/fk
 ---
 
 ## File Sharing
-
-### SMB (Samba)
-
-Restricted to `192.168.1.0/24` + Tailscale. Authentication required (`valid users = scott`).
-
-| Share | Path | Access |
-|---|---|---|
-| `[data]` | `/pool/data` | read/write, scott only |
-| `[borg]` | `/pool/borg` | read-only browse |
 
 ### NFS
 
@@ -816,14 +799,6 @@ sudo systemctl unmask --runtime borgbackup-job-system.timer borg-status.timer bo
 zpool import                 # list importable pools
 sudo zpool import -f pool    # force if never cleanly exported
 zpool status
-```
-
-### Samba not accessible
-
-```bash
-sudo systemctl status samba-smbd
-sudo smbstatus
-# Password set? sudo smbpasswd -a scott
 ```
 
 ### NFS mounts failing on clients
