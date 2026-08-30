@@ -269,7 +269,25 @@ than throwing an obvious error.
 6. **Wazuh agent enrollment** — a fresh install gets a new agent identity;
    confirm it actually re-enrolled (`client.keys` non-empty,
    `journalctl -u wazuh-agent` free of repeated connect/enroll errors) not
-   just that the service reports `active`.
+   just that the service reports `active`. Then, on the manager, also
+   confirm **group membership**: `agent_groups -s -i <id>` (or
+   `-l -g <group>`) against *every* group in `agent_groups -l` whose
+   criteria the host actually meets — not just the groups it used to
+   belong to, since that assumes the pre-migration membership was
+   complete (it wasn't, see below). Check each shared `agent.conf`'s own
+   header comment for its intended host list (docker enabled? →
+   `docker-hosts`; this specific host? → `nas01-health`) and cross-check
+   against reality (`virtualisation.docker.enable`, etc.), not memory. A
+   fresh enrollment always lands in `default` only — group membership is
+   set server-side and does not carry over from the old agent identity,
+   so any shared config tied to a non-default group (command pollers,
+   extra localfiles, wodles, etc.) silently stops applying until the host
+   is re-added with `agent_groups -a -i <id> -g <group>`. Found
+   2026-08-30: nas01 sat in `default` only for over a week post-migration
+   — both `nas01-health` (ZFS pool status poller) and `docker-hosts`
+   (docker-listener wodle, despite `docker.enable=true` fleet-wide via
+   `common.nix`) were missing; the latter had apparently never been added
+   even before the migration.
 7. **Borg backup jobs** — expect every repo to show `STALE` immediately
    after any outage/migration window (no completed backup during the
    downtime) — that's normal, not a fault. Confirm it clears after the next
