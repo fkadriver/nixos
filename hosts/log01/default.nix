@@ -10,6 +10,7 @@ let
       inputs.self.nixosModules.borg-backup
       inputs.self.nixosModules.vscode-server
       inputs.self.nixosModules.wazuh-agent
+      inputs.self.nixosModules.smart-monitor
       inputs.self.nixosModules.user-scott
       inputs.self.nixosModules.fwupd
       inputs.home-manager.nixosModules.home-manager

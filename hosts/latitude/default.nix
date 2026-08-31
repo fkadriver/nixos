@@ -7,6 +7,7 @@ let
       inputs.self.nixosModules.common
       inputs.self.nixosModules.tsauth
       inputs.self.nixosModules.wazuh-agent
+      inputs.self.nixosModules.smart-monitor
       inputs.self.nixosModules.laptop-kde
       inputs.self.nixosModules.logitech
       inputs.self.nixosModules.multi-monitor

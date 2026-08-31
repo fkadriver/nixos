@@ -1,10 +1,7 @@
 { inputs, ... }@flakeContext:
 let
-  # Called by smartd via -M exec when a SMART failure is detected.
-  smartdAlertScript = pkgs: pkgs.writeShellScript "smartd-alert" ''
-    LOG=/var/log/smartd-alerts.log
-    echo "$(date '+%b %d %H:%M:%S') nas01 smartd: ALERT device=''${SMARTD_DEVICE:-unknown} type=''${SMARTD_FAILTYPE:-unknown} msg=''${SMARTD_MESSAGE:-}" >> "$LOG"
-  '';
+  # smartd + wazuh-smart-status are now provided fleet-wide by
+  # modules/smart-monitor.nix (imported above) — was nas01-only inline here.
 
   # Checks each borg repo's index mtime; logs OK or STALE for Wazuh.
   borgStatusScript = pkgs: pkgs.writeShellScript "borg-status" ''
@@ -44,6 +41,7 @@ let
       inputs.self.nixosModules.borg-backup
       inputs.self.nixosModules.vscode-server
       inputs.self.nixosModules.wazuh-agent
+      inputs.self.nixosModules.smart-monitor
       inputs.self.nixosModules.user-scott
       inputs.self.nixosModules.syncthing-declarative
       inputs.self.nixosModules.fwupd
@@ -281,11 +279,6 @@ let
         };
       };
 
-      services.smartd = {
-        enable = true;
-        defaults.monitored = "-a -M exec ${smartdAlertScript pkgs}";
-      };
-
       # Drive temperature tools without password (temps alias)
       security.sudo.extraRules = [
         {
@@ -338,7 +331,6 @@ let
         manager = "wazuh.warthog-royal.ts.net";
         enrollmentPasswordFile = "/run/bitwarden-secrets/wazuh_agent_enrollment_password";
         extraLocalFiles = [
-          { location = "/var/log/smartd-alerts.log"; logFormat = "syslog"; }
           { location = "/var/log/borg-status.log"; logFormat = "syslog"; }
         ];
       };

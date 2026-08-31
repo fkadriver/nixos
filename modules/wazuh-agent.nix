@@ -41,6 +41,8 @@ let
                    # already-running tailscaled over its socket (bound below)
       zfs          # zpool/zfs CLI, for wazuh-zfs-pool-status (nas01) — talks to
                    # the kernel ZFS module via /dev/zfs (bound below)
+      smartmontools # smartctl, for wazuh-smart-status (fleet-wide SMART poll)
+      util-linux   # lsblk, for wazuh-smart-status drive discovery
       libcap
       procps  # provides ps, used by wazuh-control's pstatus() to verify daemons started
     ];
@@ -198,7 +200,7 @@ EOF
     # store paths are followable. Use readlink -f to get the real store path (not the
     # /usr/local/bin symlink, which points back into the invisible /usr/local).
     mkdir -p /var/ossec/scripts
-    for name in wazuh-borg-status wazuh-github-ci-status wazuh-tailscale-health wazuh-zfs-pool-status; do
+    for name in wazuh-borg-status wazuh-github-ci-status wazuh-tailscale-health wazuh-zfs-pool-status wazuh-smart-status; do
       src="/usr/local/bin/$name"
       if [ -e "$src" ]; then
         ln -sf "$(readlink -f "$src")" "/var/ossec/scripts/$name"

@@ -35,6 +35,7 @@ let
       inputs.self.nixosModules.distributed-builds
       inputs.self.nixosModules.deploy-pihole
       inputs.self.nixosModules.wazuh-agent
+      inputs.self.nixosModules.smart-monitor
       inputs.self.nixosModules.fwupd
     ];
 
