@@ -199,19 +199,48 @@ write_files:
     permissions: '0755'
     content: |
       #!/usr/bin/env bash
+      # NOTE: every $ below is backslash-escaped (\$) even though this heredoc
+      # keeps its own indentation clean — the outer `cat > user-data << CLOUDINIT`
+      # in this script is an UNQUOTED heredoc, so bash performs command
+      # substitution / parameter expansion on this entire block at ISO-build
+      # time unless escaped. An earlier, unescaped version of this exact block
+      # silently evaluated \$(ls /opt/IDrive360/...) against the host running
+      # this script (where that path doesn't exist) instead of shipping the
+      # literal source — see the \$KEY_FILE escaping a few blocks up for the
+      # existing precedent this follows.
       set -euo pipefail
 
-      STATUS_FILE=$(ls /opt/IDrive360/idriveIt/user_profile/scott/*/.userInfo/lastOnlineBackupStatus.json 2>/dev/null | head -1) || true
+      # Converts a "<number><unit>" string (B, KB, MB, GB, TB; case-insensitive,
+      # no space) to a plain MB float. Echoes "unknown" if it doesn't parse.
+      to_mb() {
+          local raw="\$1" num unit
+          num=\$(grep -oP '^[0-9.]+' <<<"\$raw") || true
+          unit=\$(grep -oP '[A-Za-z]+\$' <<<"\$raw" | tr '[:lower:]' '[:upper:]') || true
+          if [ -z "\$num" ] || [ -z "\$unit" ]; then
+              echo "unknown"
+              return
+          fi
+          case "\$unit" in
+              B)  awk -v n="\$num" 'BEGIN{printf "%.4f", n/1048576}' ;;
+              KB) awk -v n="\$num" 'BEGIN{printf "%.4f", n/1024}' ;;
+              MB) awk -v n="\$num" 'BEGIN{printf "%.4f", n}' ;;
+              GB) awk -v n="\$num" 'BEGIN{printf "%.4f", n*1024}' ;;
+              TB) awk -v n="\$num" 'BEGIN{printf "%.4f", n*1024*1024}' ;;
+              *)  echo "unknown" ;;
+          esac
+      }
 
-      if [ -z "$STATUS_FILE" ] || [ ! -f "$STATUS_FILE" ]; then
+      STATUS_FILE=\$(ls /opt/IDrive360/idriveIt/user_profile/scott/*/.userInfo/lastOnlineBackupStatus.json 2>/dev/null | head -1) || true
+
+      if [ -z "\$STATUS_FILE" ] || [ ! -f "\$STATUS_FILE" ]; then
           echo "idrive360_backup: status=UNKNOWN error=status_file_not_found"
           exit 0
       fi
 
-      STATUS=$(grep -oP '"status"\s*:\s*"\K[^"]+' "$STATUS_FILE" 2>/dev/null || echo "")
-      TIME=$(grep -oP '"time"\s*:\s*\K[0-9]+' "$STATUS_FILE" 2>/dev/null || echo "0")
+      STATUS=\$(grep -oP '"status"\s*:\s*"\K[^"]+' "\$STATUS_FILE" 2>/dev/null || echo "")
+      TIME=\$(grep -oP '"time"\s*:\s*\K[0-9]+' "\$STATUS_FILE" 2>/dev/null || echo "0")
 
-      if [ -z "$STATUS" ]; then
+      if [ -z "\$STATUS" ]; then
           echo "idrive360_backup: status=UNKNOWN error=status_field_missing"
           exit 0
       fi
@@ -220,26 +249,28 @@ write_files:
       # full backup or hourly CDP sync, whichever is newer) regardless of the status
       # field above -- that field is unreliable due to a vendor pid.txt bug that
       # misreports Failure even when the transfer itself succeeded (docs/idrive360.md).
-      LATEST_LOG=$(ls -t /opt/IDrive360/idriveIt/user_profile/scott/*/Backup/DefaultBackupSet/LOGS/* \
-                          /opt/IDrive360/idriveIt/user_profile/scott/*/CDP/DefaultBackupSet/LOGS/* \
-                          2>/dev/null | head -1) || true
+      LATEST_LOG=\$(ls -t /opt/IDrive360/idriveIt/user_profile/scott/*/Backup/DefaultBackupSet/LOGS/* /opt/IDrive360/idriveIt/user_profile/scott/*/CDP/DefaultBackupSet/LOGS/* 2>/dev/null | head -1) || true
 
       FILES_BACKED_UP="unknown"
       SIZE_BACKED_UP="unknown"
+      SIZE_BACKED_UP_MB="unknown"
       FILES_FAILED="unknown"
       LOG_NAME="none"
 
-      if [ -n "$LATEST_LOG" ] && [ -f "$LATEST_LOG" ]; then
-          LOG_NAME=$(basename "$LATEST_LOG")
-          PARSED=$(grep -oP '[Bb]acked up now\s*:?\s*\K[0-9]+' "$LATEST_LOG" | head -1) || true
-          if [ -n "$PARSED" ]; then FILES_BACKED_UP="$PARSED"; fi
-          PARSED=$(grep -oP 'Size of backed up files:\s*\K[0-9.]+\s*[A-Za-z]+' "$LATEST_LOG" | head -1) || true
-          if [ -n "$PARSED" ]; then SIZE_BACKED_UP="${PARSED// /}"; fi
-          PARSED=$(grep -oP '[Ff]ailed to backup\s*:?\s*\K[0-9]+' "$LATEST_LOG" | head -1) || true
-          if [ -n "$PARSED" ]; then FILES_FAILED="$PARSED"; fi
+      if [ -n "\$LATEST_LOG" ] && [ -f "\$LATEST_LOG" ]; then
+          LOG_NAME=\$(basename "\$LATEST_LOG")
+          PARSED=\$(grep -oP '[Bb]acked up now\s*:?\s*\K[0-9]+' "\$LATEST_LOG" | head -1) || true
+          if [ -n "\$PARSED" ]; then FILES_BACKED_UP="\$PARSED"; fi
+          PARSED=\$(grep -oP 'Size of backed up files:\s*\K[0-9.]+\s*[A-Za-z]+' "\$LATEST_LOG" | head -1) || true
+          if [ -n "\$PARSED" ]; then
+              SIZE_BACKED_UP="\${PARSED// /}"
+              SIZE_BACKED_UP_MB=\$(to_mb "\$SIZE_BACKED_UP")
+          fi
+          PARSED=\$(grep -oP '[Ff]ailed to backup\s*:?\s*\K[0-9]+' "\$LATEST_LOG" | head -1) || true
+          if [ -n "\$PARSED" ]; then FILES_FAILED="\$PARSED"; fi
       fi
 
-      echo "idrive360_backup: status=${STATUS} time=${TIME} files_backed_up=${FILES_BACKED_UP} size_backed_up=${SIZE_BACKED_UP} files_failed=${FILES_FAILED} log=${LOG_NAME}"
+      echo "idrive360_backup: status=\${STATUS} time=\${TIME} files_backed_up=\${FILES_BACKED_UP} size_backed_up=\${SIZE_BACKED_UP} size_backed_up_mb=\${SIZE_BACKED_UP_MB} files_failed=\${FILES_FAILED} log=\${LOG_NAME}"
 
   # Seamless single-window remote view of the IDrive360 GUI over SSH (no VNC,
   # no full desktop) — attach from a daily driver with:
@@ -361,6 +392,16 @@ runcmd:
   - curl -sS -o /tmp/wazuh-agent.deb https://packages.wazuh.com/4.x/apt/pool/main/w/wazuh-agent/wazuh-agent_4.14.5-1_amd64.deb
   - WAZUH_MANAGER='wazuh.warthog-royal.ts.net' dpkg -i /tmp/wazuh-agent.deb
   - python3 /usr/local/bin/idrive360-wazuh-command.py
+  # Allow command/full_command entries the manager pushes via shared agent.conf
+  # (default group: df -P, ss -tulpn, wazuh-borg-status) — default is disabled
+  # for security. Without this, logcollector logs "Remote commands are not
+  # accepted from the manager" and silently drops all three. Same override
+  # the NixOS wazuh-agent module sets for the other fleet hosts; this VM is
+  # provisioned outside that module so it needs its own copy. Doesn't affect
+  # the idrive360-command-localfile block above — that's written directly
+  # into this agent's own local ossec.conf, not pushed remotely, so it was
+  # never subject to this restriction.
+  - grep -q "remote_commands" /var/ossec/etc/local_internal_options.conf || printf '%s\n' "logcollector.remote_commands=1" "wazuh_command.remote_commands=1" >> /var/ossec/etc/local_internal_options.conf
 CLOUDINIT
 
     cloud-localds "$CIDATA_ISO" "$TMPDIR/user-data" "$TMPDIR/meta-data"
