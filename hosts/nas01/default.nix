@@ -233,6 +233,83 @@ let
         '';
       };
 
+      # Immich (migrated from vm01). NOT /pool/shares/photos — that's the
+      # unrelated existing family-photos NFS export. This is a separate
+      # dataset dedicated to the immich docker stack (uploads + postgres).
+      #
+      # One-time manual step before the first rebuild that references these
+      # paths (dataset creation is imperative here, same as every other
+      # dataset on "pool" — see docs/nas01.md, ZFS was never brought under
+      # disko):
+      #   sudo zfs create -o compression=lz4 pool/photos
+      #   sudo zfs create -o recordsize=1M -o compression=off pool/photos/library
+      #   sudo zfs create -o recordsize=16K -o compression=lz4 pool/photos/postgres
+      # (library holds already-compressed jpg/heic/mp4 — recordsize=1M and no
+      # compression avoid wasting CPU re-compressing it; postgres wants a
+      # small recordsize matching its page size.)
+      users.groups.immich = {};
+      users.users.immich = {
+        isSystemUser = true;
+        group = "immich";
+        home = "/home/users/immich";
+        createHome = true;
+        shell = pkgs.bash;
+        extraGroups = [ "docker" ];
+      };
+
+      # Deploy the same GitHub deploy key vm01 uses (fetched into scott's
+      # ~/.ssh by bitwarden-ssh-keys) so the immich user can clone/pull
+      # git@github.com:fkadriver/immich-app.git on its own.
+      system.activationScripts.immichSshGithub = lib.stringAfter [ "bitwarden-ssh-keys" "users" ] ''
+        SSH_DIR=/home/users/immich/.ssh
+        SRC_KEY=/home/scott/.ssh/id_ed25519_github
+
+        if [ -f "$SRC_KEY" ]; then
+          mkdir -p "$SSH_DIR"
+          chmod 700 "$SSH_DIR"
+          chown immich:immich "$SSH_DIR"
+
+          cp "$SRC_KEY" "$SSH_DIR/id_ed25519_github"
+          chmod 600 "$SSH_DIR/id_ed25519_github"
+          chown immich:immich "$SSH_DIR/id_ed25519_github"
+
+          cat > "$SSH_DIR/config" << 'EOF'
+Host github.com
+  User git
+  IdentityFile ~/.ssh/id_ed25519_github
+  IdentitiesOnly yes
+EOF
+          chmod 600 "$SSH_DIR/config"
+          chown immich:immich "$SSH_DIR/config"
+        else
+          echo "Warning: $SRC_KEY not found — immich GitHub SSH key not installed" >&2
+        fi
+      '';
+
+      # Immich Docker Compose stack. The repo itself
+      # (git@github.com:fkadriver/immich-app.git) is cloned manually as the
+      # immich user, same convention as unifi-docker/immich-ml-docker below —
+      # Nix wires up the user/key/service but doesn't own the checkout:
+      #   sudo -u immich git clone git@github.com:fkadriver/immich-app.git /home/users/immich/git/immich
+      # .env (gitignored upstream) then needs UPLOAD_LOCATION=/pool/photos/library
+      # and DB_DATA_LOCATION=/pool/photos/postgres, with PUID/PGID set to
+      # `id immich` on this host (NOT vm01's — uids aren't pinned to match,
+      # see users.users.immich above).
+      systemd.services.immich-docker = {
+        description = "Immich Docker Compose Stack";
+        wantedBy = [ "multi-user.target" ];
+        after = [ "docker.service" "network-online.target" ];
+        wants = [ "network-online.target" ];
+        requires = [ "docker.service" ];
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+          WorkingDirectory = "/home/users/immich/git/immich";
+          ExecStart = "${pkgs.docker}/bin/docker compose up -d";
+          ExecStop = "${pkgs.docker}/bin/docker compose down";
+        };
+      };
+
       # Borg server side: clients invoke borg over SSH as scott
       environment.systemPackages = with pkgs; [
         borgbackup
@@ -259,6 +336,11 @@ let
         "d /pool/borg 0750 scott users -"
         "d /usr/local/bin 0755 root root -"
         "L+ /usr/local/bin/wazuh-zfs-pool-status - - - - ${pkgs.writeShellScript "wazuh-zfs-pool-status" (builtins.readFile ./wazuh-zfs-pool-status.sh)}"
+        # Fix ownership on the already-mounted photos datasets (created
+        # manually — see the immich section above). "z" not "d": these are
+        # ZFS mountpoints, not plain dirs for tmpfiles to create.
+        "z /pool/photos/library 0750 immich immich -"
+        "z /pool/photos/postgres 0750 immich immich -"
       ];
 
       # Drive spindown. by-id paths instead of sdX (assignments shift on reboot).
