@@ -303,7 +303,9 @@ EOF
       # see users.users.immich above).
       systemd.services.immich-docker = {
         description = "Immich Docker Compose Stack";
-        wantedBy = [ "multi-user.target" ];
+        # wantedBy disabled — data migration from vm01 is paused. Re-enable
+        # once library/postgres are populated and .env is confirmed correct.
+        # wantedBy = [ "multi-user.target" ];
         after = [ "docker.service" "network-online.target" ];
         wants = [ "network-online.target" ];
         requires = [ "docker.service" ];
