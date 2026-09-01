@@ -244,9 +244,15 @@ let
       #   sudo zfs create -o compression=lz4 pool/photos
       #   sudo zfs create -o recordsize=1M -o compression=off pool/photos/library
       #   sudo zfs create -o recordsize=16K -o compression=lz4 pool/photos/postgres
+      #   sudo chown immich:immich pool/photos/library pool/photos/postgres
+      #   sudo chmod 750 pool/photos/library pool/photos/postgres
       # (library holds already-compressed jpg/heic/mp4 — recordsize=1M and no
       # compression avoid wasting CPU re-compressing it; postgres wants a
-      # small recordsize matching its page size.)
+      # small recordsize matching its page size. Ownership is chowned by hand,
+      # not by a tmpfiles "z" rule — systemd-tmpfiles refuses to fix ownership
+      # through /pool, since /pool itself is scott-owned rather than root, and
+      # treats that as an unsafe path transition. Re-run the chown/chmod above
+      # by hand if these datasets are ever recreated.)
       users.groups.immich = {};
       users.users.immich = {
         isSystemUser = true;
@@ -336,11 +342,6 @@ EOF
         "d /pool/borg 0750 scott users -"
         "d /usr/local/bin 0755 root root -"
         "L+ /usr/local/bin/wazuh-zfs-pool-status - - - - ${pkgs.writeShellScript "wazuh-zfs-pool-status" (builtins.readFile ./wazuh-zfs-pool-status.sh)}"
-        # Fix ownership on the already-mounted photos datasets (created
-        # manually — see the immich section above). "z" not "d": these are
-        # ZFS mountpoints, not plain dirs for tmpfiles to create.
-        "z /pool/photos/library 0750 immich immich -"
-        "z /pool/photos/postgres 0750 immich immich -"
       ];
 
       # Drive spindown. by-id paths instead of sdX (assignments shift on reboot).
