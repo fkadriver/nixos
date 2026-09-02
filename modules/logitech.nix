@@ -5,22 +5,18 @@
 # Migrate from Solaar once nixpkgs PR merges with Linux support.
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }: {
-  imports = [
-    inputs.solaar.nixosModules.default
-  ];
-
   config = {
     # Enable Solaar service for Logitech device management
-    services.solaar = {
+    programs.solaar = {
       enable = true;
-      window = "hide";  # Start hidden in system tray
+      userService = {
+        enable = true;
+        window = "hide";  # Start hidden in system tray
+      };
     };
 
     # Enable udev rules for Logitech devices
-    hardware.logitech.wireless = {
-      enable = true;
-      enableGraphical = true;
-    };
+    hardware.logitech.wireless.enable = true;
 
     # Install libinput-gestures for mouse button support
     environment.systemPackages = with pkgs; [
@@ -85,9 +81,9 @@
           # Wait for Solaar to enumerate devices
           sleep 3
           DEV="ERGO K860 for Business"
-          ${config.services.solaar.package}/bin/solaar config "$DEV" fn-swap false
-          ${config.services.solaar.package}/bin/solaar config "$DEV" divert-keys "Screen Capture" Diverted
-          ${config.services.solaar.package}/bin/solaar config "$DEV" divert-keys "Host Switch Channel 1" Diverted
+          ${config.programs.solaar.package}/bin/solaar config "$DEV" fn-swap false
+          ${config.programs.solaar.package}/bin/solaar config "$DEV" divert-keys "Screen Capture" Diverted
+          ${config.programs.solaar.package}/bin/solaar config "$DEV" divert-keys "Host Switch Channel 1" Diverted
 
           # Remove stale Wave Keys entry from config.yaml (device no longer paired)
           CONFIG="$HOME/.config/solaar/config.yaml"
