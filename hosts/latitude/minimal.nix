@@ -28,14 +28,8 @@ let
         { device = "/dev/disk/by-uuid/ba0803d5-36af-4d07-98c2-7fc73adab9e9"; }
       ];
 
-      hardware = {
-        logitech = {
-          wireless = {
-            enable = true;
-            enableGraphical = true;
-          };
-        };
-      };
+      hardware.logitech.wireless.enable = true;
+      programs.solaar.enable = true;
       networking = {
         hostName = "latitude-nixos";
       };

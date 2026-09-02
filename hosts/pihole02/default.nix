@@ -29,7 +29,7 @@ let
 
       # Kernel version lock — Pi 3B (nixos-hardware kernel)
       # Update alongside LOCKED_KERNEL_VERSIONS in scripts/deploy-piholes.sh
-      pihole.lockedKernelVersion = "6.18.34-stable_20260609";
+      pihole.lockedKernelVersion = "6.18.39-stable_20260724";
 
       system = {
         stateVersion = "25.11";

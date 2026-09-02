@@ -43,7 +43,7 @@ QUIET=false
 # pihole02 = Pi 3B (nixos-hardware kernel)
 declare -A LOCKED_KERNEL_VERSIONS
 LOCKED_KERNEL_VERSIONS[pihole01]="6.6.78"
-LOCKED_KERNEL_VERSIONS[pihole02]="6.18.34-stable_20260609"
+LOCKED_KERNEL_VERSIONS[pihole02]="6.18.39-stable_20260724"
 
 # Machines that should each have a local copy of built SD images.
 # After a successful --build-image, the resulting .img is rsynced to every
