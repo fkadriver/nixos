@@ -1,8 +1,14 @@
 <domain type='kvm'>
   <name>nas01-backup</name>
   <uuid>843679ec-786b-42fc-87eb-868a66bb4dc4</uuid>
-  <memory unit='MiB'>4096</memory>
-  <currentMemory unit='MiB'>4096</currentMemory>
+  <!-- Bumped 4096 -> 6144 on 2026-09-02: with idrive360-xpra.service (a
+       second, headless idrive360-client copy on :100, intentional — see
+       idrive360 repo's README) running alongside the normal seat0-desktop
+       GUI copy, 4096 wasn't enough headroom and the guest kernel OOM-killer
+       had to referee, killing the xpra-hosted copy once. See idrive360
+       repo README's "Resolved 2026-09-02" entry for the full incident. -->
+  <memory unit='MiB'>6144</memory>
+  <currentMemory unit='MiB'>6144</currentMemory>
   <vcpu placement='static'>3</vcpu>
   <!-- nas01 is a Xeon E3-1270 v5, 4C/8T (lscpu -e: core0=cpus 0,4; core1=1,5;
        core2=2,6; core3=3,7). Pin the VM's 3 vcpus to cores 1-3, leaving core0
