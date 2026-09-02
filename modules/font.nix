@@ -157,7 +157,10 @@ in
       };
 
       environment.systemPackages = lib.optionals cfg.viewer (with pkgs; [
-        font-manager
+        # font-manager: temporarily dropped — fails to build against nixpkgs
+        # as of the 2026-09-02 update (Vala error: Gtk.DragIcon.get_for_drag
+        # needs `new`, a GTK4 vapi binding change font-manager 0.9.4 hasn't
+        # caught up to). Re-add once upstream fixes it.
         gnome-font-viewer
         fontpreview
         fontforge
