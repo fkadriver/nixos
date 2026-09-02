@@ -98,7 +98,12 @@
       settings = {
         experimental-features = [ "nix-command" "flakes" ];
         auto-optimise-store = true;
+        # nas01's pull-through proxy (modules/nix-cache-proxy.nix) is tried first;
+        # nix falls through to the real upstream on a miss or if nas01 is down —
+        # no fallback logic needed here beyond listing both.
         substituters = [
+          "http://nas01.warthog-royal.ts.net:8383/cache.nixos.org"
+          "http://nas01.warthog-royal.ts.net:8383/nix-community.cachix.org"
           "https://cache.nixos.org"
           "https://nix-community.cachix.org"
         ];

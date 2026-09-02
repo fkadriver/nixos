@@ -45,6 +45,7 @@ let
       inputs.self.nixosModules.user-scott
       inputs.self.nixosModules.syncthing-declarative
       inputs.self.nixosModules.fwupd
+      inputs.self.nixosModules.nix-cache-proxy
       inputs.home-manager.nixosModules.home-manager
       (inputs.self.homeConfigurations.scott).nixosModule
     ];
