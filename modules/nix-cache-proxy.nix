@@ -40,6 +40,12 @@
     # so this is belt-and-suspenders — matches the syncthing GUI precedent.
     networking.firewall.interfaces."tailscale0".allowedTCPPorts = [ 8383 ];
 
+    # NixOS's nginx unit runs under ProtectSystem=strict — the whole filesystem
+    # is read-only to the service except paths listed here, so without this
+    # nginx's own mkdir for proxy_cache_path fails with EROFS despite /pool
+    # being rw at the system level.
+    systemd.services.nginx.serviceConfig.ReadWritePaths = [ "/pool/nix-cache" ];
+
     systemd.tmpfiles.rules = [
       "d /pool/nix-cache 0750 nginx nginx -"
     ];
