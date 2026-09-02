@@ -92,11 +92,12 @@ let
           # QEMU's graphical console (the guest's actual virtual monitor / lightdm
           # session, which auto-logs scott into LXDE at boot — no in-guest VNC
           # server anymore, that duplicate session caused PolicyKit "No session
-          # for pid" failures). Reachable directly over tailscale (no SSH tunnel):
-          # listen is nas01's own tailscale IP, gated by tailscale0 being a
-          # trustedInterfaces entry. Any tailnet device with a VNC viewer
-          # (TigerVNC, Remmina, ...) can point straight at this address.
-          idrive-console-vnc = "vncviewer nas01.warthog-royal.ts.net:5900";
+          # for pid" failures). Reachable directly over tailscale (no SSH tunnel)
+          # at nas01.warthog-royal.ts.net:5900 — listen is nas01's own tailscale
+          # IP, gated by tailscale0 being a trustedInterfaces entry. Connect from
+          # whatever tailnet device you're actually sitting at (e.g. on latitude:
+          # krdc vnc://nas01.warthog-royal.ts.net:5900) — no VNC client needed
+          # on nas01 itself.
           # Single-window remote view of just the IDrive360 GUI, no VNC — attaches over
           # SSH to the idrive360-xpra seamless session on the VM (same alias as
           # latitude/airbook-darwin).
@@ -326,13 +327,8 @@ EOF
         zfs
         ethtool
         ipmitool
-        # Remote desktop session
-        openbox
-        firefox
-        xterm
         # QEMU/KVM: nas01-backup VM (IDrive360 backup agent)
         cloud-utils      # cloud-localds for building cloud-init ISOs
-        tigervnc         # vncviewer to reach nas01-backup from the RDP/Openbox session
         xpra             # xpra client for idrive-app alias — single-window remote view of IDrive360
       ];
       # Force eno2 down at every network start (belt-and-suspenders with
@@ -374,43 +370,6 @@ EOF
           ];
         }
       ];
-
-      # Remote desktop (xrdp): headless — no local display manager.
-      # Connect via any RDP client to nas01:3389 (or nas01.warthog-royal.ts.net:3389).
-      # Right-click desktop for menu; use Firefox to reach the IDrive360 web console.
-      services.xserver.enable = true;
-      services.xserver.displayManager.lightdm.enable = false;
-      services.xrdp = {
-        enable = true;
-        defaultWindowManager = "${pkgs.writeShellScript "openbox-session" ''
-          exec ${pkgs.dbus}/bin/dbus-launch --exit-with-session ${pkgs.openbox}/bin/openbox-session
-        ''}";
-        openFirewall = true;
-      };
-      environment.etc."xdg/openbox/menu.xml".text = ''
-        <?xml version="1.0" encoding="UTF-8"?>
-        <openbox_menu xmlns="http://openbox.org/"
-            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-            xsi:schemaLocation="http://openbox.org/ file:///usr/share/openbox/menu.xsd">
-        <menu id="root-menu" label="nas01">
-          <item label="Firefox">
-            <action name="Execute"><execute>firefox</execute></action>
-          </item>
-          <item label="Terminal">
-            <action name="Execute"><execute>xterm</execute></action>
-          </item>
-          <separator/>
-          <menu id="client-list-menu"/>
-          <separator/>
-          <item label="Reconfigure">
-            <action name="Reconfigure"/>
-          </item>
-          <item label="Log Out">
-            <action name="Exit"/>
-          </item>
-        </menu>
-        </openbox_menu>
-      '';
 
       services.wazuh-agent = {
         enable = true;

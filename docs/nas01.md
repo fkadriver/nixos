@@ -601,12 +601,16 @@ idrive-vm-restore  # sudo bash /etc/nas01-backup/vm-restore.sh — restore + sta
 Full disaster-recovery use of `vm-restore.sh` is covered in
 [Disaster Recovery](#disaster-recovery--os-ssd-sda-failure) above.
 
-Graphical console access from any Tailscale machine (TigerVNC, Remmina, etc.
-— no SSH tunnel, no password):
+Graphical console access from any Tailscale machine (TigerVNC, KDE's krdc,
+Remmina, etc. — no SSH tunnel, no password), e.g. from latitude:
 ```bash
-idrive-console-vnc   # alias: vncviewer nas01.warthog-royal.ts.net:5900
+krdc vnc://nas01.warthog-royal.ts.net:5900
 ```
-This is QEMU's own console VNC (the guest's actual virtual monitor, bound to
+nas01 itself stays TUI-only — it no longer runs a VNC client or a GUI remote
+desktop session (the old xrdp/openbox/firefox setup was removed 2026-09-02;
+it was originally there to reach the IDrive360 web console, but that's a
+cloud-hosted page reachable from any browser, not something specific to
+nas01's network). This is QEMU's own console VNC (the guest's actual virtual monitor, bound to
 nas01's tailscale IP — see `<graphics>` in `nas01-backup-domain.xml`), not an
 in-guest VNC server. scott auto-logs into LXDE at boot with no password
 (`nopasswdlogin` group), which is what keeps the IDrive360 GUI running
