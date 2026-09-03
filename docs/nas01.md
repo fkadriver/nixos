@@ -490,16 +490,38 @@ One-time setup (already done — the VM is registered and running):
 sudo bash /etc/nas01-backup/setup.sh
 ```
 
-Useful aliases (available in scott's shell on nas01):
+Useful aliases (available in scott's shell on nas01). Note the split: bare
+`idrive-*` acts on the **idrive360cron agent inside the VM** (cheap, safe to
+restart any time), while `idrive-vm-*` acts on the **VM itself** (virsh power
+state and the VM-disk Borg backup):
 ```bash
-idrive-status       # virsh domstate nas01-backup --reason
-idrive-start        # sudo virsh start nas01-backup
-idrive-stop         # sudo virsh shutdown nas01-backup
+idrive-status       # VM state + idrive360cron agent status inside the VM
+idrive-start        # start the idrive360cron agent service inside the VM
+idrive-stop         # stop it
+idrive-restart      # restart it
+idrive-ip           # virsh domifaddr nas01-backup
 idrive-ssh          # ssh directly into the VM
 idrive-console      # serial console (Ctrl+] to exit)
-idrive-console-vnc  # graphical console (QEMU's own console VNC, tailscale-reachable, no password)
-idrive-restart      # restart the idrive360cron service inside the VM (also on latitude, airbook-darwin)
+
+idrive-vm-start     # sudo virsh start nas01-backup
+idrive-vm-stop      # sudo virsh shutdown nas01-backup
+idrive-vm-restart   # graceful shutdown, wait, offer force-destroy, then start
+idrive-vm-backup    # run the VM-disk Borg job now (borgbackup-job-system.service)
+idrive-vm-list      # list archives in /pool/borg/nas01
+idrive-vm-restore   # sudo bash /etc/nas01-backup/vm-restore.sh
 ```
+
+The graphical console is QEMU's own, reachable over Tailscale without an SSH
+tunnel at `nas01.warthog-royal.ts.net:5900` (no password) — connect from
+whatever tailnet device you're sitting at, e.g. on latitude:
+`krdc vnc://nas01.warthog-royal.ts.net:5900`.
+
+**On client hosts** (latitude, airbook-darwin) the agent-level subset is
+available — `idrive-start`/`idrive-stop`/`idrive-restart` (SSH to the VM) and
+`idrive-app` (single-window xpra view of the IDrive360 GUI). airbook-darwin
+also has `idrive-status`, which gets VM state via `virsh` over SSH on nas01
+since it isn't the libvirt host; latitude doesn't have it yet. The
+`idrive-vm-*` VM controls exist only on nas01.
 
 ### Monitoring (Wazuh agent inside the VM)
 

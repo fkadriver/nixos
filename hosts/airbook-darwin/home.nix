@@ -12,6 +12,26 @@ let
   '';
   borgRepo = "ssh://scott@nas01.warthog-royal.ts.net/pool/borg/airbook-darwin";
   borgEnv  = ''BORG_RSH="ssh -i $HOME/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new" BORG_PASSCOMMAND="${borgPassCmd}" BORG_REMOTE_PATH=/run/current-system/sw/bin/borg'';
+
+  # IDrive360 status, same output as nas01's idrive-status — but airbook isn't the
+  # libvirt host, so the VM state comes from virsh over SSH on nas01 (scott is in
+  # libvirtd there, no sudo needed) rather than locally. Then, if the VM is up, run
+  # idrive360-agent-status.sh inside it (tracked in ~/git/idrive360, deployed to
+  # /usr/local/bin on the VM). A function, not an alias, because of the conditional.
+  # Shared verbatim by bash and zsh below.
+  idriveStatusFn = ''
+    idrive-status() {
+      local state
+      state=$(ssh scott@nas01.warthog-royal.ts.net \
+        'LIBVIRT_DEFAULT_URI=qemu:///system virsh domstate nas01-backup --reason')
+      echo "VM: $state"
+      if [[ "$state" == running* ]]; then
+        echo ""
+        echo "=== idrive360cron agent (nas01-backup) ==="
+        ssh scott@nas01-backup.warthog-royal.ts.net /usr/local/bin/idrive360-agent-status.sh
+      fi
+    }
+  '';
 in
 {
   home = {
@@ -326,6 +346,8 @@ in
         if [ -e '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh' ]; then
           . '/nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh'
         fi
+
+        ${idriveStatusFn}
       '';
     };
 
@@ -455,6 +477,8 @@ in
       };
       initContent = ''
         export PATH="$PATH:$HOME/bin:$HOME/.local/bin:$HOME/go/bin"
+
+        ${idriveStatusFn}
       '';
     };
 
