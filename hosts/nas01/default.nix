@@ -83,10 +83,17 @@ let
 
           # IDrive360 — nas01-backup VM (Ubuntu 24.04 / QEMU/KVM)
           # VMs live in qemu:///system; LIBVIRT_DEFAULT_URI is set in initExtra below.
-          idrive-status   = "virsh domstate nas01-backup --reason";
+          #
+          # Split: idrive-start/stop/restart act on the idrive360cron *agent
+          # service inside the VM* (the thing that actually runs backups —
+          # cheap and safe to restart any time); idrive-vm-* acts on the VM
+          # itself (virsh power state, and the existing VM-disk Borg backup).
+          # idrive-status and idrive-vm-restart are functions (initExtra
+          # below) — they need conditional logic, not just a fixed command.
+          idrive-start    = "ssh scott@nas01-backup.warthog-royal.ts.net sudo systemctl start idrive360cron";
+          idrive-stop     = "ssh scott@nas01-backup.warthog-royal.ts.net sudo systemctl stop idrive360cron";
+          idrive-restart  = "ssh scott@nas01-backup.warthog-royal.ts.net sudo systemctl restart idrive360cron";
           idrive-ip       = "virsh domifaddr nas01-backup";
-          idrive-start    = "sudo virsh start nas01-backup";
-          idrive-stop     = "sudo virsh shutdown nas01-backup";
           idrive-ssh      = ''ssh scott@$(virsh domifaddr nas01-backup | awk '/ipv4/{print $4}' | cut -d/ -f1)'';
           idrive-console  = "sudo virsh console nas01-backup";
           # QEMU's graphical console (the guest's actual virtual monitor / lightdm
@@ -98,13 +105,12 @@ let
           # whatever tailnet device you're actually sitting at (e.g. on latitude:
           # krdc vnc://nas01.warthog-royal.ts.net:5900) — no VNC client needed
           # on nas01 itself.
-          # Single-window remote view of just the IDrive360 GUI, no VNC — attaches over
-          # SSH to the idrive360-xpra seamless session on the VM (same alias as
-          # latitude/airbook-darwin).
-          idrive-app      = "xpra attach ssh://scott@nas01-backup.warthog-royal.ts.net/100";
-          # Restart the IDrive360 agent service inside the VM (over the tailnet —
-          # the VM is its own tailnet node, same path latitude/airbook use).
-          idrive-restart  = "ssh scott@nas01-backup.warthog-royal.ts.net sudo systemctl restart idrive360cron";
+          # No idrive-app alias here (unlike latitude/airbook-darwin) — nas01 is
+          # the VM's own host, so idrive-console (serial) and the QEMU graphical
+          # console over VNC already give direct access; an xpra-over-SSH hop
+          # back to itself adds nothing.
+          idrive-vm-start   = "sudo virsh start nas01-backup";
+          idrive-vm-stop    = "sudo virsh shutdown nas01-backup";
           # VM disk backup (Borg, local repo /pool/borg/nas01) — runs daily via
           # borgbackup-job-system.service; these are for on-demand use.
           idrive-vm-backup  = "sudo systemctl start borgbackup-job-system.service && sudo journalctl -u borgbackup-job-system.service -n 20 --no-pager";
@@ -124,6 +130,63 @@ let
           borg-ls()     { sudo borg list       "$BORG_REPOS/$1"; }
           borg-check()  { sudo borg check      "$BORG_REPOS/$1"; }
           borg-unlock() { sudo borg break-lock "$BORG_REPOS/$1"; }
+
+          # IDrive360 VM status: virsh domstate, and if the VM is up, also
+          # SSH in and check whether the idrive360cron agent is actually doing
+          # anything (same signal as the README's "is a job real or phantom"
+          # check: systemctl is-active plus a look for a live --backup subprocess).
+          # unalias first: idrive-status used to be a home-manager shellAlias, and
+          # nix-rebuild's `source ~/.bashrc` re-sources in the *same* shell (see
+          # borg-check/borg-unlock above for the same issue) — a shell that's had
+          # the old alias loaded since before this change would otherwise expand
+          # it on this line and break the function definition at parse time.
+          unalias idrive-status 2>/dev/null
+          idrive-status() {
+            local state
+            state=$(virsh domstate nas01-backup --reason)
+            echo "VM: $state"
+            if [[ "$state" == running* ]]; then
+              echo ""
+              echo "=== idrive360cron agent (nas01-backup) ==="
+              ssh scott@nas01-backup.warthog-royal.ts.net '
+                systemctl is-active idrive360cron
+                echo "--- backup subprocess ---"
+                ps aux | grep "[i]drive360.*--backup" || echo "(none — no active backup job)"
+              '
+            fi
+          }
+
+          # Restart the nas01-backup VM itself: graceful virsh shutdown, wait
+          # for it to actually stop, offer a forceful virsh destroy if it
+          # hasn't after the timeout, then virsh start once it's confirmed down.
+          idrive-vm-restart() {
+            local timeout=60 waited=0
+
+            echo "Shutting down nas01-backup (graceful)..."
+            sudo virsh shutdown nas01-backup
+
+            while [ "$waited" -lt "$timeout" ]; do
+              if virsh domstate nas01-backup | grep -q "shut off"; then
+                break
+              fi
+              sleep 5
+              waited=$((waited + 5))
+              echo "  ...waiting for shutdown ($waited/''${timeout}s)"
+            done
+
+            if ! virsh domstate nas01-backup | grep -q "shut off"; then
+              read -r -p "nas01-backup did not shut down after ''${timeout}s. Force destroy it? [y/N] " confirm
+              if [[ "$confirm" =~ ^[Yy]$ ]]; then
+                sudo virsh destroy nas01-backup
+              else
+                echo "Aborted — nas01-backup is still running."
+                return 1
+              fi
+            fi
+
+            echo "nas01-backup is down. Starting it back up..."
+            sudo virsh start nas01-backup
+          }
         '';
       };
 
@@ -329,7 +392,6 @@ EOF
         ipmitool
         # QEMU/KVM: nas01-backup VM (IDrive360 backup agent)
         cloud-utils      # cloud-localds for building cloud-init ISOs
-        xpra             # xpra client for idrive-app alias — single-window remote view of IDrive360
       ];
       # Force eno2 down at every network start (belt-and-suspenders with
       # networkmanager.unmanaged above — doesn't survive a driver reload,

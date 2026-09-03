@@ -312,7 +312,11 @@ in
         #   xattr -rd com.apple.quarantine /Applications/Xpra-Light.app
         # The `xpra` command resolves to the ~/.local/bin/xpra wrapper managed below.
         idrive-app = "xpra attach ssh://scott@nas01-backup.warthog-royal.ts.net/100";
-        # Restart the IDrive360 agent service inside the nas01-backup VM (same alias as nas01/latitude)
+        # Start/stop/restart the idrive360cron agent service inside the nas01-backup VM
+        # (same aliases as nas01/latitude). VM-level virsh control (idrive-vm-*) only
+        # exists on nas01, which is the actual libvirt host.
+        idrive-start = "ssh scott@nas01-backup.warthog-royal.ts.net sudo systemctl start idrive360cron";
+        idrive-stop = "ssh scott@nas01-backup.warthog-royal.ts.net sudo systemctl stop idrive360cron";
         idrive-restart = "ssh scott@nas01-backup.warthog-royal.ts.net sudo systemctl restart idrive360cron";
       };
       initExtra = ''
@@ -442,7 +446,11 @@ in
         #   xattr -rd com.apple.quarantine /Applications/Xpra-Light.app
         # The `xpra` command resolves to the ~/.local/bin/xpra wrapper managed below.
         idrive-app = "xpra attach ssh://scott@nas01-backup.warthog-royal.ts.net/100";
-        # Restart the IDrive360 agent service inside the nas01-backup VM (same alias as nas01/latitude)
+        # Start/stop/restart the idrive360cron agent service inside the nas01-backup VM
+        # (same aliases as nas01/latitude). VM-level virsh control (idrive-vm-*) only
+        # exists on nas01, which is the actual libvirt host.
+        idrive-start = "ssh scott@nas01-backup.warthog-royal.ts.net sudo systemctl start idrive360cron";
+        idrive-stop = "ssh scott@nas01-backup.warthog-royal.ts.net sudo systemctl stop idrive360cron";
         idrive-restart = "ssh scott@nas01-backup.warthog-royal.ts.net sudo systemctl restart idrive360cron";
       };
       initContent = ''

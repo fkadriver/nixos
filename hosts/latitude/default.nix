@@ -148,7 +148,11 @@ let
       # Single-window remote view of just the IDrive360 GUI, no VNC — attaches over SSH
       # to the idrive360-xpra seamless session on the nas01-backup VM (same alias as airbook-darwin)
       environment.shellAliases.idrive-app = "xpra attach ssh://scott@nas01-backup.warthog-royal.ts.net/100";
-      # Restart the IDrive360 agent service inside the nas01-backup VM (same alias as nas01/airbook-darwin)
+      # Start/stop/restart the idrive360cron agent service inside the nas01-backup VM
+      # (same aliases as nas01/airbook-darwin). VM-level virsh control (idrive-vm-*)
+      # only exists on nas01, which is the actual libvirt host.
+      environment.shellAliases.idrive-start = "ssh scott@nas01-backup.warthog-royal.ts.net sudo systemctl start idrive360cron";
+      environment.shellAliases.idrive-stop = "ssh scott@nas01-backup.warthog-royal.ts.net sudo systemctl stop idrive360cron";
       environment.shellAliases.idrive-restart = "ssh scott@nas01-backup.warthog-royal.ts.net sudo systemctl restart idrive360cron";
 
       sops.secrets."syncthing_nas01_apikey" = {
