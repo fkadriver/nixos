@@ -131,10 +131,11 @@ let
           borg-check()  { sudo borg check      "$BORG_REPOS/$1"; }
           borg-unlock() { sudo borg break-lock "$BORG_REPOS/$1"; }
 
-          # IDrive360 VM status: virsh domstate, and if the VM is up, also
-          # SSH in and check whether the idrive360cron agent is actually doing
-          # anything (same signal as the README's "is a job real or phantom"
-          # check: systemctl is-active plus a look for a live --backup subprocess).
+          # IDrive360 VM status: virsh domstate, and if the VM is up, also SSH in
+          # and run idrive360-agent-status.sh (tracked in ~/git/idrive360, deployed
+          # to /usr/local/bin on the VM) — same script you can run directly on
+          # nas01-backup itself; it doesn't need to check VM state since if it's
+          # running at all, the VM is obviously up.
           # unalias first: idrive-status used to be a home-manager shellAlias, and
           # nix-rebuild's `source ~/.bashrc` re-sources in the *same* shell (see
           # borg-check/borg-unlock above for the same issue) — a shell that's had
@@ -148,11 +149,7 @@ let
             if [[ "$state" == running* ]]; then
               echo ""
               echo "=== idrive360cron agent (nas01-backup) ==="
-              ssh scott@nas01-backup.warthog-royal.ts.net '
-                systemctl is-active idrive360cron
-                echo "--- backup subprocess ---"
-                ps aux | grep "[i]drive360.*--backup" || echo "(none — no active backup job)"
-              '
+              ssh scott@nas01-backup.warthog-royal.ts.net /usr/local/bin/idrive360-agent-status.sh
             fi
           }
 
