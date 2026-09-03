@@ -516,12 +516,16 @@ tunnel at `nas01.warthog-royal.ts.net:5900` (no password) — connect from
 whatever tailnet device you're sitting at, e.g. on latitude:
 `krdc vnc://nas01.warthog-royal.ts.net:5900`.
 
-**On client hosts** (latitude, airbook-darwin) the agent-level subset is
-available — `idrive-start`/`idrive-stop`/`idrive-restart` (SSH to the VM) and
-`idrive-app` (single-window xpra view of the IDrive360 GUI). airbook-darwin
-also has `idrive-status`, which gets VM state via `virsh` over SSH on nas01
-since it isn't the libvirt host; latitude doesn't have it yet. The
-`idrive-vm-*` VM controls exist only on nas01.
+**On daily drivers** the agent-level subset is available —
+`idrive-start`/`idrive-stop`/`idrive-restart` (SSH to the VM), `idrive-app`
+(single-window xpra view of the IDrive360 GUI), and `idrive-status`. These live
+in `modules/daily-driver.nix`, so every daily driver gets them (currently
+latitude, both KDE and XFCE variants); airbook-darwin can't import NixOS
+modules and carries its own copy in `hosts/airbook-darwin/home.nix`, which
+needs to be kept in sync. A daily driver isn't the libvirt host, so its
+`idrive-status` gets VM state via `virsh` over SSH on nas01 (a
+`writeShellScriptBin` on NixOS, a shell function on darwin) before checking the
+agent inside the VM. The `idrive-vm-*` VM controls exist only on nas01.
 
 ### Monitoring (Wazuh agent inside the VM)
 

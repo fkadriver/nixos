@@ -38,6 +38,21 @@
       nix-sync = "~/git/nixos/scripts/sync-nixos-hosts.sh";
       fw-check = "~/git/nixos/scripts/check-fw-updates.sh";
       host-status = "~/git/nixos/scripts/host-status.sh";
+
+      # IDrive360 client shortcuts — same reasoning as the fleet aliases above:
+      # useful from any daily driver, not tied to one host. Only the agent-level
+      # controls belong here; VM-level control (idrive-vm-*) stays on nas01,
+      # which is the actual libvirt host. airbook-darwin can't import NixOS
+      # modules, so it carries its own copy in hosts/airbook-darwin/home.nix —
+      # keep the two in sync.
+      #
+      # Single-window remote view of just the IDrive360 GUI, no VNC — attaches
+      # over SSH to the idrive360-xpra seamless session on the nas01-backup VM.
+      idrive-app = "xpra attach ssh://scott@nas01-backup.warthog-royal.ts.net/100";
+      # Start/stop/restart the idrive360cron agent service inside the VM.
+      idrive-start = "ssh scott@nas01-backup.warthog-royal.ts.net sudo systemctl start idrive360cron";
+      idrive-stop = "ssh scott@nas01-backup.warthog-royal.ts.net sudo systemctl stop idrive360cron";
+      idrive-restart = "ssh scott@nas01-backup.warthog-royal.ts.net sudo systemctl restart idrive360cron";
     };
 
     networking.networkmanager.enable = true;
@@ -95,6 +110,27 @@
 
       # Backlight control (for screen and keyboard backlighting)
       brightnessctl
+
+      xpra  # client for the idrive-app alias above
+
+      # idrive-status — same output as nas01's, but a daily driver isn't the
+      # libvirt host, so VM state comes from virsh over SSH on nas01 (scott is in
+      # libvirtd there, no sudo needed) rather than locally; then, if the VM is
+      # up, idrive360-agent-status.sh runs inside it. A script rather than a
+      # shell function so it works from any shell and can't be broken by alias
+      # parse-order (see the unalias notes in hosts/nas01/default.nix).
+      (writeShellScriptBin "idrive-status" ''
+        state=$(ssh scott@nas01.warthog-royal.ts.net \
+          'LIBVIRT_DEFAULT_URI=qemu:///system virsh domstate nas01-backup --reason')
+        echo "VM: $state"
+        case "$state" in
+          running*)
+            echo ""
+            echo "=== idrive360cron agent (nas01-backup) ==="
+            ssh scott@nas01-backup.warthog-royal.ts.net /usr/local/bin/idrive360-agent-status.sh
+            ;;
+        esac
+      '')
     ];
 
     programs.nix-ld = {
