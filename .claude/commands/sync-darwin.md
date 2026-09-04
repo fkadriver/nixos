@@ -2,6 +2,8 @@
 
 Review `modules/daily-driver.nix` and `modules/3d-printing.nix` for additions or changes that should be reflected in the darwin config (`hosts/airbook-darwin/default.nix` for packages/casks, `hosts/airbook-darwin/home.nix` for shell aliases and helper commands), then interactively offer to apply them.
 
+**airbook is a thin client — do not treat daily-driver as a target to mirror.** As of 2026-09-04 it was deliberately trimmed from 34 casks to 22 (commit 787d1df). It is an Intel MacBookAir7,2, and both package sources are winding down x86_64 support (nixpkgs after 26.05; Homebrew announced non-support as of September 2026). The default answer for a new GUI app from daily-driver / 3d-printing is **no** — heavy modeling and office work happens on latitude. See "Thin-client policy" below before surfacing anything.
+
 ## Steps
 
 1. **Read the source files** — read all four files:
@@ -27,6 +29,7 @@ Review `modules/daily-driver.nix` and `modules/3d-printing.nix` for additions or
    - Anything already present in the darwin config (exact match by package name or cask name)
    - Aliases and helpers whose command only works on Linux — ones that run `systemctl`, `virsh`, `journalctl`, `nixos-rebuild` etc. *locally*. Note the distinction: an alias that **SSHes to another host** and runs those there (like the `idrive-*` shortcuts) is portable and **should** be surfaced.
    - Aliases whose darwin counterpart is deliberately different rather than missing — `nix-rebuild` is `darwin-rebuild` on airbook, not `nixos-rebuild`. Never "sync" these into agreement.
+   - **Anything on the deliberately-dropped list** in "Thin-client policy" below. These were removed on purpose and are still present in daily-driver / 3d-printing, so a naive diff proposes them every single run. Do not surface them.
 
 4. **Surface candidates interactively** — for each remaining candidate, use AskUserQuestion to present it with context:
    - What it is and what it does
@@ -67,6 +70,31 @@ Review `modules/daily-driver.nix` and `modules/3d-printing.nix` for additions or
 | `hardware.*` | Not applicable — skip |
 | `services.udev.extraRules` | Not applicable — skip |
 | `services.logind.*` | Not applicable — skip |
+
+## Thin-client policy
+
+airbook keeps a deliberate short list, not a mirror of daily-driver. Two categories matter:
+
+**Deliberately dropped (2026-09-04, commit 787d1df) — never propose these again.** They remain in daily-driver / 3d-printing, so every naive diff will surface them:
+
+`openscad@snapshot`, `prusaslicer`, `blender`, `meshlab`, `solvespace`, `librecad`, `qcad`, `libreoffice`, `thunderbird`, `inkscape`, `diffusionbee`, `xquartz`, `mpv`, `f3d`, `shotwell`, `usbimager`, `gparted`, `brightnessctl`.
+
+Two of those have specific reasons worth preserving:
+- `f3d` — unbuildable here. nixpkgs pulls qtwebengine (no x86_64-darwin cache); the brew formula needs `qtbase`, which hard-requires a full Xcode.app. Both routes dead-end at Qt. Do not retry.
+- `xquartz` — was only ever for `x2goclient`, which lives on latitude. `idrive-app` uses xpra's native Quartz client specifically so no X11 server is needed.
+
+**The keep-list.** Apps: `firefox`, `visual-studio-code`, `orcaslicer`, `freecad`, `gimp`, `heroic`, `sweet-home3d`, `tigervnc`, `microsoft-remote-desktop`, `balenaetcher`, `handbrake-app`, `geany`, `claude`, `anki`, `iterm2`, `rectangle`, `scroll-reverser`, `bitwarden`.
+
+Infrastructure — **never propose removing these**, they are not apps and dropping them breaks things:
+- `opencore-patcher` — BDW iGPU + WiFi/BT root patches for Sequoia on MacBookAir7,2. Removing it degrades the hardware itself.
+- `bitwarden-cli` — the borg backup script and Wazuh borg-status probe both shell out to `/usr/local/bin/bw`. Dropping it fails backups *silently*.
+- `osquery`, `clamav` — Wazuh security telemetry.
+- `syncthing` + `swiftbar` — daemon plus the menubar plugin declared in `home.nix`; they go together or not at all.
+- `caffeine`, `duti`.
+
+**How to apply this.** A new GUI app in daily-driver is not by itself a reason to add it here — ask whether the use case actually moved to airbook. When something on the dropped list reappears in daily-driver, stay silent rather than re-litigating it. If Scott explicitly asks for one back, add it and remove it from the dropped list above so the record stays accurate.
+
+**Removing casks does not uninstall them.** `onActivation.cleanup = "none"`, so dropping an entry only stops managing it — the app stays on disk. Never imply a trim reclaims space; say plainly that manual `brew uninstall` is needed.
 
 ## Notes
 
