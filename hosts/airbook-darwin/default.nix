@@ -309,9 +309,13 @@ let
         "syncthing"
         "bitwarden-cli"  # nix version requires xcodebuild, use homebrew instead
         "duti"           # Set default file type associations on macOS
-        "f3d"            # Fast 3D model viewer (from 3d-printing.nix). Brew, not nixpkgs:
-                         # the nix build drags in qtwebengine, which isn't cached for
-                         # x86_64-darwin and would compile from source for hours.
+        # NOTE: no f3d (3d-printing.nix's 3D viewer). There is no viable route on
+        # this Intel Mac: the nixpkgs build pulls qtwebengine (no x86_64-darwin
+        # bottle/cache, hours of source build), and the brew formula needs qtbase,
+        # which hard-requires a full Xcode.app install — Command Line Tools alone
+        # fails the build outright. f3d's own bottle is fine; it's the Qt/VTK stack
+        # underneath that can't be satisfied here. Use meshlab/blender (already
+        # casks above) for model viewing instead.
         "mpv"            # Media player (from daily-driver.nix). Formula, not cask: the
                          # `mpv` cask was renamed stolendata-mpv and is DISABLED — it
                          # fails the macOS Gatekeeper check (same fate as the xpra cask,
