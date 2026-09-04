@@ -312,6 +312,11 @@ let
         "f3d"            # Fast 3D model viewer (from 3d-printing.nix). Brew, not nixpkgs:
                          # the nix build drags in qtwebengine, which isn't cached for
                          # x86_64-darwin and would compile from source for hours.
+        "mpv"            # Media player (from daily-driver.nix). Formula, not cask: the
+                         # `mpv` cask was renamed stolendata-mpv and is DISABLED — it
+                         # fails the macOS Gatekeeper check (same fate as the xpra cask,
+                         # both disabled 2026-09-01). The formula is bottled and newer
+                         # (0.41.0 vs the cask's 0.39.0).
         "clamav"         # Antivirus — clamscan + freshclam for signature updates
         # NOTE: no brew `tailscale`. The App Store macsys Tailscale.app (System Network
         # Extension) is the sole tailnet endpoint on this box — running two tailscaleds
@@ -343,9 +348,8 @@ let
         # Gaming (from daily-driver.nix)
         "heroic"           # Epic, GOG, Amazon Prime games launcher
 
-        # Video transcoding / playback
+        # Video transcoding
         "handbrake-app"
-        "mpv"              # media player (from daily-driver.nix) — cask, since it's a GUI app
 
         # Office and productivity
         "libreoffice"
