@@ -376,9 +376,12 @@ let
         # installed app had already migrated on disk — only the cask reference was
         # stale. Requires macOS >= 14 (airbook is on 15.7.9).
         "windows-app"
-        # NOTE: no xquartz. It was only here for x2goclient, which lives on latitude,
-        # not airbook — and idrive-app deliberately uses xpra's native Quartz client
-        # precisely so it doesn't need an X11 server. Nothing left here required it.
+        # NOTE: no xquartz. Remote GUI access from this host goes through idrive-app,
+        # which uses xpra's native Quartz client specifically so it needs no X11 server
+        # (it also works over Tailscale SSH, which can't do X11 forwarding). An
+        # x2goclient cask IS installed here by hand and would need XQuartz, but it's
+        # unused — x2go to OTworkstation is done from latitude. If that ever changes,
+        # add xquartz back rather than leaving it an undeclared dependency.
 
         # Text editor
         "geany"

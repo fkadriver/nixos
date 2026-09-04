@@ -77,13 +77,13 @@ airbook keeps a deliberate short list, not a mirror of daily-driver. Two categor
 
 **Deliberately dropped (2026-09-04, commit 787d1df) — never propose these again.** They remain in daily-driver / 3d-printing, so every naive diff will surface them:
 
-`openscad@snapshot`, `prusaslicer`, `blender`, `meshlab`, `solvespace`, `librecad`, `qcad`, `libreoffice`, `thunderbird`, `inkscape`, `diffusionbee`, `xquartz`, `mpv`, `f3d`, `shotwell`, `usbimager`, `gparted`, `brightnessctl`.
+`openscad@snapshot`, `prusaslicer`, `blender`, `meshlab`, `solvespace`, `librecad`, `qcad`, `libreoffice`, `thunderbird`, `inkscape`, `diffusionbee`, `xquartz`, `mpv`, `f3d`, `microsoft-remote-desktop` (discontinued upstream, disabled 2025-10-01 — `windows-app` replaces it), `shotwell`, `usbimager`, `gparted`, `brightnessctl`.
 
 Two of those have specific reasons worth preserving:
 - `f3d` — unbuildable here. nixpkgs pulls qtwebengine (no x86_64-darwin cache); the brew formula needs `qtbase`, which hard-requires a full Xcode.app. Both routes dead-end at Qt. Do not retry.
-- `xquartz` — was only ever for `x2goclient`, which lives on latitude. `idrive-app` uses xpra's native Quartz client specifically so no X11 server is needed.
+- `xquartz` — remote GUI access from airbook goes through `idrive-app`, which uses xpra's native Quartz client and needs no X11 server. Note a hand-installed `x2goclient` cask *is* present on airbook and would need XQuartz, but it is unused (x2go to OTworkstation is driven from latitude). Do not cite "x2goclient isn't on airbook" as the reason — it is; it's simply not used.
 
-**The keep-list.** Apps: `firefox`, `visual-studio-code`, `orcaslicer`, `freecad`, `gimp`, `heroic`, `sweet-home3d`, `tigervnc`, `microsoft-remote-desktop`, `balenaetcher`, `handbrake-app`, `geany`, `claude`, `anki`, `iterm2`, `rectangle`, `scroll-reverser`, `bitwarden`.
+**The keep-list.** Apps: `firefox`, `visual-studio-code`, `orcaslicer`, `freecad`, `gimp`, `heroic`, `sweet-home3d`, `tigervnc`, `windows-app`, `balenaetcher`, `handbrake-app`, `geany`, `claude`, `anki`, `iterm2`, `rectangle`, `scroll-reverser`, `bitwarden`.
 
 Infrastructure — **never propose removing these**, they are not apps and dropping them breaks things:
 - `opencore-patcher` — BDW iGPU + WiFi/BT root patches for Sequoia on MacBookAir7,2. Removing it degrades the hardware itself.
