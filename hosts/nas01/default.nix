@@ -254,18 +254,22 @@ let
         };
       };
 
-      # WD 18TB drive — FAILING as of 2026-07 (kernel dropped both mounts on the
-      # old Ubuntu install). Kept with nofail for salvage attempts; borg repos
-      # moved to the redundant ZFS pool at /pool/borg. Remove when drive is pulled.
+      # WD 18TB drive — dropped off the SATA bus 2026-07, written off as
+      # failing at the time; stress-tested clean under SpinRite and confirmed
+      # healthy 2026-08-22 (see docs/nas01.md). The 5s device-timeout added
+      # during the failing period was too tight for this drive's partition
+      # table to settle at boot, so it silently failed to automount even
+      # though the disk was fine — dropped back to systemd's default timeout.
+      # Kept "nofail" as a no-cost safety net so boot never blocks on it.
       fileSystems."/mnt/wd18t_1" = {
         device = "/dev/disk/by-uuid/02d115cd-4e24-4dc9-adb9-7ea7ae4fdf20";
         fsType = "ext4";
-        options = [ "nofail" "x-systemd.device-timeout=5" ];
+        options = [ "nofail" ];
       };
       fileSystems."/mnt/wd18t_3" = {
         device = "/dev/disk/by-uuid/886e681a-20b4-40bb-a408-060e63c4efe5";
         fsType = "ext4";
-        options = [ "nofail" "x-systemd.device-timeout=5" ];
+        options = [ "nofail" ];
       };
 
       # SSH access (headless server; borg clients connect as scott)
