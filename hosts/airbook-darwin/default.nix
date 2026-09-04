@@ -368,7 +368,14 @@ let
         # installer, so its pinned .dmg URL 404s whenever the cask version lags).
         # TigerVNC ships stable versioned SourceForge downloads and needs no account.
         "tigervnc"         # VNC viewer — for reaching nas01-backup etc.
-        "microsoft-remote-desktop"  # RDP client for OTworkstation xrdp sessions
+        # RDP client — reaches OTworkstation (services.xrdp, openbox session, :3389),
+        # and latitude/nas01 which also serve XRDP. See docs/remote-desktops.md.
+        # This is `windows-app`, NOT the older `microsoft-remote-desktop` cask: that
+        # one was discontinued upstream and disabled 2025-10-01. Microsoft renamed the
+        # app itself to "Windows App", and since the old cask had auto_updates the
+        # installed app had already migrated on disk — only the cask reference was
+        # stale. Requires macOS >= 14 (airbook is on 15.7.9).
+        "windows-app"
         # NOTE: no xquartz. It was only here for x2goclient, which lives on latitude,
         # not airbook — and idrive-app deliberately uses xpra's native Quartz client
         # precisely so it doesn't need an X11 server. Nothing left here required it.
