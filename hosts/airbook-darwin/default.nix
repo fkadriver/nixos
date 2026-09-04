@@ -214,6 +214,16 @@ let
       gnumake
       python3
       claude-code
+      binutils     # strings, objdump, etc. — GNU versions, distinct from Xcode's
+
+      # 3D printing support tools (from 3d-printing.nix — the GUI apps in that
+      # module are casks below; these are CLI and come from nixpkgs)
+      # NOTE: f3d is NOT here — the nixpkgs build pulls qtwebengine, which has no
+      # x86_64-darwin binary cache and would compile for hours on this Intel Mac.
+      # It's a Homebrew formula instead (see brews below).
+      potrace      # bitmap → vector tracing
+      fontforge    # font editing / conversion for emboss prep
+      freetype
 
       # Input Leap: KVM client — connects to latitude's keyboard/mouse server
       input-leap
@@ -299,6 +309,9 @@ let
         "syncthing"
         "bitwarden-cli"  # nix version requires xcodebuild, use homebrew instead
         "duti"           # Set default file type associations on macOS
+        "f3d"            # Fast 3D model viewer (from 3d-printing.nix). Brew, not nixpkgs:
+                         # the nix build drags in qtwebengine, which isn't cached for
+                         # x86_64-darwin and would compile from source for hours.
         "clamav"         # Antivirus — clamscan + freshclam for signature updates
         # NOTE: no brew `tailscale`. The App Store macsys Tailscale.app (System Network
         # Extension) is the sole tailnet endpoint on this box — running two tailscaleds
@@ -325,12 +338,14 @@ let
         "meshlab"
         "inkscape"
         "gimp"
+        "solvespace"       # parametric 2D/3D CAD — nixpkgs build is Linux-only, cask is the route
 
         # Gaming (from daily-driver.nix)
         "heroic"           # Epic, GOG, Amazon Prime games launcher
 
-        # Video transcoding
+        # Video transcoding / playback
         "handbrake-app"
+        "mpv"              # media player (from daily-driver.nix) — cask, since it's a GUI app
 
         # Office and productivity
         "libreoffice"
