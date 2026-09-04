@@ -33,7 +33,7 @@ The Ubuntu-era `apply.sh` deployment is archived at `archive/hosts/nas01-ubuntu/
 |---|---|---|
 | 500GB SATA HDD | `/` (LVM/ext4 via disko) | OS — single disk, not mirrored (a spare 1TB drive is kept as a cold spare instead; mdadm mirroring was considered and declined 2026-08-22) |
 | 3x HGST HDS724040ALE640 4TB 7200rpm (RAIDZ1) | `/pool` | ZFS pool — NAS data + borg repos (lz4, ashift=12). Behind the HBA330; by-id paths still use the `ata-HGST_...` prefix, unchanged from the old controller |
-| WD WD180EDGZ-11BLDS0 18TB 7200rpm | `/mnt/wd18t_1`, `/mnt/wd18t_3` | Functioning normally (confirmed 2026-08-22) — dropped off the SATA bus 2026-07, written off as failing at the time, but stress-tested clean under SpinRite and now mounted/serving with data intact. Mounts kept `nofail` as a precaution |
+| WD WD180EDGZ-11BLDS0 18TB 7200rpm | `/mnt/wd18t_1`, `/mnt/wd18t_3` | Functioning normally (confirmed 2026-08-22) — dropped off the SATA bus 2026-07, written off as failing at the time, but stress-tested clean under SpinRite and now mounted/serving with data intact. Mounts kept `nofail`; the salvage-era 5s `x-systemd.device-timeout` was dropped 2026-09-04 after it was found to silently prevent automount at boot |
 
 The ZFS pool and WD drive are **not** managed by disko — they carry data across OS reinstalls.
 
@@ -862,7 +862,17 @@ The WD 18TB drive dropped off the SATA bus in 2026-07 and was written off as
 failing at the time. It stress-tested clean under SpinRite on the T330 and
 is now mounted normally on both `/mnt/wd18t_1` and `/mnt/wd18t_3` with data
 intact — this section is now historical/precautionary rather than an active
-concern. If it ever drops offline again, copy the old repo history onto the
+concern.
+
+Note: the salvage-era mount options (`x-systemd.device-timeout=5`, added
+while the drive looked like it was failing) turned out to silently break
+automount at boot even after the drive was healthy again — the 18TB
+partition table needed longer than 5s to settle, so the device unit timed
+out and the mount never happened. Fixed 2026-09-04 by dropping the timeout
+override back to systemd's default; `nofail` is kept as a no-cost safety
+net. See `hosts/nas01/default.nix`.
+
+If it ever drops offline again, copy the old repo history onto the
 pool before further troubleshooting:
 
 ```bash

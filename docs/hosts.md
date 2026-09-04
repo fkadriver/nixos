@@ -58,7 +58,7 @@ Then add to `.sops.yaml` and run `sops updatekeys secrets/secrets.yaml`.
 | Service Tag | 86B3JH2 |
 | CPU / Memory | Xeon E3-1270 v5 (4C/8T, 3.6/4.0GHz turbo, 80W), 16GB 2133MHz ECC UDIMM |
 | Purpose | NAS: NFS file serving, Borg backup server, Syncthing hub, IDrive360 cloud backup |
-| Storage | 500GB SATA HDD (OS), 3x 4TB HGST ZFS RAIDZ1 (`/pool`, incl. borg repos), WD 18TB (confirmed healthy 2026-08-22, kept `nofail`) |
+| Storage | 500GB SATA HDD (OS), 3x 4TB HGST ZFS RAIDZ1 (`/pool`, incl. borg repos), WD 18TB (confirmed healthy 2026-08-22, kept `nofail`; automount-at-boot fixed 2026-09-04) |
 | Storage controller | Dell HBA330 (true HBA passthrough, `mpt3sas`) — replaced the stock PERC H730 RAID-on-chip card |
 | Key Features | ZFS (autoScrub/TRIM), NFS, syncthing-declarative, hd-idle spindown, Wazuh agent, IDrive360 in Docker |
 | Borg Repos | `/pool/borg/{nas01,latitude,vm01,log01,airbook-darwin}` |
