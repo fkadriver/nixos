@@ -316,11 +316,11 @@ let
         # fails the build outright. f3d's own bottle is fine; it's the Qt/VTK stack
         # underneath that can't be satisfied here. Use meshlab/blender (already
         # casks above) for model viewing instead.
-        "mpv"            # Media player (from daily-driver.nix). Formula, not cask: the
-                         # `mpv` cask was renamed stolendata-mpv and is DISABLED — it
-                         # fails the macOS Gatekeeper check (same fate as the xpra cask,
-                         # both disabled 2026-09-01). The formula is bottled and newer
-                         # (0.41.0 vs the cask's 0.39.0).
+        # NOTE: no mpv either. It was added 2026-09-03 from daily-driver.nix as a
+        # formula (the cask is DISABLED — renamed stolendata-mpv, fails the macOS
+        # Gatekeeper check, same as the xpra cask, both disabled 2026-09-01), then
+        # dropped a day later in the thin-client trim. If it ever comes back, use
+        # the formula, not the cask.
         "clamav"         # Antivirus — clamscan + freshclam for signature updates
         # NOTE: no brew `tailscale`. The App Store macsys Tailscale.app (System Network
         # Extension) is the sole tailnet endpoint on this box — running two tailscaleds
@@ -329,6 +329,18 @@ let
         # SSH server hosting from this Mac (the sandboxed extension can't); standard sshd
         # over the tailnet still works fine.
       ];
+      # Thin-client app set (trimmed 2026-09-04). airbook is an Intel MacBookAir7,2
+      # and both of its package sources are winding down x86_64 support — nixpkgs
+      # after 26.05, and Homebrew announced non-support as of September 2026. Rather
+      # than mirror every daily-driver app here, this host keeps a deliberate short
+      # list: the apps actually used on it, plus the infrastructure the machine and
+      # its backups depend on. Heavy modeling/office work happens on latitude.
+      #
+      # Dropped in the trim: openscad@snapshot, prusaslicer, blender, meshlab,
+      # solvespace, librecad, qcad, libreoffice, thunderbird, inkscape, diffusionbee,
+      # xquartz, and the mpv brew. Re-add deliberately, not by syncing from
+      # daily-driver.nix — /sync-darwin will offer them again, and the answer is no
+      # unless the use case actually moved here.
       casks = [
         "balenaetcher"       # USB image writer
         "bitwarden"
@@ -338,16 +350,12 @@ let
         "scroll-reverser"    # Natural scroll for trackpad, reversed for mouse
         "visual-studio-code"
 
-        # 3D printing and modeling (from 3d-printing.nix)
-        "openscad@snapshot"
+        # 3D printing — slice and model here; the rest of the CAD stack is on latitude
         "orcaslicer"
-        "prusaslicer"
         "freecad"
-        "blender"
-        "meshlab"
-        "inkscape"
+
+        # Photo / image editing
         "gimp"
-        "solvespace"       # parametric 2D/3D CAD — nixpkgs build is Linux-only, cask is the route
 
         # Gaming (from daily-driver.nix)
         "heroic"           # Epic, GOG, Amazon Prime games launcher
@@ -355,31 +363,24 @@ let
         # Video transcoding
         "handbrake-app"
 
-        # Office and productivity
-        "libreoffice"
-        "thunderbird"
-
         # Remote access
         # TigerVNC (not RealVNC's vnc-viewer cask — RealVNC only hosts the latest
         # installer, so its pinned .dmg URL 404s whenever the cask version lags).
         # TigerVNC ships stable versioned SourceForge downloads and needs no account.
         "tigervnc"         # VNC viewer — for reaching nas01-backup etc.
-
-        # 2D CAD
-        "librecad"
-        "qcad"
+        "microsoft-remote-desktop"  # RDP client for OTworkstation xrdp sessions
+        # NOTE: no xquartz. It was only here for x2goclient, which lives on latitude,
+        # not airbook — and idrive-app deliberately uses xpra's native Quartz client
+        # precisely so it doesn't need an X11 server. Nothing left here required it.
 
         # Text editor
         "geany"
 
-        # AI / image generation
+        # AI
         "claude"           # Anthropic's official Claude desktop app (macOS/Windows only)
-        "diffusionbee"     # Stable Diffusion GUI — Intel Mac compatible, manages models itself
 
         # Utilities
         "caffeine"         # Prevent Mac from sleeping (menubar app)
-        "xquartz"          # X11 server required by x2goclient on macOS
-        "microsoft-remote-desktop"  # RDP client for OTworkstation xrdp sessions
         "sweet-home3d"     # Interior design and home planning
 
         # Security
