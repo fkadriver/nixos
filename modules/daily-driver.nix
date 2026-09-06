@@ -94,6 +94,7 @@
       shotwell
       mpv
       handbrake  # Video transcoding
+      discord
 
       libreoffice
       thunderbird

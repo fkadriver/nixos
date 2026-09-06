@@ -357,6 +357,9 @@ let
         # Photo / image editing
         "gimp"
 
+        # Chat (from daily-driver.nix)
+        "discord"
+
         # Gaming (from daily-driver.nix)
         "heroic"           # Epic, GOG, Amazon Prime games launcher
 
