@@ -101,6 +101,13 @@
         ".." = "cd ..";
         "..." = "cd ../..";
         "...." = "cd ../../..";
+
+        # Total disk usage across all filesystems/pools — df alone doesn't sum
+        # multi-drive hosts (vm01's external drive, nas01's ZFS pool + wd18t
+        # drives). ZFS pools are handled separately via zpool list, since
+        # summing df's per-dataset lines would double-count the pool's shared
+        # free space across every mounted dataset.
+        dfsum = ''f(){ echo "=== Filesystems ==="; df -hP -l 2>/dev/null | awk 'NR==1 || $1 ~ /^\/dev\//'; if command -v zpool >/dev/null 2>&1 && [ -n "$(zpool list -H 2>/dev/null)" ]; then echo ""; echo "=== ZFS Pools ==="; zpool list; fi; echo ""; set -- $(df -kP -l 2>/dev/null | awk 'NR>1 && $1 ~ /^\/dev\//{u+=$3;s+=$2;a+=$4} END{print u+0, s+0, a+0}'); local u=$1 s=$2 a=$3; if command -v zpool >/dev/null 2>&1; then set -- $(zpool list -Hp -o alloc,size,free 2>/dev/null | awk '{u+=$1;s+=$2;a+=$3} END{printf "%d %d %d\n", u/1024, s/1024, a/1024}'); u=$((u+$1)); s=$((s+$2)); a=$((a+$3)); fi; awk -v u="$u" -v s="$s" -v a="$a" 'BEGIN{printf "=== Total: %.1fG used / %.1fG total (%.1fG free) ===\n", u/1048576, s/1048576, a/1048576}'; }; f'';
       };
     };
   };

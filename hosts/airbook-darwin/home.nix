@@ -287,6 +287,10 @@ in
         "..." = "cd ../..";
         "...." = "cd ../../..";
 
+        # Total disk usage across all filesystems (from shell-aliases.nix;
+        # no ZFS on darwin, so no zpool handling needed here)
+        dfsum = ''f(){ echo "=== Filesystems ==="; df -hP -l 2>/dev/null | awk 'NR==1 || $1 ~ /^\/dev\//'; echo ""; set -- $(df -kP -l 2>/dev/null | awk 'NR>1 && $1 ~ /^\/dev\//{u+=$3;s+=$2;a+=$4} END{print u+0, s+0, a+0}'); local u=$1 s=$2 a=$3; awk -v u="$u" -v s="$s" -v a="$a" 'BEGIN{printf "=== Total: %.1fG used / %.1fG total (%.1fG free) ===\n", u/1048576, s/1048576, a/1048576}'; }; f'';
+
         # Kubernetes
         k = "kubectl";
 
@@ -421,6 +425,10 @@ in
         ".." = "cd ..";
         "..." = "cd ../..";
         "...." = "cd ../../..";
+
+        # Total disk usage across all filesystems (from shell-aliases.nix;
+        # no ZFS on darwin, so no zpool handling needed here)
+        dfsum = ''f(){ echo "=== Filesystems ==="; df -hP -l 2>/dev/null | awk 'NR==1 || $1 ~ /^\/dev\//'; echo ""; set -- $(df -kP -l 2>/dev/null | awk 'NR>1 && $1 ~ /^\/dev\//{u+=$3;s+=$2;a+=$4} END{print u+0, s+0, a+0}'); local u=$1 s=$2 a=$3; awk -v u="$u" -v s="$s" -v a="$a" 'BEGIN{printf "=== Total: %.1fG used / %.1fG total (%.1fG free) ===\n", u/1048576, s/1048576, a/1048576}'; }; f'';
 
         # Kubernetes
         k = "kubectl";
