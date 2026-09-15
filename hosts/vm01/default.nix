@@ -36,6 +36,7 @@ let
       inputs.self.nixosModules.deploy-pihole
       inputs.self.nixosModules.wazuh-agent
       inputs.self.nixosModules.smart-monitor
+      inputs.self.nixosModules.disk-usage-monitor
       inputs.self.nixosModules.fwupd
     ];
 

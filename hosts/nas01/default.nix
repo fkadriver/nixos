@@ -42,6 +42,7 @@ let
       inputs.self.nixosModules.vscode-server
       inputs.self.nixosModules.wazuh-agent
       inputs.self.nixosModules.smart-monitor
+      inputs.self.nixosModules.disk-usage-monitor
       inputs.self.nixosModules.user-scott
       inputs.self.nixosModules.syncthing-declarative
       inputs.self.nixosModules.fwupd

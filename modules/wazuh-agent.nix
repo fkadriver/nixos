@@ -200,7 +200,7 @@ EOF
     # store paths are followable. Use readlink -f to get the real store path (not the
     # /usr/local/bin symlink, which points back into the invisible /usr/local).
     mkdir -p /var/ossec/scripts
-    for name in wazuh-borg-status wazuh-github-ci-status wazuh-tailscale-health wazuh-zfs-pool-status wazuh-smart-status; do
+    for name in wazuh-borg-status wazuh-github-ci-status wazuh-tailscale-health wazuh-zfs-pool-status wazuh-smart-status wazuh-disk-usage-status; do
       src="/usr/local/bin/$name"
       if [ -e "$src" ]; then
         ln -sf "$(readlink -f "$src")" "/var/ossec/scripts/$name"
