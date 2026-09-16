@@ -2,9 +2,11 @@
 # Query status from every NixOS host over SSH and print a summary table.
 #
 # For each host: uptime, Linux version (NixOS/Ubuntu/etc + version number),
-# current generation number + build date (NixOS only), kernel version, and
-# root filesystem usage. The current machine is checked locally; the rest
-# are checked over SSH in parallel.
+# current generation number + build date (NixOS only), kernel version, root
+# filesystem usage, and total data volume (used/total across all local
+# filesystems plus ZFS pools, same used-plus-zpool-list logic as the dfsum
+# shell alias — see shell-aliases.nix). The current machine is checked
+# locally; the rest are checked over SSH in parallel.
 #
 # airbook is excluded — it's macOS/darwin and not reachable via SSH from
 # latitude (manual darwin-rebuild only).
@@ -60,7 +62,7 @@ run_on() {
     fi
 }
 
-# Emits: <reachable|unreachable>|<uptime>|<linux version>|<gen>|<built>|<kernel>|<disk>
+# Emits: <reachable|unreachable>|<uptime>|<linux version>|<gen>|<built>|<kernel>|<disk>|<volume>
 # on stdout so the caller can parse it. All errors → unreachable.
 # <linux version> is /etc/os-release's PRETTY_NAME (works for NixOS, Ubuntu,
 # or anything else — no OS-specific command needed).
@@ -69,6 +71,9 @@ run_on() {
 # hosts <gen> is "-" and <built> is instead the last successful `apt update`
 # time (from /var/lib/apt/periodic/update-success-stamp, falling back to
 # /var/lib/apt/lists' mtime if that stamp file doesn't exist).
+# <volume> is total used/total across local filesystems plus ZFS pools
+# (mirrors dfsum's totals line in shell-aliases.nix), rendered as e.g.
+# "410G/932G" via numfmt.
 probe_host() {
     local host="$1"
     local out
@@ -79,7 +84,21 @@ probe_host() {
         [[ -z \$osver ]] && osver='-'; \
         kernel=\$(uname -r); \
         disk=\$(df -h / --output=pcent 2>/dev/null | tail -n1 | tr -d ' '); \
-        [[ -z \$disk ]] && disk='-';"
+        [[ -z \$disk ]] && disk='-'; \
+        vs=\$(df -kP -l 2>/dev/null | awk 'NR>1 && \$1 ~ /^\/dev\//{u+=\$3;s+=\$2} END{printf \"%d %d\", u+0, s+0}'); \
+        vu=\$(echo \$vs | cut -d' ' -f1); vt=\$(echo \$vs | cut -d' ' -f2); \
+        if command -v zpool >/dev/null 2>&1; then \
+            zvs=\$(zpool list -Hp -o alloc,size 2>/dev/null | awk '{u+=\$1;s+=\$2} END{printf \"%d %d\", u/1024, s/1024}'); \
+            if [[ -n \$zvs ]]; then \
+                vu=\$((vu + \$(echo \$zvs | cut -d' ' -f1))); \
+                vt=\$((vt + \$(echo \$zvs | cut -d' ' -f2))); \
+            fi; \
+        fi; \
+        if [[ -z \$vu || \$vu -eq 0 ]]; then \
+            volume='-'; \
+        else \
+            volume=\$(numfmt --from-unit=1024 --to=iec \$vu 2>/dev/null)/\$(numfmt --from-unit=1024 --to=iec \$vt 2>/dev/null); \
+        fi;"
     if is_non_nixos "$host"; then
         if ! out="$(run_on "$host" "\
             $common_cmd \
@@ -87,8 +106,8 @@ probe_host() {
             [[ -f \$stamp ]] || stamp=/var/lib/apt/lists; \
             aptupd=\$(date -d @\$(stat -c %Y \"\$stamp\" 2>/dev/null) '+%Y-%m-%d %H:%M:%S' 2>/dev/null); \
             [[ -z \$aptupd ]] && aptupd='-'; \
-            echo \"reachable|\$uptime|\$osver|-|\$aptupd|\$kernel|\$disk\"" 2>/dev/null)"; then
-            echo "unreachable|-|-|-|-|-|-"
+            echo \"reachable|\$uptime|\$osver|-|\$aptupd|\$kernel|\$disk|\$volume\"" 2>/dev/null)"; then
+            echo "unreachable|-|-|-|-|-|-|-"
             return
         fi
     elif ! out="$(run_on "$host" "\
@@ -98,8 +117,8 @@ probe_host() {
         built=\$(echo \"\$genline\" | awk '{print \$2, \$3}'); \
         [[ -z \$gen ]] && gen='-'; \
         [[ -z \$built || \$built == ' ' ]] && built='-'; \
-        echo \"reachable|\$uptime|\$osver|\$gen|\$built|\$kernel|\$disk\"" 2>/dev/null)"; then
-        echo "unreachable|-|-|-|-|-|-"
+        echo \"reachable|\$uptime|\$osver|\$gen|\$built|\$kernel|\$disk|\$volume\"" 2>/dev/null)"; then
+        echo "unreachable|-|-|-|-|-|-|-"
         return
     fi
     # Take the last non-empty line in case SSH banners leak through.
@@ -122,10 +141,10 @@ gather_status() {
 }
 
 print_status_table() {
-    printf "%-16s %-10s %-24s %-6s %-20s %-16s %-6s\n" "HOST" "UPTIME" "LINUX VERSION" "GEN" "BUILT" "KERNEL" "DISK"
-    printf "%-16s %-10s %-24s %-6s %-20s %-16s %-6s\n" "----" "------" "-------------" "---" "-----" "------" "----"
+    printf "%-16s %-10s %-24s %-6s %-20s %-16s %-6s %-12s\n" "HOST" "UPTIME" "LINUX VERSION" "GEN" "BUILT" "KERNEL" "DISK" "VOLUME"
+    printf "%-16s %-10s %-24s %-6s %-20s %-16s %-6s %-12s\n" "----" "------" "-------------" "---" "-----" "------" "----" "------"
     for host in "${HOSTS[@]}"; do
-        IFS='|' read -r reach uptime osver gen built kernel disk <<<"${STATUS[$host]}"
+        IFS='|' read -r reach uptime osver gen built kernel disk volume <<<"${STATUS[$host]}"
         local color="$NC" label="$host"
         [[ "$host" == "$CURRENT_HOST" ]] && label="$host (local)"
         if [[ "$reach" == "unreachable" ]]; then
@@ -133,8 +152,8 @@ print_status_table() {
             printf "${color}%-16s %-10s${NC}\n" "$label" "unreachable"
             continue
         fi
-        printf "${color}%-16s %-10s %-24s %-6s %-20s %-16s %-6s${NC}\n" \
-            "$label" "$uptime" "$osver" "$gen" "$built" "$kernel" "$disk"
+        printf "${color}%-16s %-10s %-24s %-6s %-20s %-16s %-6s %-12s${NC}\n" \
+            "$label" "$uptime" "$osver" "$gen" "$built" "$kernel" "$disk" "$volume"
     done
 }
 
