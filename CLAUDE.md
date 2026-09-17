@@ -137,8 +137,8 @@ Each host has a base configuration in `hosts/<hostname>/default.nix` with option
 
 - **latitude** - Dell Latitude 7480 laptop (default: Borg backup + 3D printing)
 - **OTworkstation** - Dell Latitude 5480 (OT lab VM workstation, XFCE minimal, VMware + VirtualBox)
-- **vm01** - Dell Latitude E7270 (Service Tag: 7NYTSF2, Immich server with external 1TB drive)
-- **nas01** - NAS server (ZFS raidz1 pool, NFS, Borg backup server, Syncthing hub, IDrive360 in Docker; converted from Ubuntu — see docs/nas01.md)
+- **vm01** - Dell Latitude E7270 (Service Tag: 7NYTSF2, Immich app + Postgres — library data lives on nas01 via NFS)
+- **nas01** - NAS server (ZFS raidz1 pool, NFS incl. Immich library export, Borg backup server, Syncthing hub, IDrive360 in Docker; converted from Ubuntu — see docs/nas01.md)
 - **log01** - Shuttle Zingbox GL014G128W10, 128GB SSD (syslog collector — rsyslog UDP/TCP 514)
 - **installer** - Bootable ISO with automated installation script
 
@@ -292,12 +292,27 @@ sops updatekeys secrets/secrets.yaml
 - **Logitech support**: Mouse button tools (xdotool, xbindkeys)
 
 ### Dell Latitude E7270 (vm01)
-- **Purpose**: Immich photo management server
+- **Purpose**: Immich app + Postgres (frontend/database only — library data lives on nas01)
 - **Service Tag**: 7NYTSF2
-- **Service User**: `immich` (system user, home: `/opt/immich`, member of `docker` group)
-- **External Storage**: 1TB Toshiba drive mounted at `/mnt/immich` (by UUID)
+- **Library storage**: NFS-mounted from nas01 (`/pool/photos` → `/mnt/nas01/immich-library`, lazy-automount); no dedicated `immich` system user — compose checkout lives under scott's home, container runs as PUID/PGID 991:989 (nas01's immich uid/gid)
+- **Database**: Local Postgres under the compose checkout (not on NFS — Postgres doesn't tolerate NFS-backed data dirs)
 - **Features**: Borg backup to nas01, wireless, docker
-- **Note**: Headless server, no desktop environment
+- **Note**: Headless server, no desktop environment. The old 1TB USB drive at `/mnt/immich` was removed (failing hardware) as part of this migration.
+
+### Immich fleet (vm01 + nas01 + latitude)
+Distributed across three hosts: **vm01** runs the app + Postgres + Redis,
+**nas01** hosts the library data (NFS export only, no containers), and
+**latitude** runs the machine-learning worker (OpenVINO). Compose stacks and
+fleet-management scripts live in their own GitHub repos, not here (they're
+not referenced by nix code, so they don't belong in this flake):
+- `immich-app` (vm01): app compose stack, `immich-fleet-status.sh`,
+  `immich-fleet-check.sh`, `immich-fleet-update.sh` (update ML + app/db with
+  one command, in the right order)
+- `immich_machine_learning` (latitude): ML compose stack, `immich-update.sh`
+
+Run `immich-fleet-update.sh` from vm01 (or anywhere with SSH access to the
+fleet) to update every component — pulls latest images and restarts ML
+first, then app/db, stopping before touching the app if ML fails.
 
 ## Common Development Tasks
 

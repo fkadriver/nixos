@@ -12,23 +12,35 @@ This document provides a brief overview of all host configurations in this repos
 | Service Tag | 3BLBPQ2 |
 | Desktop | KDE Plasma (default), XFCE and minimal variants available |
 | Purpose | Daily driver development laptop |
-| Key Features | Borg backup, 3D printing, Logitech support, multi-monitor, Input Leap KVM server |
+| Key Features | Borg backup, 3D printing, Logitech support, multi-monitor, Input Leap KVM server, Immich machine learning worker |
 | Variants | `latitude-xfce`, `latitude-kde`, `latitude-minimal` |
-| Tailscale tags | `tag:mgmt-admin` (SSH to all infra as scott), `tag:backup-client` (borg to nas01) |
+| Tailscale tags | `tag:mgmt-admin` (SSH to all infra as scott), `tag:backup-client` (borg to nas01), `tag:container` (Immich ML) |
+
+**Immich ML worker:** `systemd.services.immich-ml-docker` runs the
+`immich_machine_learning` compose stack (OpenVINO-accelerated) from
+`~/git/immich_machine_learning`, reachable at the `immich-machine-learning`
+Tailscale hostname. Move it to a different host later by pointing that
+compose checkout + service there and updating `ML_HOST` in the
+`immich-app` repo's `immich-fleet-*.sh` scripts.
 
 ### vm01
-**Dell Latitude E7270** - Immich photo server
+**Dell Latitude E7270** - Immich app + Postgres
 
 | | |
 |---|---|
 | Service Tag | 7NYTSF2 |
-| Purpose | Headless Immich photo management server |
-| Storage | 1TB Toshiba external drive at `/mnt/immich` |
-| Service User | `immich` (home: `/opt/immich`, member of docker group) |
+| Purpose | Headless Immich app server (frontend + database) |
+| Library data | NFS-mounted from nas01 (`/pool/photos` → `/mnt/nas01/immich-library`), lazy-automount |
+| Database | Local Postgres under the compose checkout (`~/git/immich-app/postgres-vm01`) |
 | Key Features | Borg backup to nas01, wireless, docker, VS Code Server |
 | Tailscale tags | `tag:backup-client` (borg to nas01), `tag:container` (Immich) |
 
-**Note:** No desktop environment - access via SSH or Tailscale.
+**Note:** No desktop environment - access via SSH or Tailscale. No dedicated
+`immich` system user here (removed along with the old failing USB drive
+migration) — the compose checkout lives under scott's home like
+`unifi_controller`, and the `immich-server` container itself runs as
+PUID/PGID 991:989 (nas01's `immich` uid/gid, which owns the NFS-exported
+files) regardless of which host user runs `docker compose`.
 
 ### log01
 **Shuttle Zingbox GL014G128W10** - Centralized syslog collector
@@ -57,8 +69,8 @@ Then add to `.sops.yaml` and run `sops updatekeys secrets/secrets.yaml`.
 |---|---|
 | Service Tag | 86B3JH2 |
 | CPU / Memory | Xeon E3-1270 v5 (4C/8T, 3.6/4.0GHz turbo, 80W), 16GB 2133MHz ECC UDIMM |
-| Purpose | NAS: NFS file serving, Borg backup server, Syncthing hub, IDrive360 cloud backup |
-| Storage | 500GB SATA HDD (OS), 3x 4TB HGST ZFS RAIDZ1 (`/pool`, incl. borg repos), WD 18TB (confirmed healthy 2026-08-22, kept `nofail`; automount-at-boot fixed 2026-09-04) |
+| Purpose | NAS: NFS file serving (incl. Immich library data for vm01), Borg backup server, Syncthing hub, IDrive360 cloud backup |
+| Storage | 500GB SATA HDD (OS), 3x 4TB HGST ZFS RAIDZ1 (`/pool`, incl. borg repos + `pool/photos` Immich library), WD 18TB (confirmed healthy 2026-08-22, kept `nofail`; automount-at-boot fixed 2026-09-04) |
 | Storage controller | Dell HBA330 (true HBA passthrough, `mpt3sas`) — replaced the stock PERC H730 RAID-on-chip card |
 | Key Features | ZFS (autoScrub/TRIM), NFS, syncthing-declarative, hd-idle spindown, Wazuh agent, IDrive360 in Docker |
 | Borg Repos | `/pool/borg/{nas01,latitude,vm01,log01,airbook-darwin}` |
@@ -134,8 +146,8 @@ Then add to `.sops.yaml` and run `sops updatekeys secrets/secrets.yaml`.
 | `latitude-kde` | Laptop | KDE | Full desktop variant |
 | `latitude-minimal` | Laptop | XFCE | Testing |
 | `OTworkstation` | Laptop | XFCE | OT lab VM workstation |
-| `vm01` | Server | None | Immich photo server |
-| `nas01` | Server | None | NAS / backup hub |
+| `vm01` | Server | None | Immich app + Postgres |
+| `nas01` | Server | None | NAS / backup hub / Immich data |
 | `log01` | Server | None | Syslog collector |
 | `pihole01` | RPi 3B | None | Primary Pi-hole DNS |
 | `pihole02` | RPi 3B | None | Secondary Pi-hole DNS |

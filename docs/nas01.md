@@ -447,9 +447,24 @@ sudo nixos-rebuild switch --flake ~/git/nixos#nas01
   shares/                   SANS + photos NFS exports
   syncthing/                Syncthing folders (Documents, Downloads, Photos)
   borg/                     Borg backup repos: <hostname> per client
+  photos/                   Immich library (uploads/thumbs/encoded-video/etc) — NFS
+    photos/library/         export to vm01 (see below); the app + Postgres run
+                             on vm01, nas01 is data-only. photos/library is its
+                             own child dataset — the NFS export needs crossmnt
+                             or clients see it as an empty stub.
 
 /mnt/wd18t_3/               WD 18TB drive — functioning normally (confirmed 2026-08-22)
 ```
+
+**Immich**: `/pool/photos` is exported over NFS (Tailscale-only, `crossmnt`) and
+mounted on vm01 at `/mnt/nas01/immich-library` as the app's `UPLOAD_LOCATION`.
+Postgres runs locally on vm01, not here — it doesn't tolerate NFS-backed data
+directories. Owned by the `immich` user (uid 991/gid 989), which exists here
+only to hold that ownership; the actual compose stack runs on vm01. See
+[hosts/vm01/default.nix](../hosts/vm01/default.nix) and the `immich-app` /
+`immich_machine_learning` GitHub repos for the compose stacks and fleet
+scripts (`immich-fleet-status.sh`, `immich-fleet-check.sh`,
+`immich-fleet-update.sh`).
 
 ---
 
@@ -467,6 +482,29 @@ All declared in [hosts/nas01/default.nix](../hosts/nas01/default.nix):
 | Wazuh agent | `services.wazuh-agent` | manager: wazuh.warthog-royal.ts.net |
 | rsyslog → log01 | `logging.forwardToLog01` (common.nix) | on by default |
 | IDrive360 | `virtualisation.libvirtd` (nas01-backup VM) | see below |
+
+**NFS restart-in-place wedges the kernel nfsd state (2026-09-17):** any change
+to `services.nfs.server.exports` requires restarting `nfs-server`, and doing
+so *without a reboot* leaves every NFS client (this host's own exports to
+latitude, vm01, etc.) hanging indefinitely on mount/access — TCP connects
+fine, but the actual NFS RPC exchange never completes. Root cause: the
+`nfs-server` unit's `PATH` (from the upstream NixOS module) lacks `kmod`, so
+`nfsdctl`'s internal `modprobe` call fails ("command not found"), which fails
+its lockd/grace configuration step. Harmless on a genuine cold boot (kernel
+modules already loaded by then), but fatal on a live restart. Fixed via
+`systemd.services.nfs-server.path = [ pkgs.kmod ];` in
+[hosts/nas01/default.nix](../hosts/nas01/default.nix) — if this ever
+regresses anyway, a full reboot is the reliable fallback (a service restart
+is not).
+
+**NetworkManager wipes Tailscale's routing rules:** intermittently, one side
+of a host pair loses its route to the other's Tailscale IP entirely (falls
+back to the LAN default gateway, or just times out), typically noticed as
+SSH or NFS suddenly hanging between two hosts that were fine minutes earlier.
+Symptom: `ip route get <peer-tailscale-ip>` shows it going out the physical
+interface instead of `tailscale0`, or `ip route show dev tailscale0` is
+empty. Fix: `sudo systemctl restart tailscaled` on the affected host — no
+reboot needed for this one.
 
 ---
 
