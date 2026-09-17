@@ -281,6 +281,17 @@ let
 
       users.users.scott.extraGroups = [ "libvirtd" "kvm" ];
 
+      # nfs-server's unit PATH (set by the upstream NixOS module) lacks kmod,
+      # so nfsdctl's internal `modprobe` call fails with "command not found"
+      # on every start — which in turn fails its lockd/grace configuration
+      # step and appears to wedge the kernel nfsd state on any restart-in-place
+      # (as opposed to a fresh boot, where it's harmless — the modules are
+      # already loaded by then). Surfaced 2026-09-17 while adding the
+      # /pool/photos export below required restarting nfs-server, which then
+      # needed a full reboot to un-wedge every NFS client. Fixing the PATH so
+      # modprobe actually runs should let it configure cleanly without that.
+      systemd.services.nfs-server.path = [ pkgs.kmod ];
+
       # NFS exports (LAN + Tailscale, same as Ubuntu-era /etc/exports)
       services.nfs.server = {
         enable = true;
@@ -303,7 +314,11 @@ let
           # that's the unrelated family-photos share above. Tailscale only,
           # matching the photos share; rw so vm01's compose stack (running as
           # PUID/PGID 991:989, this host's immich uid/gid) can write through it.
-          /pool/photos    100.64.0.0/10(rw,sync,wdelay,hide,no_subtree_check,sec=sys,secure,no_root_squash,no_all_squash)
+          # crossmnt (not hide): pool/photos/library is its own child ZFS
+          # dataset mounted under pool/photos, and that's where the actual
+          # library data lives — without crossmnt, NFS clients see an empty
+          # stub at the pool/photos/library mountpoint instead of its content.
+          /pool/photos    100.64.0.0/10(rw,sync,wdelay,crossmnt,no_subtree_check,sec=sys,secure,no_root_squash,no_all_squash)
         '';
       };
 
