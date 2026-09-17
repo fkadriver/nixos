@@ -133,75 +133,52 @@ let
 
 # Dell Latitude E7270 - Service Tag: 7NYTSF2
 
-      # Immich service user
-      users.users.immich = {
-        isSystemUser = true;
-        group = "immich";
-        home = "/opt/immich";
-        createHome = true;
-        shell = pkgs.bash;
-        extraGroups = [ "docker" ];
+      # Immich library/uploads live on nas01 (/pool/photos, ZFS raidz1),
+      # mounted here over NFS via Tailscale — replaces the old local
+      # /mnt/immich USB drive (removed: it was failing and USB besides).
+      # Postgres stays local (under the compose checkout, see immich-docker
+      # below) since Postgres doesn't tolerate NFS-backed data directories.
+      # No dedicated immich system user needed here — the compose checkout
+      # lives under scott's home like unifi_controller below, and the actual
+      # immich-server container process runs as PUID/PGID 991:989 (nas01's
+      # immich uid/gid, which owns the exported files) regardless of which
+      # host user invokes `docker compose`.
+      fileSystems."/mnt/nas01/immich-library" = {
+        device = "nas01.warthog-royal.ts.net:/pool/photos";
+        fsType = "nfs";
+        options = [
+          "_netdev"
+          "nofail"
+          "hard"
+          "timeo=30"
+          "retrans=3"
+          "x-systemd.requires=tailscaled.service"
+          "x-systemd.after=tailscaled.service"
+          "x-systemd.mount-timeout=30"
+        ];
       };
-      users.groups.immich = {};
 
-      # External 1TB drive for Immich
-      fileSystems."/mnt/immich" = {
-        device = "/dev/disk/by-uuid/f2cd320d-fe0a-474f-8662-f6fcc4171a3e";
-        fsType = "ext4";
-        options = [ "nofail" "x-systemd.device-timeout=5" ];
-      };
-
-      # Set immich as owner of the mount point after mount
-      systemd.services.immich-mount-permissions = {
-        description = "Set ownership of /mnt/immich";
-        after = [ "mnt-immich.mount" ];
-        requires = [ "mnt-immich.mount" ];
+      # Immich Docker Compose stack. Repo cloned manually as scott, same
+      # convention as unifi_controller below:
+      #   git clone git@github.com:fkadriver/immich-app.git ~/git/immich-app
+      # .env (gitignored upstream, lives only on this host — never commit the
+      # Tailscale AUTH_KEY or DB creds) needs UPLOAD_LOCATION=/mnt/nas01/immich-library,
+      # DB_DATA_LOCATION=./postgres-vm01, PUID=991, PGID=989.
+      systemd.services.immich-docker = {
+        description = "Immich Docker Compose Stack";
         wantedBy = [ "multi-user.target" ];
+        after = [ "docker.service" "network-online.target" ];
+        wants = [ "network-online.target" ];
+        requires = [ "docker.service" ];
         serviceConfig = {
           Type = "oneshot";
-          ExecStart = "${pkgs.coreutils}/bin/chown immich:immich /mnt/immich";
           RemainAfterExit = true;
+          WorkingDirectory = "/home/scott/git/immich-app";
+          RequiresMountsFor = "/mnt/nas01/immich-library";
+          ExecStart = "${pkgs.docker}/bin/docker compose up -d";
+          ExecStop = "${pkgs.docker}/bin/docker compose down";
         };
       };
-
-      # Deploy GitHub SSH key and config for the immich service user.
-      # The key is fetched from Bitwarden into scott's ~/.ssh during the
-      # bitwarden-ssh-keys activation step; we copy it here afterwards.
-      system.activationScripts.immichSshGithub = lib.stringAfter [ "bitwarden-ssh-keys" "users" ] ''
-        SSH_DIR=/opt/immich/.ssh
-        SRC_KEY=/home/scott/.ssh/id_ed25519_github
-
-        if [ -f "$SRC_KEY" ]; then
-          mkdir -p "$SSH_DIR"
-          chmod 700 "$SSH_DIR"
-          chown immich:immich "$SSH_DIR"
-
-          cp "$SRC_KEY" "$SSH_DIR/id_ed25519_github"
-          chmod 600 "$SSH_DIR/id_ed25519_github"
-          chown immich:immich "$SSH_DIR/id_ed25519_github"
-
-          cat > "$SSH_DIR/config" << 'EOF'
-Host github.com
-  User git
-  IdentityFile ~/.ssh/id_ed25519_github
-  IdentitiesOnly yes
-EOF
-          chmod 600 "$SSH_DIR/config"
-          chown immich:immich "$SSH_DIR/config"
-        else
-          echo "Warning: $SRC_KEY not found — immich GitHub SSH key not installed" >&2
-        fi
-      '';
-
-      # Disable starship for immich user
-      system.activationScripts.immichBashrc = ''
-        mkdir -p /opt/immich
-        cat > /opt/immich/.bashrc << 'EOF'
-# Minimal bashrc for immich service user - no starship
-export PS1='[\u@\h \W]\$ '
-EOF
-        chown immich:immich /opt/immich/.bashrc
-      '';
 
       # Unifi Docker Compose stack
       systemd.services.unifi-docker = {
@@ -246,7 +223,10 @@ EOF
       services.borg-backup = {
         enable = true;
         repository = "ssh://scott@nas01.warthog-royal.ts.net/pool/borg/vm01";
-        paths = [ "/home" "/mnt/immich" ];
+        # /mnt/immich (old USB drive) removed; immich's Postgres data now
+        # lives under /home/scott/git/immich-app/postgres-vm01, already
+        # covered by /home.
+        paths = [ "/home" ];
         encryption.passphraseFile = "/run/bitwarden-secrets/borg_passphrase";
         sshKeyFile = "/home/scott/.ssh/id_ed25519_legacy";
       };
