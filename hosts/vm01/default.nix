@@ -143,10 +143,21 @@ let
       # immich-server container process runs as PUID/PGID 991:989 (nas01's
       # immich uid/gid, which owns the exported files) regardless of which
       # host user invokes `docker compose`.
+      # x-systemd.automount + noauto (not an eager boot-time mount): a plain
+      # mount at boot raced Tailscale's MagicDNS — tailscaled.service being
+      # "started" doesn't mean DNS is actually resolving yet, so the mount
+      # failed with "Failed to resolve server ..." on a cold boot even with
+      # x-systemd.after=tailscaled.service. Automount defers the real mount
+      # attempt to first access (from immich-docker below), by which point
+      # Tailscale has had time to settle — same pattern latitude already uses
+      # for its own nas01 mounts. No idle-timeout: this is a server with a
+      # continuously-running container, unlike latitude's on-demand laptop use.
       fileSystems."/mnt/nas01/immich-library" = {
         device = "nas01.warthog-royal.ts.net:/pool/photos";
         fsType = "nfs";
         options = [
+          "x-systemd.automount"
+          "noauto"
           "_netdev"
           "nofail"
           "hard"
@@ -170,11 +181,15 @@ let
         after = [ "docker.service" "network-online.target" ];
         wants = [ "network-online.target" ];
         requires = [ "docker.service" ];
+        # RequiresMountsFor belongs in [Unit], not [Service] — it was
+        # silently ignored under serviceConfig, which is why this service
+        # started (and finished) before the NFS mount even attempted on the
+        # last boot, instead of waiting for it.
+        unitConfig.RequiresMountsFor = "/mnt/nas01/immich-library";
         serviceConfig = {
           Type = "oneshot";
           RemainAfterExit = true;
           WorkingDirectory = "/home/scott/git/immich-app";
-          RequiresMountsFor = "/mnt/nas01/immich-library";
           ExecStart = "${pkgs.docker}/bin/docker compose up -d";
           ExecStop = "${pkgs.docker}/bin/docker compose down";
         };
