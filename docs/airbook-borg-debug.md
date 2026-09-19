@@ -149,3 +149,45 @@ tailscale ssh nas01 'sudo dmesg | grep -i "conntrack table full" | tail; zpool i
   implicit `Host *` block.
 - **nix-darwin org moved** from `github:LnL7/nix-darwin` to
   `github:nix-darwin/nix-darwin` (LnL7 is now a mirror).
+
+## Power policy: awake on wall power, backups on wall power only (2026-09-18)
+
+Separate problem from the connection resets, same daemon. airbook lives
+lid-closed and plugged in. AC idle sleep was **1 minute**, so at 02:00 the
+machine was asleep, and launchd does not run a missed
+`StartCalendarInterval` on schedule — it defers it to the next wake. The
+backup effectively ran whenever the lid happened to be opened.
+
+What `hosts/airbook-darwin/default.nix` now does:
+
+| Piece | Where | Effect |
+| --- | --- | --- |
+| `pmset -c sleep 0` | `postActivation` | No idle system sleep on AC. Battery timers untouched. |
+| `pmset -a acwake 1` | `postActivation` | Plugging in wakes a machine that slept on battery, so the AC rule can take effect. |
+| `pmset repeat wakeorpoweron MTWRFSU 01:55:00` | `postActivation` | Safety-net RTC wake if `SleepDisabled` is ever cleared. |
+| `com.local.ac-no-sleep` | launchd daemon, every 60s | Follows the power source: AC → `pmset -a disablesleep 1`, battery → `0`. |
+| `com.local.borg-wake-hold` | launchd daemon, 01:55 | On AC, holds `caffeinate -is -t 1800` to bridge the wake→02:00 gap. Exits immediately on battery. |
+| AC guard in `borg-backup` | daemon script | Logs `skipped (on battery power)` and exits 0 unless on wall power. |
+| `caffeinate -i` → `-is` | around `borg create` | `-s` (PreventSystemSleep, AC only) survives a return from dark wake, where an idle-only assertion can be dropped. |
+
+Two things worth knowing:
+
+- **`disablesleep` is the only knob that defeats lid-close sleep.** `sleep 0`
+  does not: clamshell sleep is a separate path. `disablesleep` is undocumented
+  in `man pmset` (it sets `IOPMrootDomain SleepDisabled`) and is **system-wide,
+  with no `-b`/`-c` split** — pinning it to 1 declaratively would also keep the
+  machine awake on battery until the pack flattened. Hence the polling daemon
+  rather than a single activation line.
+- **The Sunday 04:00 restore test is not covered by the wake.** A machine has
+  exactly one repeating `pmset` wake event, spent on 01:55. While airbook is on
+  AC it never sleeps so 04:00 fires normally; on a battery weekend the restore
+  test stays deferred to the next wake. Accepted deliberately.
+
+Verify:
+
+```bash
+pmset -g sched                    # repeating wake at 01:55
+pmset -g | grep SleepDisabled     # 1 while on AC
+pmset -g custom                   # AC: sleep 0; battery unchanged
+sudo launchctl list | grep com.local
+```

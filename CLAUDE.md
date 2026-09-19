@@ -285,6 +285,11 @@ sops updatekeys secrets/secrets.yaml
   - Services: Tailscale VPN, Syncthing file sync
   - System settings: Dark mode, Touch ID sudo, dock/keyboard/trackpad preferences
   - Bluetooth: SEENDA keyboard and mouse (manual pairing required)
+  - Power policy: never sleeps while on wall power (`pmset -c sleep 0` plus the
+    `com.local.ac-no-sleep` daemon toggling `disablesleep` with the power source,
+    which is what also defeats lid-close sleep); normal battery timers kept. The
+    02:00 borg backup skips entirely unless on wall power. See
+    `docs/airbook-borg-debug.md`.
 
 ### Dell Latitude 7480 (latitude)
 - **Service Tag**: 3BLBPQ2

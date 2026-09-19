@@ -584,6 +584,32 @@ let
     # never run. All host activation logic must therefore live under postActivation.
     # Fragments are merged via mkMerge (text is types.lines, so they concatenate).
     system.activationScripts.postActivation.text = lib.mkMerge [
+      # Power policy: stay awake whenever airbook is on wall power.
+      #
+      # Default AC idle sleep here was 1 minute, so a lid-closed machine was asleep at
+      # 02:00 and launchd deferred com.local.borg-backup until someone opened the lid —
+      # backups ran whenever, not nightly.
+      #
+      #   -c sleep 0   never idle-sleep on AC (battery timers deliberately untouched)
+      #   -a acwake 1  plugging in wakes it, so the no-sleep-on-AC rule can take effect
+      #                on a machine that fell asleep on battery
+      #   repeat wake  safety net: if SleepDisabled ever gets cleared (macOS updates have
+      #                been known to), an RTC wake at 01:55 still gets the 02:00 job run.
+      #                Only one repeating wake event exists per machine, so the Sunday
+      #                04:00 restore test is not covered by it and stays deferred to the
+      #                next wake. Check with `pmset -g sched`.
+      #
+      # Lid-close sleep ignores `sleep 0` — only the undocumented `disablesleep`
+      # (IOPMrootDomain SleepDisabled) stops it, and that knob is system-wide rather
+      # than per-power-source, so it can't be pinned here without also keeping the
+      # machine awake on battery until it flattens. com.local.ac-no-sleep tracks the
+      # power source instead and toggles it.
+      ''
+        /usr/bin/pmset -c sleep 0 || true
+        /usr/bin/pmset -a acwake 1 || true
+        /usr/bin/pmset repeat wakeorpoweron MTWRFSU 01:55:00 || true
+      ''
+
       # Fix ownership of sops-created directories (sops creates parent dirs as root)
       ''
         chown scott:staff /Users/scott/.local/share || true
@@ -882,6 +908,56 @@ wazuh_command.remote_commands=1'
       };
     };
 
+    # Keeps airbook awake for as long as it is on wall power. `disablesleep` is the
+    # only knob that also defeats lid-close (clamshell) sleep, but it is a single
+    # system-wide flag with no -b/-c split, so leaving it pinned at 1 would keep the
+    # machine awake on battery until it flattened. This polls the power source once a
+    # minute and follows it: AC -> SleepDisabled 1, battery -> 0, back to the normal
+    # battery timers in `pmset -g custom`. Verify with `pmset -g | grep SleepDisabled`.
+    launchd.daemons.ac-no-sleep =
+      let
+        acNoSleep = pkgs.writeShellScript "ac-no-sleep" ''
+          want=0
+          if /usr/bin/pmset -g ps | /usr/bin/grep -q "'AC Power'"; then
+            want=1
+          fi
+          cur=$(/usr/bin/pmset -g | /usr/bin/awk '/SleepDisabled/ { print $2 }')
+          if [ "''${cur:-0}" != "$want" ]; then
+            /usr/bin/pmset -a disablesleep "$want"
+          fi
+        '';
+      in {
+        serviceConfig = {
+          Label = "com.local.ac-no-sleep";
+          ProgramArguments = [ "${acNoSleep}" ];
+          RunAtLoad = true;
+          StartInterval = 60;
+          StandardErrorPath = "/var/log/ac-no-sleep.error.log";
+        };
+      };
+
+    # Bridges the 01:55 safety-net wake (`pmset repeat`, set in postActivation) and the
+    # 02:00 backup below, for the case where SleepDisabled is not in force. A scheduled
+    # wake only guarantees a brief awake window, so without an assertion the machine can
+    # be asleep again before launchd fires com.local.borg-backup. `-i` blocks idle sleep,
+    # `-s` blocks system sleep while on AC. On battery it exits immediately rather than
+    # burning 30 minutes of charge on a run that borg-backup would skip anyway.
+    launchd.daemons.borg-wake-hold =
+      let
+        wakeHold = pkgs.writeShellScript "borg-wake-hold" ''
+          /usr/bin/pmset -g ps | /usr/bin/grep -q "'AC Power'" || exit 0
+          exec /usr/bin/caffeinate -is -t 1800
+        '';
+      in {
+        serviceConfig = {
+          Label = "com.local.borg-wake-hold";
+          ProgramArguments = [ "${wakeHold}" ];
+          StartCalendarInterval = [{ Hour = 1; Minute = 55; }];
+          RunAtLoad = false;
+          StandardErrorPath = "/var/log/borg-wake-hold.error.log";
+        };
+      };
+
     # Borg backup to nas01 via launchd (macOS equivalent of systemd)
     launchd.daemons.borg-backup =
       let
@@ -897,6 +973,16 @@ wazuh_command.remote_commands=1'
           export BW_CLIENTSECRET="$(cat "$BW_SECRETS/client_secret")"
           export BW_PASSWORD="$(cat "$BW_SECRETS/master_password")"
           export HOME="/Users/scott"
+
+          # Wall power only. A multi-hour, multi-GB upload on battery drains the pack
+          # and, once macOS is back on the normal battery timers, gets cut off mid-run
+          # by idle sleep. Skipping is silent by design: the Wazuh borg_backup probe
+          # reports archive age, so a string of skipped nights shows up there as a
+          # rising age= rather than as a fake failure.
+          if ! /usr/bin/pmset -g ps | /usr/bin/grep -q "'AC Power'"; then
+            echo "=== Borg backup skipped (on battery power): $(date) ==="
+            exit 0
+          fi
 
           echo "=== Borg backup started: $(date) ==="
 
@@ -943,11 +1029,14 @@ wazuh_command.remote_commands=1'
             echo "token=$(date +%s)-$$"
           } > /Users/scott/.borg-restore-canary
 
-          # `caffeinate -i` holds an IdleSleepAssertion for the whole borg run so macOS
-          # won't sleep mid-upload. `pmset -g` shows sleep assertions cycle in and out
-          # (AddressBookSourceSync, etc.); we can't rely on someone else holding it.
+          # `caffeinate -is` holds sleep assertions for the whole borg run so macOS won't
+          # sleep mid-upload. `-i` blocks idle sleep; `-s` blocks system sleep while on
+          # AC, which is what keeps a lid-closed machine up after the 01:55 scheduled
+          # wake (idle assertions alone can be dropped when returning from a dark wake).
+          # `pmset -g` shows sleep assertions cycle in and out (AddressBookSourceSync,
+          # etc.); we can't rely on someone else holding it.
           # `-v` from borg logs each file/phase so a future drop tells us WHERE it died.
-          /usr/bin/caffeinate -i ${pkgs.borgbackup}/bin/borg create \
+          /usr/bin/caffeinate -is ${pkgs.borgbackup}/bin/borg create \
             --verbose \
             --stats \
             --compression auto,zstd \
