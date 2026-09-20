@@ -86,11 +86,12 @@
       <listen type='address' address='100.73.114.76'/>
     </graphics>
     <video>
-      <!-- 1440x900 matches the airbook's native panel (MacBook Air 7,2, 13"
-           non-Retina) 1:1 — the primary console viewer. Confirmed available
-           in the guest's virtio-gpu EDID mode list via xrandr's query mode. -->
+      <!-- 1280x720: next size down from the airbook's native 1440x900 panel
+           (MacBook Air 7,2, 13" non-Retina) — the primary console viewer.
+           Confirmed available in the guest's virtio-gpu EDID mode list via
+           xrandr's query mode. -->
       <model type='virtio' heads='1' primary='yes'>
-        <resolution x='1440' y='900'/>
+        <resolution x='1280' y='720'/>
       </model>
     </video>
     <!-- virtiofs shares: /pool (IDrive360 backup source), /mnt (extra drives),
