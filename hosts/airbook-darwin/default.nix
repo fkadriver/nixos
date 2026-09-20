@@ -450,6 +450,7 @@ let
           AppleInterfaceStyle = "Dark";  # Dark mode
           AppleKeyboardUIMode = 3;       # Full keyboard access
           ApplePressAndHoldEnabled = false;  # Key repeat instead of character picker
+          _HIHideMenuBar = true;         # Auto-hide the menu bar (like the Dock)
           InitialKeyRepeat = 15;
           KeyRepeat = 2;
           NSAutomaticCapitalizationEnabled = false;
