@@ -319,6 +319,21 @@ let
           # library data lives — without crossmnt, NFS clients see an empty
           # stub at the pool/photos/library mountpoint instead of its content.
           /pool/photos    100.64.0.0/10(rw,sync,wdelay,crossmnt,no_subtree_check,sec=sys,secure,no_root_squash,no_all_squash)
+
+          # nas01-backup migration (see MIGRATION.md in the idrive360 repo):
+          # sands-bak01 replaces the nas01-backup VM's virtiofs shares of the
+          # *full* /pool and /mnt (not just the narrower shares above) with
+          # NFS. crossmnt so child ZFS datasets/mounts under each (including
+          # /pool/borg) actually show up instead of empty stub dirs — this
+          # is why the export is scoped to sands-bak01's single Tailscale IP
+          # rather than the whole 100.64.0.0/10 tailnet range like the
+          # shares above; it exposes far more than those do. ro, not rw —
+          # unlike the old virtiofs share, IDrive360 only ever reads backup
+          # source files; all its own state (locks/config/logs/device
+          # profile) lives under /opt/IDrive360 on the client itself, never
+          # under /pool or /mnt (confirmed against idrive360 repo's README).
+          /pool    100.64.189.120/32(ro,sync,wdelay,crossmnt,no_subtree_check,sec=sys,secure,no_root_squash,no_all_squash)
+          /mnt     100.64.189.120/32(ro,sync,wdelay,crossmnt,no_subtree_check,sec=sys,secure,no_root_squash,no_all_squash)
         '';
       };
 
