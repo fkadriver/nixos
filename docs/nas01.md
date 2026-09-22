@@ -510,6 +510,19 @@ reboot needed for this one.
 
 ## IDrive360 (cloud backup, QEMU/KVM VM)
 
+**Planned migration (2026-09-22, not started):** `nas01-backup` is slated to
+move off this VM onto dedicated hardware — the retired HP ProDesk 600 G4 DM
+(see "Hardware History" above) freed up by nas01's own migration to the
+Dell PowerEdge T330. The target box runs **plain Ubuntu Server, not NixOS**
+— it will not become a host in this repo; it's managed the same ad hoc,
+by-hand way `nas01-backup` is today (see "Manually installed packages" in
+the `idrive360` repo's `README.md`). Full plan, including the device
+re-enrollment and virtiofs→NFS risks, lives in `MIGRATION.md` in the
+`idrive360` repo. Nothing in this section is stale yet — treat it as current
+until that migration actually lands, at which point this whole section (VM
+definition, setup script, virtiofs data access, VM-disk Borg backup below)
+needs a rewrite for bare metal.
+
 IDrive360's installer self-updates and downloads its backup engine at runtime,
 which is incompatible with Nix packaging. It runs in a persistent Ubuntu 24.04
 QEMU/KVM VM named `nas01-backup` instead of a Docker container.
