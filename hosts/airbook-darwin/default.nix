@@ -370,7 +370,7 @@ let
         # TigerVNC (not RealVNC's vnc-viewer cask — RealVNC only hosts the latest
         # installer, so its pinned .dmg URL 404s whenever the cask version lags).
         # TigerVNC ships stable versioned SourceForge downloads and needs no account.
-        "tigervnc"         # VNC viewer — for reaching nas01-backup etc.
+        "tigervnc"         # VNC viewer
         # RDP client — reaches OTworkstation (services.xrdp, openbox session, :3389),
         # and latitude/nas01 which also serve XRDP. See docs/remote-desktops.md.
         # This is `windows-app`, NOT the older `microsoft-remote-desktop` cask: that
