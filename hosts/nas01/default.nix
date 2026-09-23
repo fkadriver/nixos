@@ -299,6 +299,10 @@ let
         statdPort = 4000;
         lockdPort = 4001;
         mountdPort = 20048;
+        # Default is 8. General headroom bump for the LAN/tailnet NFS
+        # clients (SANS, photos shares, immich on vm01) — more server
+        # threads for concurrent access, not tied to any one client.
+        nproc = 16;
         exports = ''
           /pool/data    192.168.1.0/24(rw,sync,no_subtree_check,no_root_squash)
 
