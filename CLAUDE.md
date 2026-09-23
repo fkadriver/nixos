@@ -319,6 +319,18 @@ Run `immich-fleet-update.sh` from vm01 (or anywhere with SSH access to the
 fleet) to update every component — pulls latest images and restarts ML
 first, then app/db, stopping before touching the app if ML fails.
 
+### Work MacBook (not part of this flake)
+A separate, non-Nix work MacBook mirrors the terminal *look* of
+`airbook-darwin` — same starship prompt layout and the Dracula ("vampire")
+iTerm2 color profile — via a plain Homebrew + dotfiles bootstrap script
+(`starship.toml`, `.tmux.conf`, a marked block in `.zshrc`, and the Dracula
+iTerm2 Dynamic Profile JSON from `hosts/airbook-darwin/home.nix`). Deliberately
+excludes Nix/nix-darwin and every home-infra-specific alias (Tailscale SSH
+shortcuts, borg, IDrive360) since it's a work device, not part of this
+personal flake. The script isn't checked into this repo (it was handed to the
+user directly); `hosts/airbook-darwin/home.nix` is the source of truth if it
+needs to be regenerated.
+
 ## Common Development Tasks
 
 ### Adding a New Host Configuration
