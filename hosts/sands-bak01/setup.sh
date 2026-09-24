@@ -36,7 +36,7 @@ NAS01_TS_IP=100.73.114.76
 WAZUH_MANAGER_HOST=wazuh.warthog-royal.ts.net
 WAZUH_AGENT_VERSION=4.14.5-1
 
-echo "=== [1/12] Base packages ==="
+echo "=== [1/13] Base packages ==="
 apt-get update
 apt-get install -y \
   software-properties-common apt-transport-https ca-certificates \
@@ -46,7 +46,7 @@ apt-get install -y \
   borgbackup \
   btop strace iperf3
 
-echo "=== [2/12] Passwordless sudo for scott ==="
+echo "=== [2/13] Passwordless sudo for scott ==="
 # This host isn't behind the nixos repo's narrowly-scoped
 # security.sudo.extraRules (nixos-rebuild/nix/tailscale/borg only) - it gets
 # full passwordless sudo instead, since it's single-user hardware with no
@@ -56,7 +56,7 @@ scott ALL=(ALL) NOPASSWD: ALL
 EOF
 visudo -c -f /etc/sudoers.d/scott-nopasswd
 
-echo "=== [3/12] Tailscale ==="
+echo "=== [3/13] Tailscale ==="
 if ! command -v tailscale >/dev/null 2>&1; then
   curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/noble.noarmor.gpg \
     -o /usr/share/keyrings/tailscale-archive-keyring.gpg
@@ -81,7 +81,7 @@ else
   echo "  'sudo tailscale up --ssh' by hand if this host predates it.)"
 fi
 
-echo "=== [4/12] xpra (remote GUI view, no VNC) ==="
+echo "=== [4/13] xpra (remote GUI view, no VNC) ==="
 if ! command -v xpra >/dev/null 2>&1; then
   curl -fsSL https://xpra.org/xpra.asc -o /usr/share/keyrings/xpra.asc
   cat > /etc/apt/sources.list.d/xpra.sources <<'EOF'
@@ -128,7 +128,7 @@ WantedBy=multi-user.target
 EOF
 systemctl daemon-reload
 
-echo "=== [5/12] LightDM autologin (scott -> LXDE) ==="
+echo "=== [5/13] LightDM autologin (scott -> LXDE) ==="
 install -d /etc/lightdm/lightdm.conf.d
 cat > /etc/lightdm/lightdm.conf.d/50-autologin.conf <<'EOF'
 [Seat:*]
@@ -137,7 +137,7 @@ autologin-user-timeout=0
 autologin-session=LXDE
 EOF
 
-echo "=== [6/12] Chromium sandbox fix (AppArmor unprivileged userns) ==="
+echo "=== [6/13] Chromium sandbox fix (AppArmor unprivileged userns) ==="
 # Ubuntu 24.04 hardening (kernel.apparmor_restrict_unprivileged_userns=1)
 # blocks Electron/Chromium's sandbox from acquiring CAP_SYS_ADMIN, which
 # breaks the IDrive360 client GUI. Confirmed this session.
@@ -146,10 +146,29 @@ kernel.apparmor_restrict_unprivileged_userns=0
 EOF
 sysctl --system >/dev/null
 
-echo "=== [7/12] Timezone ==="
+echo "=== [7/13] Disable all automatic updates ==="
+# Deliberate: an automatic update broke the nas01-backup VM in the past
+# (see MIGRATION.md in the idrive360 repo). This host is administered by
+# hand (apt run manually) instead - masked, not just disabled, so nothing
+# can silently re-enable these.
+systemctl stop apt-daily.timer apt-daily-upgrade.timer apt-daily.service \
+  apt-daily-upgrade.service unattended-upgrades.service 2>/dev/null || true
+systemctl disable --now apt-daily.timer apt-daily-upgrade.timer \
+  unattended-upgrades.service 2>/dev/null || true
+systemctl mask apt-daily.timer apt-daily-upgrade.timer apt-daily.service \
+  apt-daily-upgrade.service unattended-upgrades.service
+cat > /etc/apt/apt.conf.d/20auto-upgrades <<'EOF'
+APT::Periodic::Update-Package-Lists "0";
+APT::Periodic::Unattended-Upgrade "0";
+EOF
+if command -v snap >/dev/null 2>&1; then
+  snap refresh --hold >/dev/null 2>&1 || true
+fi
+
+echo "=== [8/13] Timezone ==="
 timedatectl set-timezone America/Chicago
 
-echo "=== [8/12] NFS mounts to nas01 ==="
+echo "=== [9/13] NFS mounts to nas01 ==="
 # /pool and /mnt: read-only, this host only ever reads source data for
 # backup. ~/git/idrive360: read-write, it's a live shared checkout (this
 # repo's twin - see idrive360-agent-status.sh below).
@@ -165,14 +184,14 @@ done
 systemctl daemon-reload
 mount -a || echo "  (some mounts may need tailscale/nas01 reachable first - rerun 'mount -a' later)"
 
-echo "=== [9/12] Starship prompt ==="
+echo "=== [10/13] Starship prompt ==="
 if ! command -v starship >/dev/null 2>&1; then
   curl -sS https://starship.rs/install.sh | sh -s -- -y
 fi
 su - scott -c 'grep -q "starship init bash" ~/.bashrc' || \
   su - scott -c 'printf "\n# Starship prompt\neval \"\$(starship init bash)\"\n" >> ~/.bashrc'
 
-echo "=== [10/12] Fleet SSH aliases + idrive-status ==="
+echo "=== [11/13] Fleet SSH aliases + idrive-status ==="
 # Matches modules/shell-aliases.nix in this repo (kept in sync by hand,
 # since this host can't import it directly).
 su - scott -c 'grep -q "Fleet SSH shortcuts" ~/.bashrc' || su - scott -c "cat >> ~/.bashrc" <<'EOF'
@@ -195,7 +214,7 @@ else
   echo "    sudo install -m 0755 ~/git/idrive360/idrive360-agent-status.sh /usr/local/bin/"
 fi
 
-echo "=== [11/12] Borg backup of /opt/IDrive360 ==="
+echo "=== [12/13] Borg backup of /opt/IDrive360 ==="
 # IDrive360 doesn't back up its own install/identity directory - despite
 # /opt/ being in its backup set, no backup log ever showed a [SUCCESS]
 # entry under /opt/IDrive360/ itself. That directory holds the exact
@@ -260,7 +279,7 @@ systemctl daemon-reload
 su - scott -c "BORG_RELOCATED_REPO_ACCESS_IS_OK=yes BORG_REMOTE_PATH=/run/current-system/sw/bin/borg borg init --encryption none ssh://scott@nas01.warthog-royal.ts.net/pool/borg/sands-bak01" 2>/dev/null || true
 systemctl enable --now borg-backup-idrive360.timer
 
-echo "=== [12/12] Wazuh agent ==="
+echo "=== [13/13] Wazuh agent ==="
 if ! dpkg -l wazuh-agent >/dev/null 2>&1; then
   curl -sS -o /tmp/wazuh-agent.deb \
     "https://packages.wazuh.com/4.x/apt/pool/main/w/wazuh-agent/wazuh-agent_${WAZUH_AGENT_VERSION}_amd64.deb"
