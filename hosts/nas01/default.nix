@@ -82,18 +82,21 @@ let
           # Temperature monitoring
           temps = ''echo '=== CPU Temps (°F) ===' && sensors -f 2>/dev/null | grep -E ':.*°F' || echo '(run: sudo sensors-detect)'; echo ""; echo '=== Drive Temps (°F) ==='; for d in /dev/sd?; do C=$(sudo smartctl -A "$d" 2>/dev/null | awk '/^[[:space:]]*19[04] /{print $10}' | head -1); if [ -n "$C" ]; then printf "%s: %d°F\n" "$d" "$((C * 9 / 5 + 32))"; else printf "%s: N/A\n" "$d"; fi; done'';
 
-          # IDrive360 — nas01-backup VM (Ubuntu 24.04 / QEMU/KVM)
-          # VMs live in qemu:///system; LIBVIRT_DEFAULT_URI is set in initExtra below.
+          # IDrive360 — agent now runs on sands-bak01 (dedicated hardware,
+          # migrated off the nas01-backup VM below — see MIGRATION.md in the
+          # idrive360 repo). VMs live in qemu:///system; LIBVIRT_DEFAULT_URI
+          # is set in initExtra below.
           #
           # Split: idrive-start/stop/restart act on the idrive360cron *agent
-          # service inside the VM* (the thing that actually runs backups —
-          # cheap and safe to restart any time); idrive-vm-* acts on the VM
-          # itself (virsh power state, and the existing VM-disk Borg backup).
-          # idrive-status and idrive-vm-restart are functions (initExtra
-          # below) — they need conditional logic, not just a fixed command.
-          idrive-start    = "ssh scott@nas01-backup.warthog-royal.ts.net sudo systemctl start idrive360cron";
-          idrive-stop     = "ssh scott@nas01-backup.warthog-royal.ts.net sudo systemctl stop idrive360cron";
-          idrive-restart  = "ssh scott@nas01-backup.warthog-royal.ts.net sudo systemctl restart idrive360cron";
+          # service on sands-bak01* (cheap and safe to restart any time);
+          # idrive-vm-* acts on the nas01-backup VM itself (virsh power
+          # state, and the existing VM-disk Borg backup) — kept for
+          # potential rollback, not currently the active agent.
+          # idrive-vm-restart is a function (initExtra below) — it needs
+          # conditional logic, not just a fixed command.
+          idrive-start    = "ssh scott@sands-bak01.warthog-royal.ts.net sudo systemctl start idrive360cron";
+          idrive-stop     = "ssh scott@sands-bak01.warthog-royal.ts.net sudo systemctl stop idrive360cron";
+          idrive-restart  = "ssh scott@sands-bak01.warthog-royal.ts.net sudo systemctl restart idrive360cron";
           idrive-ip       = "virsh domifaddr nas01-backup";
           idrive-ssh      = ''ssh scott@$(virsh domifaddr nas01-backup | awk '/ipv4/{print $4}' | cut -d/ -f1)'';
           idrive-console  = "sudo virsh console nas01-backup";
@@ -132,11 +135,9 @@ let
           borg-check()  { sudo borg check      "$BORG_REPOS/$1"; }
           borg-unlock() { sudo borg break-lock "$BORG_REPOS/$1"; }
 
-          # IDrive360 VM status: virsh domstate, and if the VM is up, also SSH in
-          # and run idrive360-agent-status.sh (tracked in ~/git/idrive360, deployed
-          # to /usr/local/bin on the VM) — same script you can run directly on
-          # nas01-backup itself; it doesn't need to check VM state since if it's
-          # running at all, the VM is obviously up.
+          # IDrive360 agent status: sands-bak01 is dedicated hardware, not a
+          # VM, so this just SSHes in and runs idrive360-agent-status.sh
+          # (tracked in ~/git/idrive360, deployed to /usr/local/bin there).
           # unalias first: idrive-status used to be a home-manager shellAlias, and
           # nix-rebuild's `source ~/.bashrc` re-sources in the *same* shell (see
           # borg-check/borg-unlock above for the same issue) — a shell that's had
@@ -144,14 +145,7 @@ let
           # it on this line and break the function definition at parse time.
           unalias idrive-status 2>/dev/null
           idrive-status() {
-            local state
-            state=$(virsh domstate nas01-backup --reason)
-            echo "VM: $state"
-            if [[ "$state" == running* ]]; then
-              echo ""
-              echo "=== idrive360cron agent (nas01-backup) ==="
-              ssh scott@nas01-backup.warthog-royal.ts.net /usr/local/bin/idrive360-agent-status.sh
-            fi
+            ssh scott@sands-bak01.warthog-royal.ts.net /usr/local/bin/idrive360-agent-status.sh
           }
 
           # Restart the nas01-backup VM itself: graceful virsh shutdown, wait

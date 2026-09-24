@@ -84,7 +84,7 @@ let
             # Tailscale SSH to other hosts
             # (airbook has no sshd — see hosts/airbook-darwin/home.nix)
             latitude = "tailscale ssh latitude";
-            backup   = "tailscale ssh nas01-backup";
+            backup   = "tailscale ssh sands-bak01";
             vm01     = "tailscale ssh vm01";
             pihole01 = "tailscale ssh pihole01";
             pihole02 = "tailscale ssh pihole02";

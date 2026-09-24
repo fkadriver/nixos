@@ -13,23 +13,14 @@ let
   borgRepo = "ssh://scott@nas01.warthog-royal.ts.net/pool/borg/airbook-darwin";
   borgEnv  = ''BORG_RSH="ssh -i $HOME/.ssh/id_ed25519_legacy -o StrictHostKeyChecking=accept-new" BORG_PASSCOMMAND="${borgPassCmd}" BORG_REMOTE_PATH=/run/current-system/sw/bin/borg'';
 
-  # IDrive360 status, same output as nas01's idrive-status — but airbook isn't the
-  # libvirt host, so the VM state comes from virsh over SSH on nas01 (scott is in
-  # libvirtd there, no sudo needed) rather than locally. Then, if the VM is up, run
-  # idrive360-agent-status.sh inside it (tracked in ~/git/idrive360, deployed to
-  # /usr/local/bin on the VM). A function, not an alias, because of the conditional.
-  # Shared verbatim by bash and zsh below.
+  # IDrive360 status, same output as nas01's idrive-status. sands-bak01 is
+  # dedicated hardware (migrated off the nas01-backup VM — see MIGRATION.md in
+  # the idrive360 repo), so this just SSHes in and runs
+  # idrive360-agent-status.sh (tracked in ~/git/idrive360, deployed to
+  # /usr/local/bin there). Shared verbatim by bash and zsh below.
   idriveStatusFn = ''
     idrive-status() {
-      local state
-      state=$(ssh scott@nas01.warthog-royal.ts.net \
-        'LIBVIRT_DEFAULT_URI=qemu:///system virsh domstate nas01-backup --reason')
-      echo "VM: $state"
-      if [[ "$state" == running* ]]; then
-        echo ""
-        echo "=== idrive360cron agent (nas01-backup) ==="
-        ssh scott@nas01-backup.warthog-royal.ts.net /usr/local/bin/idrive360-agent-status.sh
-      fi
+      ssh scott@sands-bak01.warthog-royal.ts.net /usr/local/bin/idrive360-agent-status.sh
     }
   '';
 in
@@ -231,7 +222,7 @@ in
 
         # Tailscale SSH shortcuts
         nas01 = "tailscale ssh nas01";
-        backup = "tailscale ssh nas01-backup";
+        backup = "tailscale ssh sands-bak01";
         log01 = "tailscale ssh log01";
         pihole01 = "tailscale ssh pihole01";
         pihole02 = "tailscale ssh pihole02";
@@ -324,7 +315,7 @@ in
         flush-dns = "sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder";
 
         # Single-window remote view of just the IDrive360 GUI, no VNC — attaches over SSH
-        # to the idrive360-xpra seamless session on the nas01-backup VM (same alias as
+        # to the idrive360-xpra seamless session on sands-bak01 (same alias as
         # latitude). Renders natively in xpra's own Quartz client — no XQuartz needed —
         # and works over Tailscale SSH (xpra tunnels its protocol over the ssh stdio
         # channel, so it doesn't need X11 forwarding, which Tailscale SSH can't do).
@@ -335,13 +326,13 @@ in
         #   cp -R /Volumes/Xpra/Xpra-Light.app /Applications/ && hdiutil detach /Volumes/Xpra
         #   xattr -rd com.apple.quarantine /Applications/Xpra-Light.app
         # The `xpra` command resolves to the ~/.local/bin/xpra wrapper managed below.
-        idrive-app = "xpra attach ssh://scott@nas01-backup.warthog-royal.ts.net/100";
-        # Start/stop/restart the idrive360cron agent service inside the nas01-backup VM
-        # (same aliases as nas01/latitude). VM-level virsh control (idrive-vm-*) only
-        # exists on nas01, which is the actual libvirt host.
-        idrive-start = "ssh scott@nas01-backup.warthog-royal.ts.net sudo systemctl start idrive360cron";
-        idrive-stop = "ssh scott@nas01-backup.warthog-royal.ts.net sudo systemctl stop idrive360cron";
-        idrive-restart = "ssh scott@nas01-backup.warthog-royal.ts.net sudo systemctl restart idrive360cron";
+        idrive-app = "xpra attach ssh://scott@sands-bak01.warthog-royal.ts.net/100";
+        # Start/stop/restart the idrive360cron agent service on sands-bak01
+        # (same aliases as nas01/latitude). VM-level virsh control (idrive-vm-*,
+        # kept for potential rollback) only exists on nas01, the libvirt host.
+        idrive-start = "ssh scott@sands-bak01.warthog-royal.ts.net sudo systemctl start idrive360cron";
+        idrive-stop = "ssh scott@sands-bak01.warthog-royal.ts.net sudo systemctl stop idrive360cron";
+        idrive-restart = "ssh scott@sands-bak01.warthog-royal.ts.net sudo systemctl restart idrive360cron";
       };
       initExtra = ''
         export PATH="$PATH:$HOME/bin:$HOME/.local/bin:$HOME/go/bin"
@@ -370,7 +361,7 @@ in
 
         # Tailscale SSH shortcuts
         nas01 = "tailscale ssh nas01";
-        backup = "tailscale ssh nas01-backup";
+        backup = "tailscale ssh sands-bak01";
         log01 = "tailscale ssh log01";
         pihole01 = "tailscale ssh pihole01";
         pihole02 = "tailscale ssh pihole02";
@@ -463,7 +454,7 @@ in
         flush-dns = "sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder";
 
         # Single-window remote view of just the IDrive360 GUI, no VNC — attaches over SSH
-        # to the idrive360-xpra seamless session on the nas01-backup VM (same alias as
+        # to the idrive360-xpra seamless session on sands-bak01 (same alias as
         # latitude). Renders natively in xpra's own Quartz client — no XQuartz needed —
         # and works over Tailscale SSH (xpra tunnels its protocol over the ssh stdio
         # channel, so it doesn't need X11 forwarding, which Tailscale SSH can't do).
@@ -474,13 +465,13 @@ in
         #   cp -R /Volumes/Xpra/Xpra-Light.app /Applications/ && hdiutil detach /Volumes/Xpra
         #   xattr -rd com.apple.quarantine /Applications/Xpra-Light.app
         # The `xpra` command resolves to the ~/.local/bin/xpra wrapper managed below.
-        idrive-app = "xpra attach ssh://scott@nas01-backup.warthog-royal.ts.net/100";
-        # Start/stop/restart the idrive360cron agent service inside the nas01-backup VM
-        # (same aliases as nas01/latitude). VM-level virsh control (idrive-vm-*) only
-        # exists on nas01, which is the actual libvirt host.
-        idrive-start = "ssh scott@nas01-backup.warthog-royal.ts.net sudo systemctl start idrive360cron";
-        idrive-stop = "ssh scott@nas01-backup.warthog-royal.ts.net sudo systemctl stop idrive360cron";
-        idrive-restart = "ssh scott@nas01-backup.warthog-royal.ts.net sudo systemctl restart idrive360cron";
+        idrive-app = "xpra attach ssh://scott@sands-bak01.warthog-royal.ts.net/100";
+        # Start/stop/restart the idrive360cron agent service on sands-bak01
+        # (same aliases as nas01/latitude). VM-level virsh control (idrive-vm-*,
+        # kept for potential rollback) only exists on nas01, the libvirt host.
+        idrive-start = "ssh scott@sands-bak01.warthog-royal.ts.net sudo systemctl start idrive360cron";
+        idrive-stop = "ssh scott@sands-bak01.warthog-royal.ts.net sudo systemctl stop idrive360cron";
+        idrive-restart = "ssh scott@sands-bak01.warthog-royal.ts.net sudo systemctl restart idrive360cron";
       };
       initContent = ''
         export PATH="$PATH:$HOME/bin:$HOME/.local/bin:$HOME/go/bin"
