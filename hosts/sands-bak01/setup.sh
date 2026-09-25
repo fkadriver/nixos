@@ -173,17 +173,22 @@ echo "=== [9/13] NFS mounts to nas01 ==="
 # backup. ~/git/idrive360: read-write, it's a live shared checkout (this
 # repo's twin - see idrive360-agent-status.sh below).
 #
-# x-systemd.mount-timeout=30s: confirmed live (2026-09-25) that a mount
-# fired just before Tailscale's route to nas01 fully settles hangs the
-# mount.nfs process in uninterruptible D-state forever - a "hard" NFS
-# mount just waits, it doesn't retry. Happened on two separate reboots.
-# This bounds the hang to 30s so systemd kills and retries it instead.
+# x-systemd.automount (+ idle-timeout=0 so it stays mounted once triggered,
+# not lazily unmounted): confirmed live (2026-09-25) that an EAGER
+# boot-time mount attempt races Tailscale's route to nas01 settling -
+# tried x-systemd.mount-timeout=30s alone first (bounds a D-state hang to
+# 30s instead of forever, kept as a safety net below), but the mounts
+# still failed outright on the very next reboot ("access denied by
+# server" - a transient early-boot rejection, not a real ACL problem; a
+# plain retry a few minutes later always succeeds). automount sidesteps
+# the whole race: the mount only actually happens on first access, by
+# which point Tailscale is certainly settled.
 mkdir -p /pool /mnt "$SCOTT_HOME/git/idrive360"
 chown scott:scott "$SCOTT_HOME/git/idrive360"
 for line in \
-  "$NAS01_TS_IP:/pool    /pool    nfs    ro,_netdev,nofail,noatime,nconnect=8,x-systemd.mount-timeout=30s    0  0" \
-  "$NAS01_TS_IP:/mnt     /mnt     nfs    ro,_netdev,nofail,noatime,nconnect=8,x-systemd.mount-timeout=30s    0  0" \
-  "$NAS01_TS_IP:$SCOTT_HOME/git/idrive360    $SCOTT_HOME/git/idrive360    nfs    rw,_netdev,nofail,noatime,x-systemd.mount-timeout=30s    0  0"
+  "$NAS01_TS_IP:/pool    /pool    nfs    ro,_netdev,nofail,noatime,nconnect=8,x-systemd.automount,x-systemd.idle-timeout=0,x-systemd.mount-timeout=30s    0  0" \
+  "$NAS01_TS_IP:/mnt     /mnt     nfs    ro,_netdev,nofail,noatime,nconnect=8,x-systemd.automount,x-systemd.idle-timeout=0,x-systemd.mount-timeout=30s    0  0" \
+  "$NAS01_TS_IP:$SCOTT_HOME/git/idrive360    $SCOTT_HOME/git/idrive360    nfs    rw,_netdev,nofail,noatime,x-systemd.automount,x-systemd.idle-timeout=0,x-systemd.mount-timeout=30s    0  0"
 do
   grep -qF "$line" /etc/fstab || echo "$line" >> /etc/fstab
 done
