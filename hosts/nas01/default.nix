@@ -275,6 +275,17 @@ let
 
       users.users.scott.extraGroups = [ "libvirtd" "kvm" ];
 
+      # sands-bak01's borg backup (see MIGRATION.md in the idrive360 repo)
+      # connects directly over the LAN instead of through Tailscale, so it
+      # doesn't depend on Tailscale being up - confirmed live (2026-09-25)
+      # that a Tailscale outage would otherwise take the backup down with
+      # it. Restricted to exactly `borg serve` on its own repo path
+      # (borg's own recommended pattern for unattended backup keys) rather
+      # than a normal login key - it doesn't need or get a shell.
+      users.users.scott.openssh.authorizedKeys.keys = [
+        ''command="borg serve --restrict-to-path /pool/borg/sands-bak01",restrict ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIC+CNqMIqBbF/LsbhUIuoQS5M0AMZG+7UNfIe+X/tep1 sands-bak01-borg-lan''
+      ];
+
       # nfs-server's unit PATH (set by the upstream NixOS module) lacks kmod,
       # so nfsdctl's internal `modprobe` call fails with "command not found"
       # on every start — which in turn fails its lockd/grace configuration
