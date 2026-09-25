@@ -36,7 +36,7 @@ NAS01_TS_IP=100.73.114.76
 WAZUH_MANAGER_HOST=wazuh.warthog-royal.ts.net
 WAZUH_AGENT_VERSION=4.14.5-1
 
-echo "=== [1/13] Base packages ==="
+echo "=== [1/14] Base packages ==="
 apt-get update
 apt-get install -y \
   software-properties-common apt-transport-https ca-certificates \
@@ -46,7 +46,7 @@ apt-get install -y \
   borgbackup \
   btop strace iperf3
 
-echo "=== [2/13] Passwordless sudo for scott ==="
+echo "=== [2/14] Passwordless sudo for scott ==="
 # This host isn't behind the nixos repo's narrowly-scoped
 # security.sudo.extraRules (nixos-rebuild/nix/tailscale/borg only) - it gets
 # full passwordless sudo instead, since it's single-user hardware with no
@@ -56,7 +56,7 @@ scott ALL=(ALL) NOPASSWD: ALL
 EOF
 visudo -c -f /etc/sudoers.d/scott-nopasswd
 
-echo "=== [3/13] Tailscale ==="
+echo "=== [3/14] Tailscale ==="
 if ! command -v tailscale >/dev/null 2>&1; then
   curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/noble.noarmor.gpg \
     -o /usr/share/keyrings/tailscale-archive-keyring.gpg
@@ -66,6 +66,26 @@ if ! command -v tailscale >/dev/null 2>&1; then
   apt-get install -y tailscale
 fi
 systemctl enable --now tailscaled
+
+echo "=== [4/14] Fix tailscaled boot ordering ==="
+# The stock unit only orders After=network-pre.target (fires very early,
+# before eno1 has DHCP/a default route). Confirmed live (2026-09-25):
+# tailscaled starting on a still-dead network hits "network is unreachable"
+# on every DERP bootstrap-DNS lookup, and is left in a degraded state that
+# only a manual `systemctl restart tailscaled` clears - NFS mounts to
+# nas01 (and even SSH itself) failed for a full 10 minutes on a real
+# reboot until this was noticed and fixed. network-online.target (backed
+# by NetworkManager-wait-online.service, already enabled by default) is
+# reached at the exact moment the link actually comes up - ordering
+# tailscaled after it avoids the race instead of tailscaled having to
+# recover from it.
+mkdir -p /etc/systemd/system/tailscaled.service.d
+cat > /etc/systemd/system/tailscaled.service.d/override.conf <<'EOF'
+[Unit]
+After=network-online.target
+Wants=network-online.target
+EOF
+systemctl daemon-reload
 if ! tailscale status >/dev/null 2>&1; then
   echo "  Not logged in to Tailscale yet."
   if [ -n "${TAILSCALE_AUTHKEY:-}" ]; then
@@ -81,7 +101,7 @@ else
   echo "  'sudo tailscale up --ssh' by hand if this host predates it.)"
 fi
 
-echo "=== [4/13] xpra (remote GUI view, no VNC) ==="
+echo "=== [5/14] xpra (remote GUI view, no VNC) ==="
 if ! command -v xpra >/dev/null 2>&1; then
   curl -fsSL https://xpra.org/xpra.asc -o /usr/share/keyrings/xpra.asc
   cat > /etc/apt/sources.list.d/xpra.sources <<'EOF'
@@ -128,7 +148,7 @@ WantedBy=multi-user.target
 EOF
 systemctl daemon-reload
 
-echo "=== [5/13] LightDM autologin (scott -> LXDE) ==="
+echo "=== [6/14] LightDM autologin (scott -> LXDE) ==="
 install -d /etc/lightdm/lightdm.conf.d
 cat > /etc/lightdm/lightdm.conf.d/50-autologin.conf <<'EOF'
 [Seat:*]
@@ -137,7 +157,7 @@ autologin-user-timeout=0
 autologin-session=LXDE
 EOF
 
-echo "=== [6/13] Chromium sandbox fix (AppArmor unprivileged userns) ==="
+echo "=== [7/14] Chromium sandbox fix (AppArmor unprivileged userns) ==="
 # Ubuntu 24.04 hardening (kernel.apparmor_restrict_unprivileged_userns=1)
 # blocks Electron/Chromium's sandbox from acquiring CAP_SYS_ADMIN, which
 # breaks the IDrive360 client GUI. Confirmed this session.
@@ -146,7 +166,7 @@ kernel.apparmor_restrict_unprivileged_userns=0
 EOF
 sysctl --system >/dev/null
 
-echo "=== [7/13] Disable all automatic updates ==="
+echo "=== [8/14] Disable all automatic updates ==="
 # Deliberate: an automatic update broke the nas01-backup VM in the past
 # (see MIGRATION.md in the idrive360 repo). This host is administered by
 # hand (apt run manually) instead - masked, not just disabled, so nothing
@@ -165,24 +185,22 @@ if command -v snap >/dev/null 2>&1; then
   snap refresh --hold >/dev/null 2>&1 || true
 fi
 
-echo "=== [8/13] Timezone ==="
+echo "=== [9/14] Timezone ==="
 timedatectl set-timezone America/Chicago
 
-echo "=== [9/13] NFS mounts to nas01 ==="
+echo "=== [10/14] NFS mounts to nas01 ==="
 # /pool and /mnt: read-only, this host only ever reads source data for
 # backup. ~/git/idrive360: read-write, it's a live shared checkout (this
 # repo's twin - see idrive360-agent-status.sh below).
 #
 # x-systemd.automount (+ idle-timeout=0 so it stays mounted once triggered,
-# not lazily unmounted): confirmed live (2026-09-25) that an EAGER
-# boot-time mount attempt races Tailscale's route to nas01 settling -
-# tried x-systemd.mount-timeout=30s alone first (bounds a D-state hang to
-# 30s instead of forever, kept as a safety net below), but the mounts
-# still failed outright on the very next reboot ("access denied by
-# server" - a transient early-boot rejection, not a real ACL problem; a
-# plain retry a few minutes later always succeeds). automount sidesteps
-# the whole race: the mount only actually happens on first access, by
-# which point Tailscale is certainly settled.
+# not lazily unmounted): defense-in-depth, not the primary fix. The actual
+# root cause of these mounts failing on boot was tailscaled itself
+# starting before the network was ready (see step 4 above) - once that's
+# fixed, an eager mount should just work. automount is kept anyway so a
+# mount attempt never blocks boot waiting on Tailscale at all, whatever
+# the reason; x-systemd.mount-timeout=30s is kept too, as a bound in case
+# a mount attempt (triggered by first access, post-boot) ever hangs.
 mkdir -p /pool /mnt "$SCOTT_HOME/git/idrive360"
 chown scott:scott "$SCOTT_HOME/git/idrive360"
 for line in \
@@ -195,14 +213,14 @@ done
 systemctl daemon-reload
 mount -a || echo "  (some mounts may need tailscale/nas01 reachable first - rerun 'mount -a' later)"
 
-echo "=== [10/13] Starship prompt ==="
+echo "=== [11/14] Starship prompt ==="
 if ! command -v starship >/dev/null 2>&1; then
   curl -sS https://starship.rs/install.sh | sh -s -- -y
 fi
 su - scott -c 'grep -q "starship init bash" ~/.bashrc' || \
   su - scott -c 'printf "\n# Starship prompt\neval \"\$(starship init bash)\"\n" >> ~/.bashrc'
 
-echo "=== [11/13] Fleet SSH aliases + idrive-status ==="
+echo "=== [12/14] Fleet SSH aliases + idrive-status ==="
 # Matches modules/shell-aliases.nix in this repo (kept in sync by hand,
 # since this host can't import it directly).
 su - scott -c 'grep -q "Fleet SSH shortcuts" ~/.bashrc' || su - scott -c "cat >> ~/.bashrc" <<'EOF'
@@ -225,7 +243,7 @@ else
   echo "    sudo install -m 0755 ~/git/idrive360/idrive360-agent-status.sh /usr/local/bin/"
 fi
 
-echo "=== [12/13] Borg backup of /opt/IDrive360 ==="
+echo "=== [13/14] Borg backup of /opt/IDrive360 ==="
 # IDrive360 doesn't back up its own install/identity directory - despite
 # /opt/ being in its backup set, no backup log ever showed a [SUCCESS]
 # entry under /opt/IDrive360/ itself. That directory holds the exact
@@ -290,7 +308,7 @@ systemctl daemon-reload
 su - scott -c "BORG_RELOCATED_REPO_ACCESS_IS_OK=yes BORG_REMOTE_PATH=/run/current-system/sw/bin/borg borg init --encryption none ssh://scott@nas01.warthog-royal.ts.net/pool/borg/sands-bak01" 2>/dev/null || true
 systemctl enable --now borg-backup-idrive360.timer
 
-echo "=== [13/13] Wazuh agent ==="
+echo "=== [14/14] Wazuh agent ==="
 if ! dpkg -l wazuh-agent >/dev/null 2>&1; then
   curl -sS -o /tmp/wazuh-agent.deb \
     "https://packages.wazuh.com/4.x/apt/pool/main/w/wazuh-agent/wazuh-agent_${WAZUH_AGENT_VERSION}_amd64.deb"
