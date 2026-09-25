@@ -332,6 +332,16 @@ let
           # under /pool or /mnt (confirmed against idrive360 repo's README).
           /pool    100.64.189.120/32(ro,sync,wdelay,crossmnt,no_subtree_check,sec=sys,secure,no_root_squash,no_all_squash)
           /mnt     100.64.189.120/32(ro,sync,wdelay,crossmnt,no_subtree_check,sec=sys,secure,no_root_squash,no_all_squash)
+
+          # The idrive360 repo checkout, NFS-shared to sands-bak01 so it can
+          # deploy idrive360-agent-status.sh from a live copy instead of its
+          # own clone (see hosts/sands-bak01/setup.sh). rw: sands-bak01 only
+          # ever reads from it in practice, but it's the same live working
+          # tree scott edits from other hosts, so it isn't scoped read-only.
+          # This was previously only added at runtime via a manual `exportfs`
+          # call, which a reboot/nfs-server restart silently wiped - now
+          # declared here so it survives both.
+          /home/scott/git/idrive360    100.64.189.120/32(rw,sync,wdelay,no_subtree_check,sec=sys,secure,no_root_squash,no_all_squash)
         '';
       };
 
