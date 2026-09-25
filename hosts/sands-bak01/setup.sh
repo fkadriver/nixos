@@ -149,6 +149,37 @@ RestartSec=5
 [Install]
 WantedBy=multi-user.target
 EOF
+# The dashboard/heartbeat subprocess (web console online status + logs -
+# see MIGRATION.md's "ROOT CAUSE FOUND" and later sections) self-daemonizes:
+# the process ExecStart launches double-forks and exits immediately, while
+# the real long-lived process reparents to init and writes its own PID to
+# idrive360.pid. Type=forking + PIDFile= (not Type=simple) is required -
+# confirmed live (2026-09-25) that Type=simple sees the initial process
+# exit (its normal, correct behavior) and restart-loops forever, since
+# systemd is tracking the wrong process. The GUI never launches this on
+# its own (still true as of 1.5.1 - confirmed live) hence a dedicated unit.
+# Installed now but NOT enabled yet - same reason as idrive360-xpra.service
+# above (needs idrive360-client installed first, manual step at the end):
+#   sudo systemctl enable --now idrive360-dashboard.service
+cat > /etc/systemd/system/idrive360-dashboard.service <<'EOF'
+[Unit]
+Description=IDrive360 dashboard/heartbeat (web console online status + logs)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+User=scott
+WorkingDirectory=/opt/IDrive360
+ExecStart=/opt/IDrive360/Idrivelib/dependencies/python/idrive360 start
+PIDFile=/opt/IDrive360/idriveIt/user_profile/scott/idrive360.pid
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=15
+
+[Install]
+WantedBy=multi-user.target
+EOF
 systemctl daemon-reload
 
 echo "=== [6/15] LightDM autologin (scott -> LXDE) ==="
@@ -587,6 +618,7 @@ echo "        second launch just signals the first and exits (confirmed live"
 echo "        2026-08-29):"
 echo "          sed -i 's/^Hidden=false/Hidden=true/' ~/.config/autostart/idrive360client.desktop"
 echo "          sudo systemctl enable --now idrive360-xpra.service"
+echo "          sudo systemctl enable --now idrive360-dashboard.service"
 echo "        Then view it from a daily driver: idrive-app"
 echo ""
 echo "2. Wazuh enrollment (needs a real secret, can't be scripted - password:"
