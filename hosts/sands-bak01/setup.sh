@@ -187,6 +187,15 @@ EOF
 if command -v snap >/dev/null 2>&1; then
   snap refresh --hold >/dev/null 2>&1 || true
 fi
+# Ubuntu Pro's livepatch applies kernel patches automatically (no reboot
+# needed) - same "administered by hand" philosophy applies, and its snap's
+# network-namespace mount (/run/snapd/ns/canonical-livepatch.mnt) was
+# confirmed live (2026-09-25) to be the slowest thing in this host's
+# shutdown sequence once the NFS mount timeouts (step 10) were fixed.
+# Disabling the service alone isn't enough - the mount persists as long as
+# the snap itself is installed, so remove it outright.
+pro disable livepatch 2>/dev/null || true
+snap remove canonical-livepatch 2>/dev/null || true
 
 echo "=== [9/15] Timezone ==="
 timedatectl set-timezone America/Chicago
