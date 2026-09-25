@@ -558,6 +558,14 @@ echo "=== [15/15] Tailscale self-heal timer ==="
 # automatically, instead of waiting for someone to notice. Checks real TCP
 # reachability to nas01, not `tailscale ping` - confirmed live (2026-09-25)
 # that a WireGuard-level ping can succeed while TCP is still broken.
+#
+# Also clears stale "failed" mount-unit states: confirmed live that an
+# automount attempt can hit "access denied by server" on its very first
+# try at boot, then succeed cleanly on the next access - the mount itself
+# recovers on its own, but systemd leaves the unit marked failed, which
+# then shows up as a false alarm in the Wazuh health check. Only clears
+# it if the path is actually responsive right now; a genuinely broken
+# mount stays reported as failed.
 install -m 0755 /dev/stdin /usr/local/bin/tailscale-selfheal.sh <<'SELFHEALEOF'
 #!/usr/bin/env bash
 set -u
@@ -565,18 +573,34 @@ set -u
 NAS01_TS_IP=100.73.114.76
 
 if timeout 5 bash -c "echo > /dev/tcp/${NAS01_TS_IP}/22" 2>/dev/null; then
-  exit 0
-fi
-
-logger -t tailscale-selfheal "nas01 unreachable over tailscale (TCP/22) - restarting tailscaled"
-systemctl restart tailscaled
-sleep 10
-
-if timeout 5 bash -c "echo > /dev/tcp/${NAS01_TS_IP}/22" 2>/dev/null; then
-  logger -t tailscale-selfheal "recovered after tailscaled restart"
+  :
 else
-  logger -t tailscale-selfheal "still unreachable after tailscaled restart - needs attention"
+  logger -t tailscale-selfheal "nas01 unreachable over tailscale (TCP/22) - restarting tailscaled"
+  systemctl restart tailscaled
+  sleep 10
+  if timeout 5 bash -c "echo > /dev/tcp/${NAS01_TS_IP}/22" 2>/dev/null; then
+    logger -t tailscale-selfheal "recovered after tailscaled restart"
+  else
+    logger -t tailscale-selfheal "still unreachable after tailscaled restart - needs attention"
+  fi
 fi
+
+declare -A MOUNT_PATHS=(
+  [pool.mount]=/pool
+  [mnt.mount]=/mnt
+  ["home-scott-git-idrive360.mount"]=/home/scott/git/idrive360
+)
+for unit in "${!MOUNT_PATHS[@]}"; do
+  path="${MOUNT_PATHS[$unit]}"
+  if systemctl is-failed --quiet "$unit"; then
+    if timeout 5 stat "$path" >/dev/null 2>&1; then
+      systemctl reset-failed "$unit"
+      logger -t tailscale-selfheal "cleared stale failed state on $unit ($path is responsive)"
+    else
+      logger -t tailscale-selfheal "$unit is failed AND $path is unresponsive - needs attention"
+    fi
+  fi
+done
 SELFHEALEOF
 cat > /etc/systemd/system/tailscale-selfheal.service <<'EOF'
 [Unit]
