@@ -172,12 +172,18 @@ echo "=== [9/13] NFS mounts to nas01 ==="
 # /pool and /mnt: read-only, this host only ever reads source data for
 # backup. ~/git/idrive360: read-write, it's a live shared checkout (this
 # repo's twin - see idrive360-agent-status.sh below).
+#
+# x-systemd.mount-timeout=30s: confirmed live (2026-09-25) that a mount
+# fired just before Tailscale's route to nas01 fully settles hangs the
+# mount.nfs process in uninterruptible D-state forever - a "hard" NFS
+# mount just waits, it doesn't retry. Happened on two separate reboots.
+# This bounds the hang to 30s so systemd kills and retries it instead.
 mkdir -p /pool /mnt "$SCOTT_HOME/git/idrive360"
 chown scott:scott "$SCOTT_HOME/git/idrive360"
 for line in \
-  "$NAS01_TS_IP:/pool    /pool    nfs    ro,_netdev,nofail,noatime,nconnect=8    0  0" \
-  "$NAS01_TS_IP:/mnt     /mnt     nfs    ro,_netdev,nofail,noatime,nconnect=8    0  0" \
-  "$NAS01_TS_IP:$SCOTT_HOME/git/idrive360    $SCOTT_HOME/git/idrive360    nfs    rw,_netdev,nofail,noatime    0  0"
+  "$NAS01_TS_IP:/pool    /pool    nfs    ro,_netdev,nofail,noatime,nconnect=8,x-systemd.mount-timeout=30s    0  0" \
+  "$NAS01_TS_IP:/mnt     /mnt     nfs    ro,_netdev,nofail,noatime,nconnect=8,x-systemd.mount-timeout=30s    0  0" \
+  "$NAS01_TS_IP:$SCOTT_HOME/git/idrive360    $SCOTT_HOME/git/idrive360    nfs    rw,_netdev,nofail,noatime,x-systemd.mount-timeout=30s    0  0"
 do
   grep -qF "$line" /etc/fstab || echo "$line" >> /etc/fstab
 done
