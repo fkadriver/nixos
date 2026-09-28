@@ -78,6 +78,43 @@
       HandleLidSwitchExternalPower = "ignore";
     };
 
+    # Mac-parity shortcuts: when the Logitech keyboard is paired to the
+    # MacBook, macOS auto-maps its Windows/Super key to Cmd with zero config
+    # there. This mirrors that on latitude so Super+C/V/etc behaves like
+    # Cmd+C/V does on the Mac, without touching the Mac side at all. Only
+    # leftmeta is remapped, evdev-level via keyd so it works under both X11
+    # and Wayland sessions; Ctrl itself is never touched, so a real Ctrl-C/
+    # Ctrl-Z still SIGINTs/suspends in a terminal as normal. Copy/paste/cut
+    # go to the X11-standard Ctrl-Insert/Shift-Insert/Shift-Delete bindings
+    # (already honored by Konsole and xfce4-terminal with no extra config)
+    # instead of literal Ctrl-C/V/X, so Super+C copies even with a terminal
+    # focused instead of landing on SIGINT. Undo/select-all/find/save have no
+    # such safe alternate binding, so those fall back to literal Ctrl-Z/A/F/S
+    # — harmless almost everywhere, but Ctrl-Z suspends and Ctrl-S freezes
+    # output (Ctrl-Q to resume) if one of those lands in a focused terminal.
+    # Known trade-off: tapping Super alone to open the app launcher may stop
+    # working, since keyd's layer() no longer passes through a bare tap.
+    services.keyd = {
+      enable = true;
+      keyboards.default = {
+        ids = [ "*" ];
+        settings = {
+          main = {
+            leftmeta = "layer(cmd)";
+          };
+          "cmd:M" = {
+            c = "C-insert"; # copy
+            v = "S-insert"; # paste
+            x = "S-delete"; # cut
+            z = "C-z";      # undo
+            a = "C-a";      # select all
+            f = "C-f";      # find
+            s = "C-s";      # save
+          };
+        };
+      };
+    };
+
     # Enable keyboard backlight control for laptops (Dell, Lenovo, etc.)
     services.udev.extraRules = ''
       # Allow members of video group to control keyboard backlight
