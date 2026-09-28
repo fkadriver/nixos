@@ -18,9 +18,15 @@ migrated off the VM below on 2026-09-23/24, see the idrive360 repo's
   NixOS) — run by hand after the base OS install, the only declarative
   record of this host's config.
 
-**Retired: the `nas01-backup` VM** (kept intact for potential rollback, not
-removed — shut down, autostart disabled). Still referenced directly by
-[`hosts/nas01/default.nix`](../hosts/nas01/default.nix):
+**Decommissioned: the `nas01-backup` VM** (undefined from libvirt
+2026-09-26, after several days of confirmed-healthy backups on
+`sands-bak01`). Its disk is deliberately kept at
+`/var/lib/libvirt/images/nas01-backup.qcow2` as a last-resort recovery
+artifact and still gets backed up nightly (`services.borg-backup` on
+`nas01`), but relaunching it needs real work, not a shortcut — the
+`environment.etc` deployment that wired its definition up is commented
+out in [`hosts/nas01/default.nix`](../hosts/nas01/default.nix). The
+source files are kept for that reference:
 
 - [`hosts/nas01/nas01-backup-setup.sh`](../hosts/nas01/nas01-backup-setup.sh) — cloud-init VM setup script
 - [`hosts/nas01/nas01-backup-domain.xml`](../hosts/nas01/nas01-backup-domain.xml) — libvirt VM definition

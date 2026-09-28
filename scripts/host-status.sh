@@ -11,9 +11,11 @@
 # airbook is excluded — it's macOS/darwin and not reachable via SSH from
 # latitude (manual darwin-rebuild only).
 #
-# nas01-backup is included but isn't NixOS (it's the Ubuntu VM that runs
-# IDrive360 — see docs/idrive360.md) — it only reports uptime/kernel/disk,
-# not a NixOS version/generation.
+# sands-bak01 is included but isn't NixOS (it's the dedicated hardware that
+# runs IDrive360, plain Ubuntu Server — see docs/idrive360.md) — it only
+# reports uptime/kernel/disk, not a NixOS version/generation. Was
+# nas01-backup (a VM on nas01) until the 2026-09-23/24 migration off it;
+# that VM is decommissioned as of 2026-09-26 and no longer reachable.
 #
 # Usage:
 #   ./scripts/host-status.sh
@@ -25,11 +27,11 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-HOSTS=(latitude log01 nas01 nas01-backup otworkstation pihole01 pihole02 vm01)
+HOSTS=(latitude log01 nas01 sands-bak01 otworkstation pihole01 pihole02 vm01)
 
 # Non-NixOS hosts: skip nixos-version/generation fields (nixos-rebuild
 # doesn't exist there), just report reachability/uptime/kernel/disk.
-NON_NIXOS_HOSTS=(nas01-backup)
+NON_NIXOS_HOSTS=(sands-bak01)
 is_non_nixos() {
     local host="$1"
     for h in "${NON_NIXOS_HOSTS[@]}"; do [[ "$h" == "$host" ]] && return 0; done

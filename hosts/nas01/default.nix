@@ -82,44 +82,18 @@ let
           # Temperature monitoring
           temps = ''echo '=== CPU Temps (°F) ===' && sensors -f 2>/dev/null | grep -E ':.*°F' || echo '(run: sudo sensors-detect)'; echo ""; echo '=== Drive Temps (°F) ==='; for d in /dev/sd?; do C=$(sudo smartctl -A "$d" 2>/dev/null | awk '/^[[:space:]]*19[04] /{print $10}' | head -1); if [ -n "$C" ]; then printf "%s: %d°F\n" "$d" "$((C * 9 / 5 + 32))"; else printf "%s: N/A\n" "$d"; fi; done'';
 
-          # IDrive360 — agent now runs on sands-bak01 (dedicated hardware,
-          # migrated off the nas01-backup VM below — see MIGRATION.md in the
-          # idrive360 repo). VMs live in qemu:///system; LIBVIRT_DEFAULT_URI
-          # is set in initExtra below.
-          #
-          # Split: idrive-start/stop/restart act on the idrive360cron *agent
-          # service on sands-bak01* (cheap and safe to restart any time);
-          # idrive-vm-* acts on the nas01-backup VM itself (virsh power
-          # state, and the existing VM-disk Borg backup) — kept for
-          # potential rollback, not currently the active agent.
-          # idrive-vm-restart is a function (initExtra below) — it needs
-          # conditional logic, not just a fixed command.
+          # IDrive360 — agent runs on sands-bak01 (dedicated hardware). The
+          # nas01-backup VM this replaced is decommissioned (undefined from
+          # libvirt 2026-09-26, after several days of confirmed-healthy
+          # backups on sands-bak01) — its disk deliberately kept on disk at
+          # /var/lib/libvirt/images/nas01-backup.qcow2 as a last-resort
+          # recovery artifact, but relaunching it needs real work (redefine
+          # from `nas01-backup-domain.xml` in git history, re-add the
+          # environment.etc deployment below, rebuild) rather than a
+          # shortcut — see MIGRATION.md in the idrive360 repo.
           idrive-start    = "ssh scott@sands-bak01.warthog-royal.ts.net sudo systemctl start idrive360cron";
           idrive-stop     = "ssh scott@sands-bak01.warthog-royal.ts.net sudo systemctl stop idrive360cron";
           idrive-restart  = "ssh scott@sands-bak01.warthog-royal.ts.net sudo systemctl restart idrive360cron";
-          idrive-ip       = "virsh domifaddr nas01-backup";
-          idrive-ssh      = ''ssh scott@$(virsh domifaddr nas01-backup | awk '/ipv4/{print $4}' | cut -d/ -f1)'';
-          idrive-console  = "sudo virsh console nas01-backup";
-          # QEMU's graphical console (the guest's actual virtual monitor / lightdm
-          # session, which auto-logs scott into LXDE at boot — no in-guest VNC
-          # server anymore, that duplicate session caused PolicyKit "No session
-          # for pid" failures). Reachable directly over tailscale (no SSH tunnel)
-          # at nas01.warthog-royal.ts.net:5900 — listen is nas01's own tailscale
-          # IP, gated by tailscale0 being a trustedInterfaces entry. Connect from
-          # whatever tailnet device you're actually sitting at (e.g. on latitude:
-          # krdc vnc://nas01.warthog-royal.ts.net:5900) — no VNC client needed
-          # on nas01 itself.
-          # No idrive-app alias here (unlike latitude/airbook-darwin) — nas01 is
-          # the VM's own host, so idrive-console (serial) and the QEMU graphical
-          # console over VNC already give direct access; an xpra-over-SSH hop
-          # back to itself adds nothing.
-          idrive-vm-start   = "sudo virsh start nas01-backup";
-          idrive-vm-stop    = "sudo virsh shutdown nas01-backup";
-          # VM disk backup (Borg, local repo /pool/borg/nas01) — runs daily via
-          # borgbackup-job-system.service; these are for on-demand use.
-          idrive-vm-backup  = "sudo systemctl start borgbackup-job-system.service && sudo journalctl -u borgbackup-job-system.service -n 20 --no-pager";
-          idrive-vm-list    = ''sudo env BORG_PASSCOMMAND="cat /run/bitwarden-secrets/borg_passphrase" borg list /pool/borg/nas01'';
-          idrive-vm-restore = "sudo bash /etc/nas01-backup/vm-restore.sh";
         };
         programs.bash.initExtra = ''
           # virsh defaults to qemu:///session; VMs live in qemu:///system
@@ -146,38 +120,6 @@ let
           unalias idrive-status 2>/dev/null
           idrive-status() {
             ssh scott@sands-bak01.warthog-royal.ts.net /usr/local/bin/idrive360-agent-status.sh
-          }
-
-          # Restart the nas01-backup VM itself: graceful virsh shutdown, wait
-          # for it to actually stop, offer a forceful virsh destroy if it
-          # hasn't after the timeout, then virsh start once it's confirmed down.
-          idrive-vm-restart() {
-            local timeout=60 waited=0
-
-            echo "Shutting down nas01-backup (graceful)..."
-            sudo virsh shutdown nas01-backup
-
-            while [ "$waited" -lt "$timeout" ]; do
-              if virsh domstate nas01-backup | grep -q "shut off"; then
-                break
-              fi
-              sleep 5
-              waited=$((waited + 5))
-              echo "  ...waiting for shutdown ($waited/''${timeout}s)"
-            done
-
-            if ! virsh domstate nas01-backup | grep -q "shut off"; then
-              read -r -p "nas01-backup did not shut down after ''${timeout}s. Force destroy it? [y/N] " confirm
-              if [[ "$confirm" =~ ^[Yy]$ ]]; then
-                sudo virsh destroy nas01-backup
-              else
-                echo "Aborted — nas01-backup is still running."
-                return 1
-              fi
-            fi
-
-            echo "nas01-backup is down. Starting it back up..."
-            sudo virsh start nas01-backup
           }
         '';
       };
@@ -444,48 +386,37 @@ let
         };
       };
 
-      # IDrive360 cloud backup: runs in the nas01-backup QEMU/KVM VM (Ubuntu 24.04).
-      # Set up once with:  sudo bash /etc/nas01-backup/setup.sh
-      # The VM persists its disk across reboots — no re-registration needed.
+      # IDrive360 cloud backup used to run in the nas01-backup QEMU/KVM VM
+      # (Ubuntu 24.04) — migrated to dedicated hardware (sands-bak01), see
+      # MIGRATION.md in the idrive360 repo. The VM was undefined from
+      # libvirt 2026-09-26 after several days of confirmed-healthy backups
+      # there. virtualisation.libvirtd stays enabled (nas01 remains a
+      # capable libvirt host for anything else), but the VM's own
+      # definition/setup/restore scripts are deliberately no longer
+      # deployed here — relaunching nas01-backup now needs real work
+      # (redefine from `nas01-backup-domain.xml`, still in this directory
+      # and git history, re-add the environment.etc block below, rebuild)
+      # rather than a one-command shortcut. The source files are kept for
+      # that reference, just not wired up.
       virtualisation.libvirtd = {
         enable = true;
         qemu.vhostUserPackages = [ pkgs.virtiofsd ];
-        # nas01-backup uses virtiofs shares, which don't support save/restore —
-        # managed-save on host shutdown leaves an unrestorable image (SIGPIPE on
-        # resume). ACPI-shutdown the guest instead so it always cold boots.
-        onShutdown = "shutdown";
-        # Default is 300s. 2026-08-25: nas01-backup's guest agent didn't
-        # respond to a shutdown request and the host sat waiting most of
-        # the way to the full 5 minutes (looked hung, got power-cycled via
-        # iDRAC before the timeout would've expired on its own). The guest
-        # already tolerates an ungraceful stop by design (comment above),
-        # so there's no reason to wait that long before giving up.
-        shutdownTimeout = 60;
       };
-      # VM definition and setup script deployed to /etc/nas01-backup/
-      environment.etc."nas01-backup/domain.xml" = {
-        source = ./nas01-backup-domain.xml;
-        mode = "0644";
-      };
-      environment.etc."nas01-backup/setup.sh" = {
-        source = ./nas01-backup-setup.sh;
-        mode = "0755";
-      };
-      environment.etc."nas01-backup/vm-restore.sh" = {
-        source = ./nas01-backup-vm-restore.sh;
-        mode = "0755";
-      };
+      # environment.etc."nas01-backup/domain.xml".source = ./nas01-backup-domain.xml;
+      # environment.etc."nas01-backup/setup.sh".source = ./nas01-backup-setup.sh;
+      # environment.etc."nas01-backup/vm-restore.sh".source = ./nas01-backup-vm-restore.sh;
 
       # nas01's own OS-disk data that can't be rebuilt from this flake: /home
-      # and the nas01-backup VM disk (its IDrive360 registration/config).
-      # Backed up locally to /pool (redundant ZFS raidz1), so it survives a
-      # failure of nas01's OS SSD — see docs/nas01.md.
+      # and the nas01-backup VM disk (kept as a last-resort recovery
+      # artifact after decommissioning — its IDrive360 registration/config
+      # as of the last time the VM ran). Backed up locally to /pool
+      # (redundant ZFS raidz1), so it survives a failure of nas01's OS SSD —
+      # see docs/nas01.md.
       #
-      # The VM disk is only ever backed up in a frozen, consistent state:
-      # preHook redirects its writes to a throwaway overlay (live, no VM
-      # downtime) before borg reads it; postHook merges the overlay back.
-      # Memory state is never involved — nas01-backup's virtiofs shares can't
-      # save/restore that anyway (see the managed-save incident, 2026-07-28).
+      # No more preHook/postHook snapshot-overlay dance: that existed to
+      # back up a *live, mutating* VM disk consistently without downtime.
+      # The VM is decommissioned and the disk is now static, so a plain
+      # file backup is all that's needed.
       services.borg-backup = {
         enable = true;
         repository = "/pool/borg/nas01";
@@ -495,21 +426,6 @@ let
           "/var/lib/libvirt/images/nas01-backup.qcow2"
           "/var/lib/libvirt/images/nas01-backup-cidata.iso"
         ];
-        preHook = ''
-          OVERLAY=/var/lib/libvirt/images/nas01-backup.borgsnap.qcow2
-          if virsh domstate nas01-backup 2>/dev/null | grep -q running; then
-            rm -f "$OVERLAY"
-            virsh snapshot-create-as nas01-backup "borg-$(date +%s)" \
-              --diskspec vda,file="$OVERLAY" --disk-only --atomic --no-metadata
-          fi
-        '';
-        postHook = ''
-          OVERLAY=/var/lib/libvirt/images/nas01-backup.borgsnap.qcow2
-          if [ -f "$OVERLAY" ]; then
-            virsh blockcommit nas01-backup vda --active --pivot --wait || true
-            rm -f "$OVERLAY"
-          fi
-        '';
       };
       systemd.services."borgbackup-job-system" = {
         after = [ "libvirtd.service" ];

@@ -328,8 +328,9 @@ in
         # The `xpra` command resolves to the ~/.local/bin/xpra wrapper managed below.
         idrive-app = "xpra attach ssh://scott@sands-bak01.warthog-royal.ts.net/100";
         # Start/stop/restart the idrive360cron agent service on sands-bak01
-        # (same aliases as nas01/latitude). VM-level virsh control (idrive-vm-*,
-        # kept for potential rollback) only exists on nas01, the libvirt host.
+        # (same aliases as nas01/latitude). The nas01-backup VM this
+        # replaced was decommissioned 2026-09-26 - see MIGRATION.md in the
+        # idrive360 repo.
         idrive-start = "ssh scott@sands-bak01.warthog-royal.ts.net sudo systemctl start idrive360cron";
         idrive-stop = "ssh scott@sands-bak01.warthog-royal.ts.net sudo systemctl stop idrive360cron";
         idrive-restart = "ssh scott@sands-bak01.warthog-royal.ts.net sudo systemctl restart idrive360cron";
@@ -467,8 +468,9 @@ in
         # The `xpra` command resolves to the ~/.local/bin/xpra wrapper managed below.
         idrive-app = "xpra attach ssh://scott@sands-bak01.warthog-royal.ts.net/100";
         # Start/stop/restart the idrive360cron agent service on sands-bak01
-        # (same aliases as nas01/latitude). VM-level virsh control (idrive-vm-*,
-        # kept for potential rollback) only exists on nas01, the libvirt host.
+        # (same aliases as nas01/latitude). The nas01-backup VM this
+        # replaced was decommissioned 2026-09-26 - see MIGRATION.md in the
+        # idrive360 repo.
         idrive-start = "ssh scott@sands-bak01.warthog-royal.ts.net sudo systemctl start idrive360cron";
         idrive-stop = "ssh scott@sands-bak01.warthog-royal.ts.net sudo systemctl stop idrive360cron";
         idrive-restart = "ssh scott@sands-bak01.warthog-royal.ts.net sudo systemctl restart idrive360cron";

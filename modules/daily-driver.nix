@@ -40,12 +40,12 @@
       host-status = "~/git/nixos/scripts/host-status.sh";
 
       # IDrive360 client shortcuts — same reasoning as the fleet aliases above:
-      # useful from any daily driver, not tied to one host. Agent now runs on
-      # sands-bak01 (dedicated hardware, migrated off the nas01-backup VM —
-      # see MIGRATION.md in the idrive360 repo); VM-level control (idrive-vm-*,
-      # kept for potential rollback) stays on nas01, the libvirt host.
-      # airbook-darwin can't import NixOS modules, so it carries its own copy
-      # in hosts/airbook-darwin/home.nix — keep the two in sync.
+      # useful from any daily driver, not tied to one host. Agent runs on
+      # sands-bak01 (dedicated hardware, migrated off the nas01-backup VM,
+      # which was decommissioned 2026-09-26 — see MIGRATION.md in the
+      # idrive360 repo). airbook-darwin can't import NixOS modules, so it
+      # carries its own copy in hosts/airbook-darwin/home.nix — keep the
+      # two in sync.
       #
       # Single-window remote view of just the IDrive360 GUI, no VNC — attaches
       # over SSH to the idrive360-xpra seamless session on sands-bak01.

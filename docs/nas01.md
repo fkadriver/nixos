@@ -408,24 +408,30 @@ ID — no re-pairing needed):
 sudo systemctl restart syncthing
 ```
 
-### 5. Restore the nas01-backup VM disk
+### 5. (Optional, last resort) Restore the nas01-backup VM disk
+
+**Not required for IDrive360 service continuity** — the active agent is
+`sands-bak01`, dedicated hardware unaffected by nas01's OS disk. This step
+only matters if you deliberately want the decommissioned VM back (see
+[IDrive360](#idrive360-cloud-backup) below), and it needs more than the
+old one-command restore now: the VM's `environment.etc` deployment is
+commented out in `hosts/nas01/default.nix`, so step 2's rebuild won't put
+`domain.xml` back in place on its own. Re-enable that block, rebuild, then:
 
 ```bash
 sudo bash /etc/nas01-backup/vm-restore.sh
 ```
 
 Extracts the latest qcow2 + cloud-init ISO from `/pool/borg/nas01` and
-defines + starts the VM (domain.xml is already back in place declaratively
-from step 2's rebuild). Pass an archive name as an argument to restore a
-specific point instead of the latest — list them with
-`idrive-vm-list`. See [IDrive360](#idrive360-cloud-backup-qemukvm-vm) below
-for details on what is/isn't captured.
+defines + starts the VM. Pass an archive name as an argument to restore a
+specific point instead of the latest — list archives with
+`borg list /pool/borg/nas01`.
 
 ### 6. Verify
 
 ```bash
 zpool status                        # pool healthy
-idrive-status                       # nas01-backup VM running
+idrive-status                       # sands-bak01 agent status (not nas01 itself - see IDrive360 above)
 borg-repos                          # other hosts' repos visible under /pool/borg
 ```
 
@@ -481,7 +487,7 @@ All declared in [hosts/nas01/default.nix](../hosts/nas01/default.nix):
 | smartd | `services.smartd` | drive health monitoring |
 | Wazuh agent | `services.wazuh-agent` | manager: wazuh.warthog-royal.ts.net |
 | rsyslog → log01 | `logging.forwardToLog01` (common.nix) | on by default |
-| IDrive360 | `virtualisation.libvirtd` (nas01-backup VM) | see below |
+| IDrive360 | runs on `sands-bak01`, not nas01 (`virtualisation.libvirtd` stays enabled for the decommissioned VM's disk-backup use only) | see below |
 
 **NFS restart-in-place wedges the kernel nfsd state (2026-09-17):** any change
 to `services.nfs.server.exports` requires restarting `nfs-server`, and doing
@@ -508,195 +514,43 @@ reboot needed for this one.
 
 ---
 
-## IDrive360 (cloud backup, QEMU/KVM VM)
+## IDrive360 (cloud backup)
 
-**Planned migration (2026-09-22, not started):** `nas01-backup` is slated to
-move off this VM onto dedicated hardware — the retired HP ProDesk 600 G4 DM
-(see "Hardware History" above) freed up by nas01's own migration to the
-Dell PowerEdge T330. The target box runs **plain Ubuntu Server, not NixOS**
-— it will not become a host in this repo; it's managed the same ad hoc,
-by-hand way `nas01-backup` is today (see "Manually installed packages" in
-the `idrive360` repo's `README.md`). Full plan, including the device
-re-enrollment and virtiofs→NFS risks, lives in `MIGRATION.md` in the
-`idrive360` repo. Nothing in this section is stale yet — treat it as current
-until that migration actually lands, at which point this whole section (VM
-definition, setup script, virtiofs data access, VM-disk Borg backup below)
-needs a rewrite for bare metal.
+**Migrated 2026-09-23/24, decommissioned 2026-09-26.** The active agent is
+now `sands-bak01`, dedicated hardware (a retired HP ProDesk 600 G4 DM),
+running plain Ubuntu Server — not a host in this repo, not a VM on nas01.
+Full story (including the device re-enrollment, virtiofs→NFS switch, and
+every bug found and fixed along the way) lives in `MIGRATION.md` in the
+`idrive360` repo; day-to-day ops reference is in that repo's `README.md`
+and [idrive360.md](idrive360.md).
 
-IDrive360's installer self-updates and downloads its backup engine at runtime,
-which is incompatible with Nix packaging. It runs in a persistent Ubuntu 24.04
-QEMU/KVM VM named `nas01-backup` instead of a Docker container.
+nas01's only remaining involvement is the now-retired VM it used to run
+IDrive360 in (`nas01-backup`, QEMU/KVM — the installer self-updates and
+downloads its backup engine at runtime, which is incompatible with Nix
+packaging, hence a VM rather than a Docker container in the first place).
+It was undefined from libvirt on 2026-09-26 after several days of
+confirmed-healthy backups on `sands-bak01`:
 
-- **VM disk**: `/var/lib/libvirt/images/nas01-backup.qcow2` (20 GB, persists across reboots)
-- **Data access**: `/pool` and `/mnt` mounted via virtiofs into the VM
-- **Desktop**: LXDE on the guest's real console (`:0`), lightdm auto-logs in
-  scott at boot with no password (`nopasswdlogin` group) — reached via QEMU's
-  own console VNC, bound to nas01's tailscale IP (`idrive-console-vnc` alias),
-  not an in-guest VNC server
-- **VM definition**: `hosts/nas01/nas01-backup-domain.xml` deployed to `/etc/nas01-backup/domain.xml`
-- **Setup script**: `hosts/nas01/nas01-backup-setup.sh` deployed to `/etc/nas01-backup/setup.sh`
+- **Disk kept, not deleted**: `/var/lib/libvirt/images/nas01-backup.qcow2`
+  (20 GB) stays on disk as a last-resort recovery artifact and is still
+  backed up nightly (see [Borg Backup](#borg-backup-server-side) below) —
+  but relaunching the VM now needs real work, not a shortcut. The
+  `environment.etc` deployment that wired its `domain.xml`/setup/restore
+  scripts up is commented out in `hosts/nas01/default.nix`; the source
+  files themselves are kept in this directory and git history for
+  reference.
+- **`idrive-vm-*` aliases and `idrive-ip`/`idrive-ssh`/`idrive-console`
+  are gone** — removed along with the VM definition. `idrive-start`/
+  `idrive-stop`/`idrive-restart`/`idrive-status` still exist, but now act
+  on the `idrive360cron` agent on `sands-bak01` over SSH, not a local VM.
+- **Wazuh monitoring, the dashboard/heartbeat systemd service, and the
+  backup-status checks all now live on `sands-bak01` itself** — see
+  `hosts/sands-bak01/setup.sh` in this repo and `MIGRATION.md` in the
+  `idrive360` repo. None of it runs on nas01 anymore.
 
-One-time setup (already done — the VM is registered and running):
-```bash
-sudo bash /etc/nas01-backup/setup.sh
-```
-
-Useful aliases (available in scott's shell on nas01). Note the split: bare
-`idrive-*` acts on the **idrive360cron agent inside the VM** (cheap, safe to
-restart any time), while `idrive-vm-*` acts on the **VM itself** (virsh power
-state and the VM-disk Borg backup):
-```bash
-idrive-status       # VM state + idrive360cron agent status inside the VM
-idrive-start        # start the idrive360cron agent service inside the VM
-idrive-stop         # stop it
-idrive-restart      # restart it
-idrive-ip           # virsh domifaddr nas01-backup
-idrive-ssh          # ssh directly into the VM
-idrive-console      # serial console (Ctrl+] to exit)
-
-idrive-vm-start     # sudo virsh start nas01-backup
-idrive-vm-stop      # sudo virsh shutdown nas01-backup
-idrive-vm-restart   # graceful shutdown, wait, offer force-destroy, then start
-idrive-vm-backup    # run the VM-disk Borg job now (borgbackup-job-system.service)
-idrive-vm-list      # list archives in /pool/borg/nas01
-idrive-vm-restore   # sudo bash /etc/nas01-backup/vm-restore.sh
-```
-
-The graphical console is QEMU's own, reachable over Tailscale without an SSH
-tunnel at `nas01.warthog-royal.ts.net:5900` (no password) — connect from
-whatever tailnet device you're sitting at, e.g. on latitude:
-`krdc vnc://nas01.warthog-royal.ts.net:5900`.
-
-**On daily drivers** the agent-level subset is available —
-`idrive-start`/`idrive-stop`/`idrive-restart` (SSH to the VM), `idrive-app`
-(single-window xpra view of the IDrive360 GUI), and `idrive-status`. These live
-in `modules/daily-driver.nix`, so every daily driver gets them (currently
-latitude, both KDE and XFCE variants); airbook-darwin can't import NixOS
-modules and carries its own copy in `hosts/airbook-darwin/home.nix`, which
-needs to be kept in sync. A daily driver isn't the libvirt host, so its
-`idrive-status` gets VM state via `virsh` over SSH on nas01 (a
-`writeShellScriptBin` on NixOS, a shell function on darwin) before checking the
-agent inside the VM. The `idrive-vm-*` VM controls exist only on nas01.
-
-### Monitoring (Wazuh agent inside the VM)
-
-`nas01-backup` is a plain Ubuntu 24.04 guest, so it runs the **native** Wazuh
-agent (standard `.deb` + systemd unit) rather than the NixOS FHS-wrapped
-build `modules/wazuh-agent.nix` uses on real hosts — same manager
-(`wazuh.warthog-royal.ts.net`), reached over the VM's normal NAT path (ports
-1514/1515 are open through to the manager without needing Tailscale inside
-the guest).
-
-`nas01-backup-setup.sh`'s cloud-init installs the package and points it at
-the manager automatically on a fresh VM build, but does **not** enroll it —
-enrollment needs the live enrollment password, which isn't baked into the
-cloud-init image for secrets-hygiene reasons. Enroll manually after first
-boot (already done for the current VM):
-
-```bash
-sudo /var/ossec/bin/agent-auth -m wazuh.warthog-royal.ts.net -P '<password>' -A nas01-backup
-sudo systemctl enable --now wazuh-agent
-```
-
-Password: same Bitwarden item as the host's own agent
-(`wazuh_agent_enrollment_password` / "Wazuh Agent Enrollment"), readable on
-nas01 at `/run/bitwarden-secrets/wazuh_agent_enrollment_password`.
-
-Verify: `sudo /var/ossec/bin/wazuh-control status` inside the VM, or
-`sudo grep -i connect /var/ossec/logs/ossec.log`.
-
-#### IDrive360 backup status
-
-The Docker-era setup had a host-side script that parsed IDrive360's status
-file and wrote a synthetic syslog line for Wazuh to tail (removed in commit
-b20740e — the VM's internal state isn't visible on the host filesystem the
-way a Docker bind mount was). Now that the VM has its own Wazuh agent with
-direct filesystem access to the real files, that workaround is unnecessary:
-`ossec.conf` inside the VM has `<localfile>` entries (`log_format: json`)
-pointing straight at IDrive360's own status files — pure passive monitoring,
-nothing about the IDrive360 install itself is touched:
-
-- `.userInfo/lastBackupStatus.txt` — `{status, filename, jobType}` of the last backup job
-- `.userInfo/lastActivitystatus.txt` — current/last activity + its log path
-- `.userInfo/lastOnlineBackupStatus.json` — last online backup, `{status, time}`
-
-(Full path: `/opt/IDrive360/idriveIt/user_profile/scott/*/.userInfo/...` — the
-profile-hash directory changes on re-registration, hence the glob.)
-
-Known caveat (superseded — see below): these files are rewritten in place
-on each update, not appended to. The original design assumed Wazuh's log
-collector would at least catch growing rewrites and only miss same-length
-ones. Live testing on 2026-07-28 showed it's worse than that: rewriting
-`lastOnlineBackupStatus.json` — including a rewrite that grew the file from
-39 to 95 bytes — went completely undetected, even across a fresh
-`wazuh-agent` restart. Wazuh's file-tailing localfile monitor cannot be
-trusted for status files IDrive360 overwrites in place.
-
-Replaced with a command-based approach: `/usr/local/bin/wazuh-idrive360-status`
-reads `lastOnlineBackupStatus.json` fresh on every run (no tailing, no
-truncation-detection dependency) and Wazuh executes it every 15 min via a
-`<localfile><log_format>command</log_format>` block — the same pattern
-already used for `wazuh-borg-status`. Canonical source for the script,
-decoder, and rules lives in the `wazuh-tailscale` repo:
-`config/wazuh_cluster/scripts/idrive360-status.sh`,
-`decoders/idrive360-command.xml`, `rules/idrive360-command-rules.xml`.
-
-Baked into `nas01-backup-setup.sh`'s cloud-init
-(`idrive360-wazuh-command.py`, idempotent) so a fresh VM build gets this
-automatically — it patches `ossec.conf` right after the Wazuh package
-install, before the (manual) enrollment step.
-
-### VM disk backup and restore
-
-The live qcow2 disk lives on the OS SSD (not the redundant `/pool`), so it's
-backed up nightly to `/pool/borg/nas01` via `services.borg-backup` (same Borg
-job that also backs up `/home` — see
-[Borg Backup](#borg-backup-server-side) below). Memory/uptime state is never
-part of the backup — `nas01-backup`'s virtiofs shares can't save/restore that
-(see the managed-save troubleshooting entry below) — only the disk, and only
-in a consistent, frozen state:
-
-1. `preHook` checks if the VM is running; if so it redirects new writes to a
-   throwaway external overlay (`virsh snapshot-create-as --disk-only`), which
-   freezes the base qcow2 file with **zero VM downtime**.
-2. Borg backs up `/home` and the now-static qcow2 + cloud-init ISO.
-3. `postHook` merges the overlay back into the base
-   (`virsh blockcommit --active --pivot`) and removes it.
-
-You may see `file changed while we backed it up` logged for the qcow2 file —
-this is a borg warning, not a failure (`failOnWarnings = false`, same as
-every other host's borg job); the extracted disk has been verified intact
-with `qemu-img check`.
-
-Aliases:
-```bash
-idrive-vm-backup   # trigger an on-demand backup now (also runs nightly)
-idrive-vm-list     # list available backup archives (borg list)
-idrive-vm-restore  # sudo bash /etc/nas01-backup/vm-restore.sh — restore + start
-```
-
-Full disaster-recovery use of `vm-restore.sh` is covered in
-[Disaster Recovery](#disaster-recovery--os-ssd-sda-failure) above.
-
-Graphical console access from any Tailscale machine (TigerVNC, KDE's krdc,
-Remmina, etc. — no SSH tunnel, no password), e.g. from latitude:
-```bash
-krdc vnc://nas01.warthog-royal.ts.net:5900
-```
-nas01 itself stays TUI-only — it no longer runs a VNC client or a GUI remote
-desktop session (the old xrdp/openbox/firefox setup was removed 2026-09-02;
-it was originally there to reach the IDrive360 web console, but that's a
-cloud-hosted page reachable from any browser, not something specific to
-nas01's network). This is QEMU's own console VNC (the guest's actual virtual monitor, bound to
-nas01's tailscale IP — see `<graphics>` in `nas01-backup-domain.xml`), not an
-in-guest VNC server. scott auto-logs into LXDE at boot with no password
-(`nopasswdlogin` group), which is what keeps the IDrive360 GUI running
-unattended. An earlier design ran a second, in-guest VNC server (x11vnc on
-port 5901) as its own desktop session outside logind's seat management,
-which caused PolicyKit "No session for pid" failures — removed 2026-08-24.
-
-Manage backups via the [IDrive360 web console](https://www.idrive360.com/enterprise/login).
-See [idrive360.md](idrive360.md) → [fkadriver/idrive360](https://github.com/fkadriver/idrive360) for CLI reference (commands run inside the VM).
+The VM-specific troubleshooting entries further down this document (LVM
+recovery, MAC-pinning, managed-save corruption) are kept for reference —
+they'd only matter again if the VM is deliberately relaunched.
 
 ---
 
@@ -726,14 +580,15 @@ Client-side `BORG_REMOTE_PATH` is `/run/current-system/sw/bin/borg` (set by `mod
 | vm01 | `/pool/borg/vm01` |
 | log01 | `/pool/borg/log01` |
 | airbook-darwin | `/pool/borg/airbook-darwin` |
-| nas01 (itself, local — no SSH) | `/pool/borg/nas01` — `/home` + `nas01-backup` VM disk |
+| nas01 (itself, local — no SSH) | `/pool/borg/nas01` — `/home` + decommissioned `nas01-backup` VM disk |
 
 nas01's own job is the same `services.borg-backup` module as the other
-hosts, just pointed at a local path instead of `ssh://...`, and with
-`preHook`/`postHook` added (see [IDrive360](#idrive360-cloud-backup-qemukvm-vm)
-above) to freeze the VM disk consistently before each backup. It exists so
-that `/home` and the VM disk survive an OS-SSD failure — see
-[Disaster Recovery](#disaster-recovery--os-ssd-sda-failure).
+hosts, just pointed at a local path instead of `ssh://...`. No
+`preHook`/`postHook` needed anymore — that existed to freeze the VM disk
+consistently while the VM was live (snapshot-overlay, zero downtime); now
+that the VM is decommissioned and the disk is static, a plain file backup
+is enough. It exists so that `/home` and the VM disk survive an OS-SSD
+failure — see [Disaster Recovery](#disaster-recovery--os-ssd-sda-failure).
 
 On-server aliases: `borg-repos` (overview), `borg-ls <host>`, `borg-check <host>`, `borg-unlock <host>`.
 
@@ -821,6 +676,13 @@ Untested leads to check next time this comes up:
 Current workaround: a SpinRite USB (prepped via both Ventoy and dd) is
 left permanently plugged into the internal USB header for future disk
 maintenance boots.
+
+### nas01-backup VM troubleshooting (historical — VM decommissioned 2026-09-26)
+
+The four entries below only matter if `nas01-backup` is deliberately
+relaunched (see [IDrive360](#idrive360-cloud-backup) above for what that
+actually requires now) — kept for reference, not because the VM is
+expected to run again.
 
 ### Recovering the nas01-backup VM from an old OS disk (LVM VG name collision)
 
@@ -935,16 +797,12 @@ If the drive is ever lost for good, clients simply init fresh repos on their
 first backup (history lost; the IDrive360 cloud copy of `/mnt` may also hold
 the old repos).
 
-### IDrive360 VM
+### IDrive360
 
-```bash
-idrive-status    # virsh domstate nas01-backup — VM running?
-idrive-ssh       # ssh into the VM
-```
-
-See `docs/idrive360.md` → [fkadriver/idrive360](https://github.com/fkadriver/idrive360)
-for full IDrive360 operations (VM-based since the Docker containers were
-removed — see commit b20740e).
+`idrive-status` (and `idrive-start`/`idrive-stop`/`idrive-restart`) now act
+on `sands-bak01`'s agent over SSH, not a VM on this host — see
+[IDrive360](#idrive360-cloud-backup) above. Full operations reference:
+`docs/idrive360.md` → [fkadriver/idrive360](https://github.com/fkadriver/idrive360).
 
 ### `virsh start nas01-backup` fails with "unexpected fatal signal 13"
 
@@ -966,10 +824,11 @@ sudo virsh managedsave-remove nas01-backup
 sudo virsh start nas01-backup
 ```
 
-This is already prevented going forward: `virtualisation.libvirtd.onShutdown`
-is set to `"shutdown"` (ACPI shutdown instead of suspend), so
-`nas01-backup` always cold-boots and this can't recur from a normal host
-reboot.
+This was prevented via `virtualisation.libvirtd.onShutdown = "shutdown"`
+(ACPI shutdown instead of suspend) while the VM was live. That setting was
+removed along with the rest of the VM-specific `libvirtd` config when
+decommissioning (2026-09-26) — if `nas01-backup` is ever relaunched,
+re-add it, or this can recur.
 
 ### New `services.wazuh-agent` localfile/command not showing up on the manager
 
