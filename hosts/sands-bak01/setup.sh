@@ -46,7 +46,7 @@ apt-get install -y \
   nfs-common \
   lxde-core lightdm \
   wmctrl xdotool x11-utils scrot \
-  borgbackup \
+  borgbackup jq \
   btop strace iperf3
 
 echo "=== [2/15] Passwordless sudo for scott ==="
@@ -542,6 +542,102 @@ with open(conf_path, "w") as f:
 print("patched")
 PYEOF2
 python3 /usr/local/bin/wazuh-health-command.py
+
+# Borg backup staleness for /opt/IDrive360 - same command-wrapper pattern,
+# mirroring modules/borg-backup.nix's wazuh-borg-status used by the rest of
+# the fleet. nas01's own fleet-wide borg-status.service also logs this
+# repo's staleness, but that's attributed to nas01's agent, not
+# sands-bak01's - this is the sands-bak01-native equivalent (confirmed live
+# 2026-09-29 this was the actual gap: nothing borg-related showed up under
+# sands-bak01's own agent in Wazuh without it). Needs jq (step 1) and the
+# borg-LAN key (step 13, already run by this point).
+install -m 0755 /dev/stdin /usr/local/bin/wazuh-borg-status <<'BORGEOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO="ssh://scott@192.168.10.20/pool/borg/sands-bak01"
+STALE_HOURS=25
+export BORG_RELOCATED_REPO_ACCESS_IS_OK=yes
+export BORG_RSH="ssh -i /home/scott/.ssh/id_ed25519_borg_lan -o StrictHostKeyChecking=accept-new"
+
+if ! command -v borg &>/dev/null; then
+    echo "borg_backup: status=ERROR repo=${REPO} error=borg_not_found"
+    exit 0
+fi
+
+LAST=$(borg list --last 1 --format '{archive}|{start:%Y-%m-%dT%H:%M:%S}' "$REPO" 2>&1) || {
+    ERR=$(printf '%s' "$LAST" | head -1 | tr -cs '[:alnum:]_.-' '_' | cut -c1-60)
+    echo "borg_backup: status=ERROR repo=${REPO} error=${ERR}"
+    exit 0
+}
+
+if [ -z "$LAST" ]; then
+    echo "borg_backup: status=EMPTY repo=${REPO} error=no_archives"
+    exit 0
+fi
+
+ARCHIVE=$(printf '%s' "$LAST" | cut -d'|' -f1)
+START=$(printf '%s' "$LAST" | cut -d'|' -f2)
+
+START_EPOCH=$(date -d "${START/T/ }" +%s 2>/dev/null) || START_EPOCH=0
+AGE_H=$(( ($(date +%s) - START_EPOCH) / 3600 ))
+
+INFO_JSON=$(borg info --json "${REPO}::${ARCHIVE}" 2>/dev/null) || INFO_JSON=""
+
+DURATION="0"
+ORIGINAL_SIZE="unknown"
+COMPRESSED_SIZE="unknown"
+DEDUPLICATED_SIZE="unknown"
+if [ -n "$INFO_JSON" ]; then
+    DURATION=$(jq -r '.archives[0].duration // 0 | floor' <<<"$INFO_JSON" 2>/dev/null || echo "0")
+    ORIGINAL_SIZE=$(jq -r '.archives[0].stats.original_size // "unknown"' <<<"$INFO_JSON" 2>/dev/null || echo "unknown")
+    COMPRESSED_SIZE=$(jq -r '.archives[0].stats.compressed_size // "unknown"' <<<"$INFO_JSON" 2>/dev/null || echo "unknown")
+    DEDUPLICATED_SIZE=$(jq -r '.archives[0].stats.deduplicated_size // "unknown"' <<<"$INFO_JSON" 2>/dev/null || echo "unknown")
+fi
+
+if [[ "$ARCHIVE" == *.failed ]]; then
+    echo "borg_backup: status=ERROR repo=${REPO} archive=${ARCHIVE} start=${START} duration=${DURATION}s age=${AGE_H}h original_size=${ORIGINAL_SIZE} compressed_size=${COMPRESSED_SIZE} deduplicated_size=${DEDUPLICATED_SIZE} error=archive_marked_failed"
+    exit 0
+fi
+
+if [ "$AGE_H" -gt "$STALE_HOURS" ]; then
+    STATUS=STALE
+else
+    STATUS=OK
+fi
+
+echo "borg_backup: status=${STATUS} repo=${REPO} archive=${ARCHIVE} start=${START} duration=${DURATION}s age=${AGE_H}h original_size=${ORIGINAL_SIZE} compressed_size=${COMPRESSED_SIZE} deduplicated_size=${DEDUPLICATED_SIZE}"
+BORGEOF
+
+install -m 0755 /dev/stdin /usr/local/bin/wazuh-borg-status-command.py <<'PYEOF3'
+#!/usr/bin/env python3
+conf_path = "/var/ossec/etc/ossec.conf"
+with open(conf_path) as f:
+    content = f.read()
+
+marker = "sands-bak01-borg-status-localfile"
+if marker in content:
+    print("already present, skipping")
+    raise SystemExit(0)
+
+block = """  <!-- %s: borg backup staleness for /opt/IDrive360 -
+       see /usr/local/bin/wazuh-borg-status. -->
+    <localfile>
+      <log_format>command</log_format>
+      <command>/usr/local/bin/wazuh-borg-status</command>
+      <alias>sands-bak01 borg backup status</alias>
+      <frequency>3600</frequency>
+    </localfile>
+
+</ossec_config>
+""" % marker
+
+idx = content.rfind("</ossec_config>")
+with open(conf_path, "w") as f:
+    f.write(content[:idx] + block)
+print("patched")
+PYEOF3
+python3 /usr/local/bin/wazuh-borg-status-command.py
 
 # Allow command/full_command entries the manager pushes via shared
 # agent.conf - default is disabled for security. Without this,
