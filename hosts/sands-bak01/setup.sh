@@ -769,6 +769,86 @@ print("patched")
 PYEOF4
 python3 /usr/local/bin/wazuh-smart-alerts-command.py
 
+# Fleet-wide disk usage poller (gap found and closed 2026-09-29 - see
+# MIGRATION.md). Unlike SMART/ZFS, this needs no agent group assignment -
+# it's already wired into the manager's shared/default/agent.conf, which
+# every agent gets automatically. The command localfile was registered on
+# this host from first enrollment (part of the "default" group everyone
+# joins), but silently failed every 30 minutes ("command not found") until
+# the script itself was deployed here - Wazuh's command-localfile execution
+# doesn't surface that failure anywhere visible on the dashboard, so it went
+# unnoticed until a manual check. Synced copy of
+# modules/disk-usage-monitor-disk-usage-status.sh / wazuh-tailscale's
+# config/wazuh_cluster/scripts/disk-usage-status.sh - same convention as
+# wazuh-smart-status above, no ossec.conf edit needed here.
+mkdir -p /var/ossec/scripts
+chown root:wazuh /var/ossec/scripts
+chmod 750 /var/ossec/scripts
+install -o root -g wazuh -m 0750 /dev/stdin /var/ossec/scripts/wazuh-disk-usage-status <<'DISKUSAGEEOF'
+#!/usr/bin/env bash
+# Fleet-wide disk usage poller - synced copy from wazuh-tailscale's
+# config/wazuh_cluster/scripts/disk-usage-status.sh / nixos's
+# modules/disk-usage-monitor-disk-usage-status.sh, deployed here manually
+# since sands-bak01 is plain Ubuntu, not NixOS (see MIGRATION.md). Invoked
+# fleet-wide via the "default" Wazuh agent group (shared/default/agent.conf)
+# - no group assignment needed, unlike SMART/ZFS.
+#
+# Emits two kinds of structured line:
+#   disk_usage:        one per real filesystem (per-mount detail)
+#   disk_usage_total:  one per host (single "how full is this machine" figure)
+#
+# status (ok/warning/critical) is computed here, not in Wazuh rules.
+# Pseudo/virtual filesystems are excluded - not meaningful "disk usage".
+#
+# Requires GNU coreutils df (-T, -B1).
+set -uo pipefail
+
+WARN_PCT=85
+CRIT_PCT=95
+
+status_for_pcent() {
+  local pcent="$1"
+  if [ "$pcent" -ge "$CRIT_PCT" ]; then
+    echo critical
+  elif [ "$pcent" -ge "$WARN_PCT" ]; then
+    echo warning
+  else
+    echo ok
+  fi
+}
+
+EXCLUDE_TYPES='^(tmpfs|devtmpfs|overlay|squashfs|proc|sysfs|cgroup|cgroup2|nsfs|devpts|mqueue|hugetlbfs|efivarfs|debugfs|tracefs|configfs|binfmt_misc|autofs|rpc_pipefs|ramfs)$'
+
+df -PT -B1 2>/dev/null | tail -n +2 | while read -r device fstype size used avail pcent mount; do
+  [[ "$fstype" =~ $EXCLUDE_TYPES ]] && continue
+
+  pcent_num="${pcent%\%}"
+  status=$(status_for_pcent "$pcent_num")
+
+  mount_safe=$(echo "$mount" | tr ' ' '_')
+  echo "disk_usage: mount=${mount_safe} device=${device} fstype=${fstype} size_bytes=${size} used_bytes=${used} avail_bytes=${avail} pcent_used=${pcent_num} status=${status}"
+done
+
+read -r local_used_kb local_size_kb local_avail_kb <<<"$(df -kP -l 2>/dev/null | awk 'NR>1 && $1 ~ /^\/dev\//{u+=$3;s+=$2;a+=$4} END{print u+0, s+0, a+0}')"
+
+zfs_used_kb=0
+zfs_size_kb=0
+zfs_avail_kb=0
+if command -v zpool >/dev/null 2>&1 && [ -n "$(zpool list -H 2>/dev/null)" ]; then
+  read -r zfs_used_kb zfs_size_kb zfs_avail_kb <<<"$(zpool list -Hp -o alloc,size,free 2>/dev/null | awk '{u+=$1;s+=$2;a+=$3} END{printf "%d %d %d\n", u/1024, s/1024, a/1024}')"
+fi
+
+total_used_kb=$(( ${local_used_kb:-0} + ${zfs_used_kb:-0} ))
+total_size_kb=$(( ${local_size_kb:-0} + ${zfs_size_kb:-0} ))
+total_avail_kb=$(( ${local_avail_kb:-0} + ${zfs_avail_kb:-0} ))
+
+if [ "$total_size_kb" -gt 0 ]; then
+  total_pcent=$(( total_used_kb * 100 / total_size_kb ))
+  total_status=$(status_for_pcent "$total_pcent")
+  echo "disk_usage_total: size_bytes=$((total_size_kb * 1024)) used_bytes=$((total_used_kb * 1024)) avail_bytes=$((total_avail_kb * 1024)) pcent_used=${total_pcent} status=${total_status}"
+fi
+DISKUSAGEEOF
+
 echo "=== [15/15] Tailscale self-heal timer ==="
 # This host is headless/unattended by design (set-it-and-forget-it) - the
 # tailscaled boot-ordering fix (step 4) addresses the one root cause found
