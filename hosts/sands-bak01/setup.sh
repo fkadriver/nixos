@@ -48,6 +48,7 @@ apt-get install -y \
   wmctrl xdotool x11-utils scrot \
   borgbackup jq \
   smartmontools \
+  net-tools \
   btop strace iperf3
 
 echo "=== [2/15] Passwordless sudo for scott ==="

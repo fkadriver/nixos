@@ -44,6 +44,10 @@
         bind          # dig, nslookup
         curl
         netcat        # nc
+        nettools      # netstat - Wazuh's default-group "listening ports" localfile
+                      # expects it; not part of the base NixOS install otherwise
+                      # (superseded by ip/ss for interactive use, kept here only
+                      # for that check - confirmed missing fleet-wide 2026-09-29)
         nmap
         rsync
         tcpdump       # packet analyzer
