@@ -553,11 +553,19 @@ python3 /usr/local/bin/wazuh-health-command.py
 # borg-LAN key (step 13, already run by this point).
 install -m 0755 /dev/stdin /usr/local/bin/wazuh-borg-status <<'BORGEOF'
 #!/usr/bin/env bash
+# BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK is needed because wazuh runs
+# this as root, which has never accessed this repo before (only scott has)
+# - borg treats that as an unknown repo and refuses without it. Confirmed
+# live 2026-09-29. That confirmation prompt prints to stderr regardless,
+# so stdout/stderr must stay separated (a `2>&1` merge on the happy path
+# corrupts the parsed borg list output with the warning text - also
+# confirmed live) - stderr only gets read back in on an actual failure.
 set -euo pipefail
 
 REPO="ssh://scott@192.168.10.20/pool/borg/sands-bak01"
 STALE_HOURS=25
 export BORG_RELOCATED_REPO_ACCESS_IS_OK=yes
+export BORG_UNKNOWN_UNENCRYPTED_REPO_ACCESS_IS_OK=yes
 export BORG_RSH="ssh -i /home/scott/.ssh/id_ed25519_borg_lan -o StrictHostKeyChecking=accept-new"
 
 if ! command -v borg &>/dev/null; then
@@ -565,8 +573,11 @@ if ! command -v borg &>/dev/null; then
     exit 0
 fi
 
-LAST=$(borg list --last 1 --format '{archive}|{start:%Y-%m-%dT%H:%M:%S}' "$REPO" 2>&1) || {
-    ERR=$(printf '%s' "$LAST" | head -1 | tr -cs '[:alnum:]_.-' '_' | cut -c1-60)
+ERRFILE=$(mktemp)
+trap "rm -f \"\$ERRFILE\"" EXIT
+
+LAST=$(borg list --last 1 --format '{archive}|{start:%Y-%m-%dT%H:%M:%S}' "$REPO" 2>"$ERRFILE") || {
+    ERR=$(head -1 "$ERRFILE" 2>/dev/null | tr -cs '[:alnum:]_.-' '_' | cut -c1-60)
     echo "borg_backup: status=ERROR repo=${REPO} error=${ERR}"
     exit 0
 }
