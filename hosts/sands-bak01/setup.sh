@@ -47,6 +47,7 @@ apt-get install -y \
   lxde-core lightdm \
   wmctrl xdotool x11-utils scrot \
   borgbackup jq \
+  smartmontools \
   btop strace iperf3
 
 echo "=== [2/15] Passwordless sudo for scott ==="
@@ -658,6 +659,116 @@ grep -q "remote_commands" /var/ossec/etc/local_internal_options.conf || \
   printf '%s\n' "logcollector.remote_commands=1" "wazuh_command.remote_commands=1" \
     >> /var/ossec/etc/local_internal_options.conf
 
+# SMART drive health for Wazuh (gap found and closed 2026-09-29 - see
+# MIGRATION.md). Two mechanisms, mirroring the fleet-wide pattern in the
+# nixos repo's modules/smart-monitor.nix, adapted for a non-NixOS host:
+#
+# 1. Real-time alert: Debian/Ubuntu's smartd ships with -M exec pointed at
+#    /usr/share/smartmontools/smartd-runner, which fans out to any
+#    executable dropped in /etc/smartmontools/run.d/ (same mechanism the
+#    stock 10mail script uses) - no smartd.conf edit needed beyond adding
+#    -a so smartd actually monitors full attribute tables, not just health
+#    status. Confirmed live via `smartd -q onecheck` with a temporary
+#    `-M test` directive.
+# 2. Periodic poll: wazuh-smart-status (synced copy of
+#    modules/smart-monitor-smart-status.sh / wazuh-tailscale's
+#    config/wazuh_cluster/scripts/smart-status.sh) deployed to
+#    /var/ossec/scripts/ and invoked hourly by the manager once this host's
+#    agent is assigned to the "smart-monitor" group (manual step below -
+#    can't be scripted from this host, same as the borg-LAN key trust).
+sed -i 's|^DEVICESCAN -d removable|DEVICESCAN -a -d removable|' /etc/smartd.conf
+
+install -m 0755 /dev/stdin /etc/smartmontools/run.d/20wazuh-smart-alert <<'SMARTDALERTEOF'
+#!/usr/bin/env bash
+LOG=/var/log/smartd-alerts.log
+echo "$(date '+%b %d %H:%M:%S') $(hostname) smartd: ALERT device=${SMARTD_DEVICE:-unknown} type=${SMARTD_FAILTYPE:-unknown} msg=${SMARTD_MESSAGE:-}" >> "$LOG"
+SMARTDALERTEOF
+touch /var/log/smartd-alerts.log
+chmod 644 /var/log/smartd-alerts.log
+systemctl restart smartmontools
+
+mkdir -p /var/ossec/scripts
+chown root:wazuh /var/ossec/scripts
+chmod 750 /var/ossec/scripts
+install -o root -g wazuh -m 0750 /dev/stdin /var/ossec/scripts/wazuh-smart-status <<'SMARTSTATUSEOF'
+#!/usr/bin/env bash
+# Fleet-wide SMART health poller - synced copy from wazuh-tailscale's
+# config/wazuh_cluster/scripts/smart-status.sh / nixos's
+# modules/smart-monitor-smart-status.sh, deployed here manually since
+# sands-bak01 is plain Ubuntu, not NixOS (see MIGRATION.md). Invoked by the
+# Wazuh manager as a command localfile via the "smart-monitor" agent group.
+#
+# Emits one 'smart_device: ...' line per physical drive from `smartctl
+# --json`. Unifies ATA and NVMe into one schema:
+#   - health:        smart_status.passed
+#   - reallocated:   ATA attribute 5 (Reallocated_Sector_Ct) raw value, else 0
+#   - pending:       ATA attribute 197 (Current_Pending_Sector) raw value, else 0
+#   - media_errors:  NVMe nvme_smart_health_information_log.media_errors, else 0
+#   - temp_c:        temperature.current, else 0
+#
+# Per-drive smartctl calls run in parallel - a fleet host with more drives
+# hit Wazuh command-localfile's ~5s execution timeout running sequentially.
+#
+# Requires: smartctl (smartmontools), jq. Must run as root.
+set -uo pipefail
+
+poll_device() {
+  local path="$1"
+  local json passed health reallocated pending media_errors temp_c
+
+  json=$(smartctl -H -A --json=c "$path" 2>/dev/null)
+  passed=$(echo "$json" | jq -r '.smart_status.passed // empty' 2>/dev/null)
+  if [ -z "$passed" ]; then
+    return
+  fi
+
+  health="FAILED"
+  [ "$passed" = "true" ] && health="PASSED"
+
+  reallocated=$(echo "$json" | jq -r '[.ata_smart_attributes.table[]? | select(.id == 5) | .raw.value] | first // 0')
+  pending=$(echo "$json" | jq -r '[.ata_smart_attributes.table[]? | select(.id == 197) | .raw.value] | first // 0')
+  media_errors=$(echo "$json" | jq -r '.nvme_smart_health_information_log.media_errors // 0')
+  temp_c=$(echo "$json" | jq -r '.temperature.current // 0')
+
+  echo "smart_device: device=${path} health=${health} reallocated=${reallocated} pending=${pending} media_errors=${media_errors} temp_c=${temp_c}"
+}
+
+for dev in $(lsblk -dn -o NAME,TYPE 2>/dev/null | awk '$2 == "disk" {print $1}'); do
+  poll_device "/dev/${dev}" &
+done
+wait
+SMARTSTATUSEOF
+
+install -m 0755 /dev/stdin /usr/local/bin/wazuh-smart-alerts-command.py <<'PYEOF4'
+#!/usr/bin/env python3
+conf_path = "/var/ossec/etc/ossec.conf"
+with open(conf_path) as f:
+    content = f.read()
+
+marker = "sands-bak01-smartd-alerts-localfile"
+if marker in content:
+    print("already present, skipping")
+    raise SystemExit(0)
+
+block = """  <!-- %s: real-time SMART failure/attribute-change alerts from smartd
+       (fed via /etc/smartmontools/run.d/20wazuh-smart-alert). Periodic
+       SMART poll is separate - via the smart-monitor Wazuh agent group,
+       see /var/ossec/scripts/wazuh-smart-status. -->
+    <localfile>
+      <log_format>syslog</log_format>
+      <location>/var/log/smartd-alerts.log</location>
+    </localfile>
+
+</ossec_config>
+""" % marker
+
+idx = content.rfind("</ossec_config>")
+with open(conf_path, "w") as f:
+    f.write(content[:idx] + block)
+print("patched")
+PYEOF4
+python3 /usr/local/bin/wazuh-smart-alerts-command.py
+
 echo "=== [15/15] Tailscale self-heal timer ==="
 # This host is headless/unattended by design (set-it-and-forget-it) - the
 # tailscaled boot-ordering fix (step 4) addresses the one root cause found
@@ -767,3 +878,12 @@ echo "   hosts/nas01/default.nix, restricted per the existing example there):"
 cat /home/scott/.ssh/id_ed25519_borg_lan.pub 2>/dev/null | sed 's/^/     /' || echo "     (run after this script: cat ~/.ssh/id_ed25519_borg_lan.pub)"
 echo "   Until that's done, borg-backup-idrive360.timer will fail every run -"
 echo "   check with: sudo systemctl status borg-backup-idrive360.service"
+echo ""
+echo "5. Assign this host's agent to the \"smart-monitor\" Wazuh group (needs"
+echo "   the manager, can't be scripted from here - on log01, wazuh-tailscale"
+echo "   repo, after step 2's enrollment above has registered the agent):"
+echo "     docker compose exec wazuh.manager /var/ossec/bin/manage_agents -l"
+echo "     docker compose exec wazuh.manager /var/ossec/bin/agent_groups -a -i <ID> -g smart-monitor -q"
+echo "   Until that's done, the hourly wazuh-smart-status poll won't run -"
+echo "   real-time smartd alerts (rule 100818) work regardless, no group"
+echo "   assignment needed for those."
