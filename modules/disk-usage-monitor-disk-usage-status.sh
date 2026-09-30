@@ -52,6 +52,11 @@
 
 set -uo pipefail
 
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    sed -n '2,51p' "$0" | sed 's/^# \?//'
+    exit 0
+fi
+
 WARN_PCT=85
 CRIT_PCT=95
 

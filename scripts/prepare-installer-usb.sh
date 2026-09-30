@@ -17,6 +17,11 @@
 
 set -euo pipefail
 
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    sed -n '2,16p' "$0" | sed 's/^# \?//'
+    exit 0
+fi
+
 if [[ $# -ne 2 ]]; then
     echo "Usage: $0 <iso-path> <usb-device>"
     echo "Example: $0 result/iso/nixos-*.iso /dev/sdb"

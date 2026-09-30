@@ -21,6 +21,11 @@
 
 set -uo pipefail
 
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    sed -n '2,20p' "$0" | sed 's/^# \?//'
+    exit 0
+fi
+
 STATUS=$(zpool status --json 2>&1)
 if ! echo "$STATUS" | jq -e . >/dev/null 2>&1; then
   echo "zfs_pool: pool=- state=ERROR error=zpool_status_failed"

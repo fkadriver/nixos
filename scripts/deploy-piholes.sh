@@ -92,6 +92,7 @@ while [[ $# -gt 0 ]]; do
         --verbose|-v) VERBOSE=true; shift ;;
         --quiet|-q) QUIET=true; shift ;;
         --check-version) check_new_version; exit 0 ;;
+        -h|--help) sed -n '2,23p' "$0" | sed 's/^# \?//'; exit 0 ;;
         pihole01|pihole02) TARGET+=("$1"); shift ;;
         *) echo "Unknown argument: $1"; exit 1 ;;
     esac

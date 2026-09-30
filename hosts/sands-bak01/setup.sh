@@ -23,6 +23,11 @@
 # battle-tested sibling of a lot of this content).
 set -euo pipefail
 
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    sed -n '2,23p' "$0" | sed 's/^# \?//'
+    exit 0
+fi
+
 if [ "$(id -u)" -ne 0 ]; then
   echo "Run as root (sudo bash setup.sh)." >&2
   exit 1

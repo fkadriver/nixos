@@ -13,6 +13,11 @@
 #   List archives first with: borg list /pool/borg/nas01
 set -euo pipefail
 
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    sed -n '2,13p' "$0" | sed 's/^# \?//'
+    exit 0
+fi
+
 [[ $EUID -eq 0 ]] || { echo "Run as root: sudo bash $0" >&2; exit 1; }
 
 REPO=/pool/borg/nas01

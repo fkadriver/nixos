@@ -39,6 +39,11 @@
 #        idrive-app   (alias on nas01/latitude/airbook-darwin: xpra attach ssh://...)
 set -euo pipefail
 
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    sed -n '2,39p' "$0" | sed 's/^# \?//'
+    exit 0
+fi
+
 [[ $EUID -eq 0 ]] || { echo "Run as root: sudo bash $0" >&2; exit 1; }
 
 IMAGES_DIR=/var/lib/libvirt/images

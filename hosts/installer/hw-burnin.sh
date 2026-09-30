@@ -35,6 +35,11 @@
 
 set -uo pipefail  # no -e: keep going through failures so the report is complete
 
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    sed -n '2,34p' "$0" | sed 's/^# \?//'
+    exit 0
+fi
+
 DURATION_MIN="${1:-240}"
 LOG_DIR="/root/burnin-$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$LOG_DIR"

@@ -34,6 +34,11 @@
 
 set -uo pipefail
 
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    sed -n '2,33p' "$0" | sed 's/^# \?//'
+    exit 0
+fi
+
 GH_TOKEN_FILE="${GH_TOKEN_FILE:-/run/bitwarden-secrets/github_actions_token}"
 REPOS="fkadriver/tailnet fkadriver/Fortydeux-NixOS-System-Flake fkadriver/photoAlbumOrganizer fkadriver/SANS"
 

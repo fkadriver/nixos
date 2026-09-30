@@ -49,6 +49,11 @@
 
 set -uo pipefail
 
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    sed -n '2,48p' "$0" | sed 's/^# \?//'
+    exit 0
+fi
+
 poll_device() {
   local path="$1"
   local json passed health reallocated pending media_errors temp_c

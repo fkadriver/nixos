@@ -24,6 +24,11 @@
 
 set -uo pipefail
 
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    sed -n '2,23p' "$0" | sed 's/^# \?//'
+    exit 0
+fi
+
 STATUS=$(tailscale status --json 2>&1)
 if ! echo "$STATUS" | jq -e . >/dev/null 2>&1; then
   echo "tailscale_health: check=self status=ERROR error=status_command_failed"

@@ -7,6 +7,11 @@
 
 set -euo pipefail
 
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    sed -n '2,6p' "$0" | sed 's/^# \?//'
+    exit 0
+fi
+
 BASE_URL="http://127.0.0.1:8384"
 SYNCTHING_CONF="${HOME}/.local/state/syncthing"
 
