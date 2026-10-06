@@ -2,8 +2,8 @@
 # no Logitech account, no telemetry. In nixpkgs as of PR #527640 (merged; v0.6.25,
 # x86_64-linux + darwin). Upstream is v0.8.11. Cross-platform (Linux/macOS/Windows),
 # so it can cover both latitude and airbook-darwin — Solaar cannot.
-# Evaluate migration: fn-swap and Screen Capture divert look covered; verify K860
-# Host Switch mapping on Mac before switching.
+# Evaluate migration: fn-swap looks covered; verify K860 Host Switch mapping on Mac
+# before switching. Screen Capture divert is moot either way — see note below.
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }: {
   config = {
@@ -39,11 +39,19 @@
       # 1. fn-swap=false: F1-F12 send standard keycodes by default; Fn+Fx sends special function.
       #    This is enforced at login by the solaar-k860-setup service below.
       #
-      # 2. Screen Capture key (Fn+F7) -> launch Spectacle (KDE screenshot tool)
-      #    "Screen Capture" is the special function on F7 (pos:7 in fn row).
-      #    With fn-swap=false, Fn+F7 fires "Screen Capture"; this rule launches spectacle directly
-      #    rather than sending Print, since KDE Plasma doesn't bind Print to spectacle by default.
+      # 2. Host Switch Channel 1 (button 1) -> stay on Bolt (don't hardware-switch radios)
+      #    Channel 1 is diverted so we can intercept it; the Set action pins the Bolt
+      #    receiver back to host 1 (latitude). The KVM box itself is switched manually
+      #    (Tab+Right on the keyboard) since Solaar's KeyPress injection needs X11 and
+      #    this session is Wayland (confirmed via solaar's own "rules cannot access
+      #    modifier keys in Wayland" warning) — a synthetic KeyPress action here would
+      #    silently do nothing.
+      #    Channel 2 and 3 are left hardware-switched (Bluetooth to work PC and latitude BT).
       #
+      # Fn+F7 (Screen Capture) is NOT handled here: confirmed dead at the firmware level
+      # (2026-10-06) — neither Solaar's HID++ notification stream nor raw kernel evdev
+      # (libinput debug-events) ever see anything when it's pressed, diverted or not.
+      # Ctrl+F7 -> Spectacle (set up in laptop-kde.nix) is the working screenshot shortcut.
       home.file.".config/solaar/rules.yaml" = {
         text = ''
           %YAML 1.3
@@ -51,8 +59,8 @@
           - Rule:
             - Device: ERGO K860 for Business
             - Rule:
-              - Key: [Screen Capture, pressed]
-              - Execute: spectacle
+              - Key: [Host Switch Channel 1, pressed]
+              - Set: [null, change-host, 1:latitude]
           ...
         '';
         # Solaar reads rules.yaml but only writes config.yaml; this file is safe as read-only.
@@ -62,7 +70,7 @@
 
     # Apply ERGO K860 settings on each login via solaar CLI.
     # fn-swap=false: F1-F12 are standard keycodes by default (Fn+Fx = special).
-    # Divert Screen Capture (Fn+F7) so rules.yaml can intercept it and launch Spectacle.
+    # Divert Host Switch Channel 1 so rules.yaml can intercept it.
     systemd.user.services.solaar-k860-setup = {
       description = "Apply Solaar settings for ERGO K860 for Business";
       wantedBy = [ "graphical-session.target" ];
@@ -75,12 +83,13 @@
           sleep 3
           DEV="ERGO K860 for Business"
           ${config.programs.solaar.package}/bin/solaar config "$DEV" fn-swap false
-          ${config.programs.solaar.package}/bin/solaar config "$DEV" divert-keys "Screen Capture" Diverted
+          ${config.programs.solaar.package}/bin/solaar config "$DEV" divert-keys "Screen Capture" Regular
+          ${config.programs.solaar.package}/bin/solaar config "$DEV" divert-keys "Host Switch Channel 1" Diverted
 
           # Remove stale Wave Keys entry from config.yaml (device no longer paired)
           CONFIG="$HOME/.config/solaar/config.yaml"
           if [ -f "$CONFIG" ] && grep -q "Wave Keys" "$CONFIG"; then
-            ${pkgs.python3}/bin/python3 - <<'PYEOF'
+            ${pkgs.python3.withPackages (ps: [ ps.pyyaml ])}/bin/python3 - <<'PYEOF'
           import yaml, os
           path = os.path.expanduser("~/.config/solaar/config.yaml")
           with open(path) as f:
