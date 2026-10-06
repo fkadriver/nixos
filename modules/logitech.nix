@@ -1,8 +1,9 @@
 # OpenLogi (https://openlogi.org) is a modern replacement for Solaar —
-# no Logitech account, no telemetry. Linux support landed in v0.6.14 (2026-06-15);
-# latest is v0.6.18 (.deb/.rpm only). nixpkgs PR #527640 is open but darwin-only
-# and stalled (merge conflict + changes requested). No Nix package for Linux yet.
-# Migrate from Solaar once nixpkgs PR merges with Linux support.
+# no Logitech account, no telemetry. In nixpkgs as of PR #527640 (merged; v0.6.25,
+# x86_64-linux + darwin). Upstream is v0.8.11. Cross-platform (Linux/macOS/Windows),
+# so it can cover both latitude and airbook-darwin — Solaar cannot.
+# Evaluate migration: fn-swap and Screen Capture divert look covered; verify K860
+# Host Switch mapping on Mac before switching.
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }: {
   config = {
@@ -43,10 +44,6 @@
       #    With fn-swap=false, Fn+F7 fires "Screen Capture"; this rule launches spectacle directly
       #    rather than sending Print, since KDE Plasma doesn't bind Print to spectacle by default.
       #
-      # 3. Host Switch Channel 1 (button 1) -> stay on Bolt + send KVM hotkey (Tab+Right)
-      #    Channel 1 is diverted so we can intercept it; the Set action switches to host 1
-      #    (Bolt/latitude) and Later fires the KVM combo after 500ms (KVM OSD delay).
-      #    Channel 2 and 3 are left hardware-switched (Bluetooth to work PC and latitude BT).
       home.file.".config/solaar/rules.yaml" = {
         text = ''
           %YAML 1.3
@@ -56,10 +53,6 @@
             - Rule:
               - Key: [Screen Capture, pressed]
               - Execute: spectacle
-            - Rule:
-              - Key: [Host Switch Channel 1, pressed]
-              - Set: [null, change-host, 1:latitude]
-              - Later: [0.5, {KeyPress: [Tab, Right]}]
           ...
         '';
         # Solaar reads rules.yaml but only writes config.yaml; this file is safe as read-only.
@@ -69,7 +62,7 @@
 
     # Apply ERGO K860 settings on each login via solaar CLI.
     # fn-swap=false: F1-F12 are standard keycodes by default (Fn+Fx = special).
-    # Divert Screen Capture (Fn+F7) and Host Switch Channel 1 so rules.yaml can intercept them.
+    # Divert Screen Capture (Fn+F7) so rules.yaml can intercept it and launch Spectacle.
     systemd.user.services.solaar-k860-setup = {
       description = "Apply Solaar settings for ERGO K860 for Business";
       wantedBy = [ "graphical-session.target" ];
@@ -83,7 +76,6 @@
           DEV="ERGO K860 for Business"
           ${config.programs.solaar.package}/bin/solaar config "$DEV" fn-swap false
           ${config.programs.solaar.package}/bin/solaar config "$DEV" divert-keys "Screen Capture" Diverted
-          ${config.programs.solaar.package}/bin/solaar config "$DEV" divert-keys "Host Switch Channel 1" Diverted
 
           # Remove stale Wave Keys entry from config.yaml (device no longer paired)
           CONFIG="$HOME/.config/solaar/config.yaml"
