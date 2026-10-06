@@ -48,13 +48,21 @@
       #    silently do nothing.
       #    Channel 2 and 3 are left hardware-switched (Bluetooth to work PC and latitude BT).
       #
-      # Fn+F7 (Screen Capture) is NOT handled here. Diverted, it's inert — no Solaar
-      # HID++ notification, no raw kernel evdev event, confirmed across Bolt and
-      # direct Bluetooth (2026-10-06). Left Diverted (see setup service below) rather
-      # than Regular: in Regular mode it isn't actually dead, but it sends some
-      # unidentified keystroke that gets misinterpreted as a generic "save" command
-      # by whatever app has focus — worse than inert. Ctrl+F7 -> Spectacle (set up
-      # in laptop-kde.nix) is the working screenshot shortcut.
+      # Fn+F7 (Screen Capture) and Fn+F8 (Mute Microphone) are NOT handled here.
+      # Root cause (2026-10-06): this Bolt USB receiver's firmware doesn't forward
+      # either HID++ notification at all — confirmed with the receiver plugged
+      # straight into the laptop (no KVM in the path), so it's the receiver itself,
+      # not the KVM. Both work fine over the keyboard's direct Bluetooth radio
+      # (Diverted Screen Capture there launches Spectacle via Solaar's own built-in
+      # handling — no custom rule needed). But direct BT drops the physical KVM
+      # from the loop entirely (not just the Bolt Host Switch buttons), so the
+      # Bolt receiver is kept and Fn+F7/Fn+F8 are accepted as non-functional on it.
+      # Screen Capture is left Diverted (inert) rather than Regular: in Regular
+      # mode it still doesn't reach Solaar on this receiver, but the keyboard's own
+      # native fallback for the key sends some other keystroke that gets picked up
+      # as a "save" command by whatever app has focus — worse than doing nothing.
+      # Ctrl+F7 -> Spectacle (set up in laptop-kde.nix) is the working screenshot
+      # shortcut on this connection.
       home.file.".config/solaar/rules.yaml" = {
         text = ''
           %YAML 1.3
