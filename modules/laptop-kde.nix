@@ -82,6 +82,13 @@
 
     # KDE Global Shortcuts - Ctrl+F7 for Spectacle (screenshot)
     # This creates/updates the kglobalshortcutsrc file for user scott
+    #
+    # Ctrl+F7 is also KWin's default "Toggle Present Windows (Window class)"
+    # shortcut ([kwin] ExposeClass). Both can't own the same combo — KWin's
+    # built-in binding wins the conflict, so Ctrl+F7 silently did Present
+    # Windows instead of launching Spectacle (confirmed 2026-10-06). Unbind
+    # ExposeClass's active shortcut (leaving its recorded default alone) so
+    # Spectacle gets sole ownership of Ctrl+F7.
     system.activationScripts.kdeShortcuts = lib.stringAfter [ "users" ] ''
       SHORTCUTS_FILE="/home/scott/.config/kglobalshortcutsrc"
 
@@ -96,6 +103,9 @@
         ${pkgs.kdePackages.kconfig}/bin/kwriteconfig6 --file "$SHORTCUTS_FILE" \
           --group "org.kde.spectacle.desktop" \
           --key "RectangularRegionScreenShot" "Ctrl+F7,Meta+Shift+Print,Capture Rectangular Region"
+        ${pkgs.kdePackages.kconfig}/bin/kwriteconfig6 --file "$SHORTCUTS_FILE" \
+          --group "kwin" \
+          --key "ExposeClass" "none,Ctrl+F7\tMeta+F7,Toggle Present Windows (Window class)"
       fi
 
       chown scott:users "$SHORTCUTS_FILE"

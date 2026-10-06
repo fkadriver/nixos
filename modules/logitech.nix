@@ -48,10 +48,13 @@
       #    silently do nothing.
       #    Channel 2 and 3 are left hardware-switched (Bluetooth to work PC and latitude BT).
       #
-      # Fn+F7 (Screen Capture) is NOT handled here: confirmed dead at the firmware level
-      # (2026-10-06) — neither Solaar's HID++ notification stream nor raw kernel evdev
-      # (libinput debug-events) ever see anything when it's pressed, diverted or not.
-      # Ctrl+F7 -> Spectacle (set up in laptop-kde.nix) is the working screenshot shortcut.
+      # Fn+F7 (Screen Capture) is NOT handled here. Diverted, it's inert — no Solaar
+      # HID++ notification, no raw kernel evdev event, confirmed across Bolt and
+      # direct Bluetooth (2026-10-06). Left Diverted (see setup service below) rather
+      # than Regular: in Regular mode it isn't actually dead, but it sends some
+      # unidentified keystroke that gets misinterpreted as a generic "save" command
+      # by whatever app has focus — worse than inert. Ctrl+F7 -> Spectacle (set up
+      # in laptop-kde.nix) is the working screenshot shortcut.
       home.file.".config/solaar/rules.yaml" = {
         text = ''
           %YAML 1.3
@@ -83,7 +86,7 @@
           sleep 3
           DEV="ERGO K860 for Business"
           ${config.programs.solaar.package}/bin/solaar config "$DEV" fn-swap false
-          ${config.programs.solaar.package}/bin/solaar config "$DEV" divert-keys "Screen Capture" Regular
+          ${config.programs.solaar.package}/bin/solaar config "$DEV" divert-keys "Screen Capture" Diverted
           ${config.programs.solaar.package}/bin/solaar config "$DEV" divert-keys "Host Switch Channel 1" Diverted
 
           # Remove stale Wave Keys entry from config.yaml (device no longer paired)
