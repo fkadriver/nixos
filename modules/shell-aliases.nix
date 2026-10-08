@@ -32,6 +32,16 @@
         otworkstation = "tailscale ssh OTworkstation";
         work-debian = "tailscale ssh sjensen@work-debian";
 
+        # iDRAC8 (nas01's T330 remote management), 192.168.10.19. LAN-only —
+        # OPNsense doesn't route this from the wifi VLAN, so this alias only
+        # works run from a host that's actually on 192.168.10.0/24 (nas01
+        # itself; vm01 may also work). Auth is key-only as user "scott" via a
+        # dedicated RSA key (iDRAC8's SSH stack rejects ed25519) — see
+        # ~/.ssh/idrac_nas01_rsa on nas01. -tt forces a pty; iDRAC's
+        # SSH/racadm shell hangs indefinitely on piped/non-pty commands
+        # (see docs/nas01.md).
+        idrac-nas01 = "ssh -tt -i ~/.ssh/idrac_nas01_rsa scott@idrac-nas01";
+
         # Tailscale troubleshooting
         ts-status = "tailscale status";
         ts-up = "sudo tailscale up";

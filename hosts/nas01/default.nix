@@ -157,6 +157,18 @@ let
         owner = "scott";
       };
 
+      # Private key for the iDRAC's "scott" local user (SSH-key-only login,
+      # RSA because iDRAC8's old SSH stack rejects ed25519 — see the
+      # idrac-nas01 alias in shell-aliases.nix). Declared here (not in the
+      # fleet-wide bitwarden-scott.nix) since this key is only ever used from
+      # nas01 itself. A copy also lives in secrets.yaml (sops) as an inert
+      # backup, not actively deployed from there.
+      services.bitwarden.sshKeys.idrac_nas01 = {
+        user    = "scott";
+        keyName = "idrac_nas01_rsa";
+        itemId  = "684bb68a-20cf-4664-8f23-b4dd00e79c5e";  # BW_Name: iDRAC nas01 ssh
+      };
+
       # In-band IPMI to the iDRAC8's management controller. Dell's iDRAC
       # Service Module (iSM) has no NixOS package (RPM/DEB-only, bundles a
       # kernel module built against specific distro kernels), so this

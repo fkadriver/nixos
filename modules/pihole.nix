@@ -369,6 +369,7 @@
       192.168.1.3   sw02  # TL-SG108E
       192.168.11.50 LBP162  # Canon LBP
       192.168.11.51 Ender3V3KE   # Creality Ender-3 KEv3
+      192.168.10.19 idrac-nas01  # iDRAC8 - nas01's T330 remote management (see docs/nas01.md)
     '';
 
     # Pi-hole FTL daemon
