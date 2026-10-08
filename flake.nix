@@ -24,6 +24,10 @@
       url = "github:nix-community/raspberry-pi-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    tether = {
+      url = "github:zackb/tether";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     nix-darwin = {
       # Track nix-darwin-26.05 to match nixpkgs-26.05-darwin (branches must line up
       # or the "nix-darwin YY.MM with Nixpkgs YY.MM" assertion aborts activation).

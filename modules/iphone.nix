@@ -1,6 +1,12 @@
 { inputs, ... }@flakeContext:
-{ config, lib, pkgs, ... }: {
-  config = {
+{ config, lib, pkgs, ... }:
+let
+  cfg = config.services.iphone-usb;
+in {
+  options.services.iphone-usb.enable =
+    lib.mkEnableOption "USB iPhone integration (libimobiledevice/ifuse)" // { default = true; };
+
+  config = lib.mkIf cfg.enable {
     # iPhone integration for Linux
     # Allows photo sync, file transfer, and device management
 

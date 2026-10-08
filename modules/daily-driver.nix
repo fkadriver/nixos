@@ -122,6 +122,7 @@
     '';
 
     programs.firefox.enable = true;
+    programs.thunderbird.enable = true;
 
     environment.systemPackages = with pkgs; [
       python3Minimal
@@ -135,7 +136,6 @@
       discord
 
       libreoffice
-      thunderbird
 
       borgbackup
       unzip

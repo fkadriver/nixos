@@ -22,10 +22,31 @@ let
       inputs.self.nixosModules.forscan
       inputs.self.nixosModules.mcp-nixos
       inputs.self.nixosModules.fwupd
+      inputs.tether.nixosModules.tether
     ];
     config = {
       networking = {
         hostName = "latitude";
+      };
+
+      # Replaces iphone.nix's USB-only libimobiledevice/ifuse setup (which was
+      # never actually working) with Tether's wireless clipboard/file/SMS/
+      # notification bridge. iphone.nix stays enabled by default in
+      # daily-driver.nix for any future laptop or an airbook-darwin NixOS
+      # migration, so it's only switched off here.
+      services.iphone-usb.enable = false;
+
+      programs.tether = {
+        enable = true;
+        wifi = {
+          enable = true;
+          openFirewall = true;
+        };
+        bluetooth = {
+          enable = true;
+          adapters = [ "hci0" ];
+        };
+        extensions = [ "firefox" "thunderbird" ];
       };
 
       services.forscan.enable = true;
