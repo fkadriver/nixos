@@ -1,5 +1,47 @@
 { inputs, ... }@flakeContext:
-{ config, lib, pkgs, ... }: {
+{ config, lib, pkgs, ... }:
+let
+  # LAN Orangutan — network scanner with persistent device labeling,
+  # multi-network support, and Tailscale integration (https://github.com/291-Group/LAN-Orangutan).
+  # Not in nixpkgs; shipped upstream only as prebuilt glibc-dynamic binaries, so
+  # fetch the release tarball and autoPatchelf it for NixOS.
+  orangutanVersion = "3.3.8";
+  orangutanSources = {
+    x86_64-linux = {
+      url = "https://github.com/291-Group/LAN-Orangutan/releases/download/v${orangutanVersion}/orangutan-linux-amd64.tar.gz";
+      hash = "sha256-l7ii77XUAiYKoK6OFLLHdH57vDDI22rd1Puw4j12RPY=";
+      bin = "orangutan-linux-amd64";
+    };
+    aarch64-linux = {
+      url = "https://github.com/291-Group/LAN-Orangutan/releases/download/v${orangutanVersion}/orangutan-linux-arm64.tar.gz";
+      hash = "sha256-If9SJhFyBnnWn00Ti2LniTnzK82bFwRd1KDljSC9pq0=";
+      bin = "orangutan-linux-arm64";
+    };
+  };
+  orangutan = pkgs.stdenv.mkDerivation {
+    pname = "lan-orangutan";
+    version = orangutanVersion;
+    src = pkgs.fetchurl {
+      inherit (orangutanSources.${pkgs.stdenv.hostPlatform.system}) url hash;
+    };
+    nativeBuildInputs = [ pkgs.autoPatchelfHook ];
+    buildInputs = [ pkgs.glibc ];
+    # Tarball has no top-level directory — just the bare binary
+    sourceRoot = ".";
+    dontConfigure = true;
+    dontBuild = true;
+    installPhase = ''
+      install -Dm755 ${orangutanSources.${pkgs.stdenv.hostPlatform.system}.bin} $out/bin/orangutan
+    '';
+    meta = {
+      description = "Network scanner with persistent device labeling, multi-network support, and Tailscale integration";
+      homepage = "https://github.com/291-Group/LAN-Orangutan";
+      license = lib.licenses.mit;
+      platforms = builtins.attrNames orangutanSources;
+      mainProgram = "orangutan";
+    };
+  };
+in {
   imports = [
     inputs.self.nixosModules.tailscale
     inputs.self.nixosModules.shell-aliases
@@ -49,6 +91,7 @@
                       # (superseded by ip/ss for interactive use, kept here only
                       # for that check - confirmed missing fleet-wide 2026-09-29)
         nmap
+        orangutan     # LAN Orangutan network scanner; needs nmap above at runtime
         rsync
         tcpdump       # packet analyzer
         wget
