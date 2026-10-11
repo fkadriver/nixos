@@ -134,6 +134,7 @@ Then add to `.sops.yaml` and run `sops updatekeys secrets/secrets.yaml`.
 | Homebrew Casks | Bitwarden, Firefox, iTerm2, Rectangle, VSCode, 3D printing apps |
 | Services | Tailscale VPN, Syncthing, Input Leap KVM client (connects to latitude) |
 | Settings | Dark mode, Touch ID sudo, dock/keyboard/trackpad preferences |
+| Claude Code | memory-sync hooks installed to `~/.claude/` (`hosts/airbook-darwin/claude-hooks/`); registration stays in the user-managed `~/.claude/settings.json` |
 
 **Rebuild:** `sudo darwin-rebuild switch --flake ~/git/nixos#airbook-darwin`
 

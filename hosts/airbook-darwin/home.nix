@@ -676,6 +676,29 @@ in
     '';
   };
 
+  # Claude Code memory sync hooks. ~/.claude/shared-memory is a git repo
+  # (fkadriver/claude-memory, private) that every project's memory/ dir symlinks to;
+  # these keep it committed and pushed. Kept as repo files rather than inline text
+  # because they carry real logic worth diffing.
+  #
+  # The push hook's guard MUST resolve symlinks before matching: sessions write memory
+  # through ~/.claude/projects/<project>/memory/..., which is a symlink into
+  # shared-memory. The original matched the unresolved path string, so every such write
+  # was silently skipped -- 12 memories sat uncommitted from 2026-04 to 2026-10.
+  #
+  # Registration lives in ~/.claude/settings.json (PostToolUse Write|Edit for push,
+  # UserPromptSubmit for pull), which is user-managed and merged by the mcp-nixos
+  # activation script above, not replaced here.
+  home.file.".claude/sync-memory-push.sh" = {
+    executable = true;
+    source = ./claude-hooks/sync-memory-push.sh;
+  };
+
+  home.file.".claude/sync-memory-pull.sh" = {
+    executable = true;
+    source = ./claude-hooks/sync-memory-pull.sh;
+  };
+
   # Managed SSH client hosts — used for outbound git, borg (nas01), and
   # tailscale ssh. No sshd server on this box (removed 11ecf08). This file is
   # store-backed (read-only) and pulled in via `Include` from the writable
