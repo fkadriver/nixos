@@ -252,6 +252,9 @@ sudo darwin-rebuild switch --flake ~/git/nixos#airbook-darwin
 - **Fonts**: 3D printing fonts (EB Garamond, Libre Baskerville, Old Standard, Junicode, Inter, Source Sans)
 - **macOS settings**: Dock, Finder, keyboard, trackpad, dark mode, Touch ID for sudo
 - **Services**: Tailscale VPN, Syncthing (via Homebrew)
+- **Kali Linux**: headless Kali in a Docker container on a dedicated `colima` VM,
+  via the `kali` wrapper command (no Docker Desktop; `docker-client` is CLI-only).
+  See `docs/kali-docker.md`
 - **Home Manager**: Shell config (bash, zsh, starship), VSCode extensions, SSH config, dotfiles
 - **Secrets**: SSH keys deployed via sops-nix from encrypted secrets.yaml
 
@@ -290,6 +293,12 @@ sops updatekeys secrets/secrets.yaml
     which is what also defeats lid-close sleep); normal battery timers kept. The
     02:00 borg backup skips entirely unless on wall power. See
     `docs/airbook-borg-debug.md`.
+  - Kali Linux: container, not a VM. `kali` starts a dedicated colima profile
+    (2 CPU / 3 GiB / 40 GiB, `qemu` VM type) and drops into a
+    `kali-linux-headless` container; `~/kali` is mounted at `/root/work`. No GUI
+    tools and no USB Wi-Fi passthrough — those need the installed VMware Fusion
+    25. Defined inline in `hosts/airbook-darwin/default.nix`, not a module. See
+    `docs/kali-docker.md`.
 
 ### Dell Latitude 7480 (latitude)
 - **Service Tag**: 3BLBPQ2

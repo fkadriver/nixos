@@ -201,6 +201,167 @@ let
     fi
   '';
 
+  # ── Kali Linux, as a container ──────────────────────────────────────────────
+  # Kali lives in a Docker container on its own colima VM rather than in a
+  # desktop hypervisor. On this box (MacBookAir7,2, 2 physical cores / 8 GB) a
+  # full Kali desktop under Fusion would leave the host ~4 GB and thrash on two
+  # cores; the headless tool set is what actually gets used here (nmap,
+  # metasploit, sqlmap, hydra, john, wordlists) and costs ~3 GiB while running.
+  # Intel means Kali amd64 runs natively — no emulation penalty either way.
+  #
+  # Trade-offs accepted: no GUI tools (Burp, Wireshark, Zenmap) and no USB
+  # Wi-Fi passthrough, so monitor-mode work is out of reach. Both need a real
+  # VM; VMware Fusion 25 is already installed on this machine if that day comes.
+  #
+  # Deliberately its own colima profile ("kali") rather than the default one, so
+  # it can be torn down (`colima delete kali`) without disturbing any other
+  # container work, and so its 2 CPU / 3 GiB / 40 GiB sizing doesn't become the
+  # global default.
+  kaliDockerfile = pkgs.writeText "Dockerfile.kali" ''
+    FROM kalilinux/kali-rolling
+
+    ENV DEBIAN_FRONTEND=noninteractive
+
+    # kali-rolling is a moving target and the base image lags the archive, so
+    # full-upgrade before installing: otherwise the metapackage's dependencies
+    # resolve against stale versions and apt bails mid-install.
+    #
+    # No --no-install-recommends here, intentionally. Kali's metapackages lean on
+    # Recommends to pull in the actual tools; suppressing them yields a
+    # kali-linux-headless that is missing most of what it is named for.
+    RUN apt-get update \
+     && apt-get -y full-upgrade \
+     && apt-get -y install kali-linux-headless \
+     && apt-get clean \
+     && rm -rf /var/lib/apt/lists/*
+
+    WORKDIR /root/work
+    CMD ["/bin/zsh", "-l"]
+  '';
+
+  # `kali` — one entry point that brings up the VM, builds the image on first
+  # use, and drops into a persistent container. Everything is lazy: nothing runs
+  # or consumes RAM until the command is actually invoked.
+  kali = pkgs.writeShellScriptBin "kali" ''
+    set -euo pipefail
+
+    PATH="${pkgs.colima}/bin:${pkgs.docker-client}/bin:${pkgs.jq}/bin:${pkgs.coreutils}/bin:$PATH"
+
+    PROFILE=kali
+    IMAGE=kali-headless:local
+    CONTAINER=kali
+    WORKDIR="$HOME/kali"
+
+    # Talk to this profile's daemon explicitly. Relying on the active docker
+    # context would silently follow whatever `colima start` touched last.
+    export DOCKER_HOST="unix://$HOME/.colima/$PROFILE/docker.sock"
+
+    usage() {
+      cat <<USAGE
+    kali — Kali Linux (headless) in a container on a dedicated colima VM
+
+      kali                enter a zsh shell in the container (creates it if needed)
+      kali <cmd> [args]   run a single command inside the container
+      kali --status       show VM and container state
+      kali --stop         stop the container and shut the VM down (frees ~3 GiB)
+      kali --rebuild      rebuild the image from scratch and recreate the container
+
+    Files: $HOME/kali on the Mac is mounted at /root/work in the container.
+    USAGE
+    }
+
+    # colima list emits one JSON object per line; empty output means the profile
+    # has never been created.
+    vm_status() {
+      colima list --json 2>/dev/null \
+        | jq -r --arg p "$PROFILE" 'select(.name == $p) | .status'
+    }
+
+    start_vm() {
+      case "$(vm_status)" in
+        Running)
+          ;;
+        "")
+          echo "==> creating colima VM '$PROFILE' (2 CPU / 3 GiB RAM / 40 GiB disk)" >&2
+          mkdir -p "$WORKDIR"
+          colima start "$PROFILE" \
+            --vm-type qemu \
+            --cpu 2 --memory 3 --disk 40 \
+            --mount "$WORKDIR:w"
+          ;;
+        *)
+          echo "==> starting colima VM '$PROFILE'" >&2
+          colima start "$PROFILE"
+          ;;
+      esac
+    }
+
+    build_image() {
+      echo "==> building $IMAGE: pulls ~2 GB of Kali packages, expect 20-40 min here" >&2
+      docker build -t "$IMAGE" - < ${kaliDockerfile}
+    }
+
+    # NET_ADMIN/NET_RAW are what let nmap do SYN scans and the rest of the
+    # toolset open raw sockets; without them most of Kali degrades to TCP connect
+    # scans. Scoped to this container, not the daemon.
+    create_container() {
+      mkdir -p "$WORKDIR"
+      docker run -dit \
+        --name "$CONTAINER" \
+        --hostname kali \
+        --cap-add NET_ADMIN --cap-add NET_RAW \
+        -v "$WORKDIR:/root/work" \
+        "$IMAGE" sleep infinity >/dev/null
+    }
+
+    case "''${1:-}" in
+      -h|--help)
+        usage
+        exit 0
+        ;;
+      --status)
+        VM="$(vm_status)"
+        echo "colima VM '$PROFILE': ''${VM:-not created}"
+        if [ "$VM" = "Running" ]; then
+          docker ps -a --filter "name=^/$CONTAINER$" \
+            --format 'container {{.Names}}: {{.Status}}'
+          docker image inspect "$IMAGE" >/dev/null 2>&1 \
+            && echo "image $IMAGE: present" \
+            || echo "image $IMAGE: not built"
+        fi
+        exit 0
+        ;;
+      --stop)
+        docker stop "$CONTAINER" >/dev/null 2>&1 || true
+        [ -n "$(vm_status)" ] && colima stop "$PROFILE"
+        exit 0
+        ;;
+      --rebuild)
+        start_vm
+        docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
+        docker image rm -f "$IMAGE" >/dev/null 2>&1 || true
+        build_image
+        create_container
+        echo "==> rebuilt. Run 'kali' to enter." >&2
+        exit 0
+        ;;
+    esac
+
+    start_vm
+    docker image inspect "$IMAGE" >/dev/null 2>&1 || build_image
+
+    if ! docker container inspect "$CONTAINER" >/dev/null 2>&1; then
+      create_container
+    elif [ "$(docker container inspect -f '{{.State.Running}}' "$CONTAINER")" != "true" ]; then
+      docker start "$CONTAINER" >/dev/null
+    fi
+
+    if [ "$#" -eq 0 ]; then
+      exec docker exec -it -w /root/work "$CONTAINER" /bin/zsh -l
+    fi
+    exec docker exec -it -w /root/work "$CONTAINER" "$@"
+  '';
+
   darwinModule = { config, lib, pkgs, ... }: {
     # Nix configuration
     nix = {
@@ -266,6 +427,13 @@ let
 
       # Network path diagnostic TUI (binary: wtfi)
       wtfi2
+
+      # Kali Linux in a container (see kaliDockerfile/kali above for the why).
+      # colima is the Linux VM that hosts the container runtime; docker-client is
+      # CLI-only (the daemon lives in the VM, so there is nothing to run on macOS).
+      colima
+      docker-client
+      kali
     ];
 
     # Craft / decorative fonts (matches craftFonts in font.nix)

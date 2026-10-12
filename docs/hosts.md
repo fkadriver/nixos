@@ -133,6 +133,7 @@ Then add to `.sops.yaml` and run `sops updatekeys secrets/secrets.yaml`.
 | Purpose | Declarative macOS package/settings management |
 | Homebrew Casks | Bitwarden, Firefox, iTerm2, Rectangle, VSCode, 3D printing apps |
 | Services | Tailscale VPN, Syncthing, Input Leap KVM client (connects to latitude) |
+| Kali Linux | headless container on a dedicated `colima` VM via the `kali` command (`docs/kali-docker.md`) |
 | Settings | Dark mode, Touch ID sudo, dock/keyboard/trackpad preferences |
 | Claude Code | memory-sync hooks installed to `~/.claude/` (`hosts/airbook-darwin/claude-hooks/`); registration stays in the user-managed `~/.claude/settings.json` |
 
