@@ -1,6 +1,37 @@
 { inputs, ... }@flakeContext:
 let
-  nixosModule = { config, lib, pkgs, ... }: {
+  nixosModule = { config, lib, pkgs, ... }:
+    let
+      # wtfi2 — live, visual network path diagnostic that pinpoints which hop
+      # (host/Wi-Fi/gateway/uplink/WAN/DNS/captive-portal) is breaking the
+      # connection (https://github.com/kanywst/wtfi2). Not in nixpkgs; shipped
+      # upstream only as a prebuilt glibc-dynamic binary, so fetch the release
+      # tarball and autoPatchelf it.
+      wtfi2Version = "0.6.0";
+      wtfi2 = pkgs.stdenv.mkDerivation {
+        pname = "wtfi2";
+        version = wtfi2Version;
+        src = pkgs.fetchurl {
+          url = "https://github.com/kanywst/wtfi2/releases/download/v${wtfi2Version}/wtfi2-x86_64-unknown-linux-gnu.tar.xz";
+          hash = "sha256-zDhVnZ13GMWfD7V1lF27JFsEqxZLOcPCnreoWElOPSs=";
+        };
+        nativeBuildInputs = [ pkgs.autoPatchelfHook ];
+        buildInputs = [ pkgs.stdenv.cc.cc.lib ];
+        sourceRoot = "wtfi2-x86_64-unknown-linux-gnu";
+        dontConfigure = true;
+        dontBuild = true;
+        installPhase = ''
+          install -Dm755 wtfi $out/bin/wtfi
+        '';
+        meta = {
+          description = "Live, visual network path diagnostic that pinpoints exactly where your connection dies";
+          homepage = "https://github.com/kanywst/wtfi2";
+          license = lib.licenses.mit;
+          platforms = [ "x86_64-linux" ];
+          mainProgram = "wtfi";
+        };
+      };
+    in {
     imports = [
       ./hardware.nix
       ./syncthing.nix
@@ -164,6 +195,7 @@ let
         pkgs.kdePackages.krdc  # KDE remote desktop client (VNC/RDP) — e.g. nas01-backup
         pkgs.syncthingtray-minimal
         pkgs.x2goclient  # remote X sessions to OTworkstation
+        wtfi2            # network path diagnostic TUI (binary: wtfi)
       ];
 
       # idrive-* client shortcuts (and the xpra client they need) live in

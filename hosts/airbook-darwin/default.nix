@@ -12,6 +12,36 @@ let
     hash = "sha256-0qy9WX7lhiVoY5Jv5pdXHOMXf6QfnrEJ5XHzv5B2Skk=";
   };
 
+  # wtfi2 — live, visual network path diagnostic that pinpoints which hop
+  # (host/Wi-Fi/gateway/uplink/WAN/DNS/captive-portal) is breaking the
+  # connection (https://github.com/kanywst/wtfi2). Not in nixpkgs; shipped
+  # upstream only as a prebuilt binary, so fetch the release tarball directly.
+  # dontFixup avoids touching the Mach-O binary (stripping would invalidate
+  # its embedded code signature).
+  wtfi2Version = "0.6.0";
+  wtfi2 = pkgs.stdenv.mkDerivation {
+    pname = "wtfi2";
+    version = wtfi2Version;
+    src = pkgs.fetchurl {
+      url = "https://github.com/kanywst/wtfi2/releases/download/v${wtfi2Version}/wtfi2-x86_64-apple-darwin.tar.xz";
+      hash = "sha256-w21+xXwJltAIYCbWa0OCdSkaZ2z6Pk1TbgD/IvJ5g+w=";
+    };
+    sourceRoot = "wtfi2-x86_64-apple-darwin";
+    dontConfigure = true;
+    dontBuild = true;
+    dontFixup = true;
+    installPhase = ''
+      install -Dm755 wtfi $out/bin/wtfi
+    '';
+    meta = {
+      description = "Live, visual network path diagnostic that pinpoints exactly where your connection dies";
+      homepage = "https://github.com/kanywst/wtfi2";
+      license = pkgs.lib.licenses.mit;
+      platforms = [ "x86_64-darwin" ];
+      mainProgram = "wtfi";
+    };
+  };
+
   wazuhVersion = "4.14.5";
 
   # Wazuh borg-status telemetry: caches the borg passphrase from Bitwarden into a root-
@@ -233,6 +263,9 @@ let
 
       # MCP server for Claude Code (NixOS/nix-darwin package/option queries)
       uv
+
+      # Network path diagnostic TUI (binary: wtfi)
+      wtfi2
     ];
 
     # Craft / decorative fonts (matches craftFonts in font.nix)
