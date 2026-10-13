@@ -13,6 +13,7 @@ This document provides a brief overview of all host configurations in this repos
 | Desktop | KDE Plasma (default), XFCE and minimal variants available |
 | Purpose | Daily driver development laptop |
 | Key Features | Borg backup, 3D printing, Logitech support, multi-monitor, Input Leap KVM server, Immich machine learning worker |
+| Kali Linux | headless Docker container via the `kali` command, no VM layer needed (`docs/kali-docker.md`) |
 | Variants | `latitude-xfce`, `latitude-kde`, `latitude-minimal` |
 | Tailscale tags | `tag:mgmt-admin` (SSH to all infra as scott), `tag:backup-client` (borg to nas01), `tag:container` (Immich ML) |
 

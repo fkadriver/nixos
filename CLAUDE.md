@@ -304,6 +304,10 @@ sops updatekeys secrets/secrets.yaml
 - **Service Tag**: 3BLBPQ2
 - **Default config**: Includes Borg backup and 3D printing support
 - **Logitech support**: Mouse button tools (xdotool, xbindkeys)
+- **Kali Linux**: headless Kali in a Docker container via the `kali` wrapper command
+  (`modules/kali-docker.nix`, imported by `daily-driver.nix`) — same image and
+  interface as airbook-darwin's, no VM layer needed since Docker already runs
+  natively here. See `docs/kali-docker.md`.
 
 ### Dell Latitude E7270 (vm01)
 - **Purpose**: Immich app + Postgres (frontend/database only — library data lives on nas01)

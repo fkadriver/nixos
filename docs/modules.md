@@ -49,6 +49,7 @@ This document provides a high-level overview of all available modules in this re
 |--------|-------------|
 | `bitwarden.nix` | Generic Bitwarden/sops-nix secrets management module |
 | `bitwarden-scott.nix` | Scott-specific Bitwarden SSH key deployment |
+| `kali-docker.nix` | Headless Kali Linux (`kali-linux-headless`) in a Docker container via the `kali` wrapper command — NixOS counterpart to airbook-darwin's colima-based setup, minus the VM layer since the Docker daemon already runs natively. Imported by `daily-driver.nix`. See `docs/kali-docker.md` |
 
 ## Backup & Sync
 

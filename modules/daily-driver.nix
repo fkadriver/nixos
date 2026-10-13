@@ -15,6 +15,7 @@
     inputs.self.nixosModules.syncthing-declarative
     inputs.self.nixosModules.vscode
     inputs.self.nixosModules.pdf
+    inputs.self.nixosModules."kali-docker"
     inputs.home-manager.nixosModules.home-manager
     (inputs.self.homeConfigurations.scott).nixosModule
   ];
