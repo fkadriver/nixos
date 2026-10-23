@@ -42,6 +42,7 @@ This document provides a high-level overview of all available modules in this re
 |--------|-------------|
 | `vscode.nix` | VSCode with extensions (Nix, Python, Docker, Claude Code) and gnome-keyring |
 | `vscode-server.nix` | VS Code Server for Remote SSH with Claude Code CLI and nix-ld |
+| `herdr.nix` | [Herdr](https://herdr.dev) terminal workspace manager for AI coding agents — prebuilt static binary, not in nixpkgs. Imported by `daily-driver.nix`; pairs with the `<host>-h` aliases there (`herdr --remote <host>`, the tmux-attach equivalent for a remote session). macOS counterpart is inline in `hosts/airbook-darwin/default.nix` (same pattern as that host's Kali packaging) |
 
 ## Secrets & Security
 

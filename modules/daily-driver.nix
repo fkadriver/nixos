@@ -16,6 +16,7 @@
     inputs.self.nixosModules.vscode
     inputs.self.nixosModules.pdf
     inputs.self.nixosModules."kali-docker"
+    inputs.self.nixosModules.herdr
     inputs.home-manager.nixosModules.home-manager
     (inputs.self.homeConfigurations.scott).nixosModule
   ];
@@ -55,6 +56,23 @@
       idrive-start = "ssh scott@sands-bak01.warthog-royal.ts.net sudo systemctl start idrive360cron";
       idrive-stop = "ssh scott@sands-bak01.warthog-royal.ts.net sudo systemctl stop idrive360cron";
       idrive-restart = "ssh scott@sands-bak01.warthog-royal.ts.net sudo systemctl restart idrive360cron";
+
+      # Herdr -h shortcuts — same targets as the "Tailscale SSH shortcuts" in
+      # shell-aliases.nix, but through `herdr --remote` (modules/herdr.nix)
+      # instead of a plain `tailscale ssh`. Herdr attaches to a persistent
+      # remote session the way `tmux attach` attaches to a local one. Kept
+      # here rather than shell-aliases.nix because the herdr binary is only
+      # installed on daily-driver hosts, mirrored on airbook-darwin in
+      # home.nix (which carries its own herdr package — see default.nix).
+      nas01-h = "herdr --remote nas01";
+      backup-h = "herdr --remote sands-bak01";
+      log01-h = "herdr --remote log01";
+      pihole01-h = "herdr --remote pihole01";
+      pihole02-h = "herdr --remote pihole02";
+      latitude-h = "herdr --remote latitude";
+      vm01-h = "herdr --remote vm01";
+      otworkstation-h = "herdr --remote OTworkstation";
+      work-debian-h = "herdr --remote sjensen@work-debian";
     };
 
     networking.networkmanager.enable = true;

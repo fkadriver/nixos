@@ -42,6 +42,38 @@ let
     };
   };
 
+  # Herdr — terminal workspace manager for AI coding agents (herdr.dev), the
+  # macOS counterpart to modules/herdr.nix on NixOS daily drivers. Not in
+  # nixpkgs/Homebrew; ships only as a prebuilt binary, so fetch the release
+  # asset directly (same reasoning as wtfi2 above). No account/login
+  # required. dontFixup: same reasoning as wtfi2 — don't risk invalidating an
+  # embedded macOS code signature by stripping.
+  #
+  # `herdr --remote <ssh-target>` attaches through SSH to a Herdr server on
+  # another machine, the way `tmux attach` attaches to a local session — see
+  # the -h aliases in home.nix. Pinned to v0.9.5; bump the version and
+  # sha256 together from https://herdr.dev/latest.json.
+  herdrVersion = "0.9.5";
+  herdr = pkgs.stdenv.mkDerivation {
+    pname = "herdr";
+    version = herdrVersion;
+    src = pkgs.fetchurl {
+      url = "https://github.com/herdrdev/herdr/releases/download/v${herdrVersion}/herdr-macos-x86_64";
+      sha256 = "5fb0a908ec7f6745e3e245738b06bfad56c46391c391ab3c0955fbead01f1369";
+    };
+    dontUnpack = true;
+    dontFixup = true;
+    installPhase = ''
+      install -Dm755 $src $out/bin/herdr
+    '';
+    meta = {
+      description = "Terminal workspace manager for AI coding agents";
+      homepage = "https://herdr.dev";
+      platforms = [ "x86_64-darwin" ];
+      mainProgram = "herdr";
+    };
+  };
+
   wazuhVersion = "4.14.5";
 
   # Wazuh borg-status telemetry: caches the borg passphrase from Bitwarden into a root-
@@ -434,6 +466,9 @@ let
       colima
       docker-client
       kali
+
+      # Terminal workspace manager for AI coding agents (see herdr above).
+      herdr
     ];
 
     # Craft / decorative fonts (matches craftFonts in font.nix)

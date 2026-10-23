@@ -56,6 +56,10 @@ in {
   };
 
   config = {
+    # Install terminfo for Ghostty (and other modern terminal emulators) so
+    # tmux doesn't reject the TERM it gets forwarded over SSH from them.
+    environment.enableAllTerminfo = true;
+
     # Core system packages (server-safe, no GUI dependencies)
     environment = {
       systemPackages = with pkgs; [

@@ -232,6 +232,19 @@ in
         otworkstation = "tailscale ssh OTworkstation";
         ot = "tailscale ssh OTworkstation";
 
+        # Herdr -h shortcuts — same targets as above, but through
+        # `herdr --remote` (see herdr in default.nix) instead of a plain
+        # `tailscale ssh`. Herdr attaches to a persistent remote session the
+        # way `tmux attach` attaches to a local one.
+        nas01-h = "herdr --remote nas01";
+        backup-h = "herdr --remote sands-bak01";
+        log01-h = "herdr --remote log01";
+        pihole01-h = "herdr --remote pihole01";
+        pihole02-h = "herdr --remote pihole02";
+        latitude-h = "herdr --remote latitude";
+        vm01-h = "herdr --remote vm01";
+        otworkstation-h = "herdr --remote OTworkstation";
+
         # Tailscale troubleshooting
         ts-status = "tailscale status";
         ts-up = "sudo tailscale up";
@@ -371,6 +384,19 @@ in
         vm01 = "tailscale ssh vm01";
         otworkstation = "tailscale ssh OTworkstation";
         ot = "tailscale ssh OTworkstation";
+
+        # Herdr -h shortcuts — same targets as above, but through
+        # `herdr --remote` (see herdr in default.nix) instead of a plain
+        # `tailscale ssh`. Herdr attaches to a persistent remote session the
+        # way `tmux attach` attaches to a local one.
+        nas01-h = "herdr --remote nas01";
+        backup-h = "herdr --remote sands-bak01";
+        log01-h = "herdr --remote log01";
+        pihole01-h = "herdr --remote pihole01";
+        pihole02-h = "herdr --remote pihole02";
+        latitude-h = "herdr --remote latitude";
+        vm01-h = "herdr --remote vm01";
+        otworkstation-h = "herdr --remote OTworkstation";
 
         # Tailscale troubleshooting
         ts-status = "tailscale status";
