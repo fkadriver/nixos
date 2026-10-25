@@ -478,12 +478,17 @@ sudo nixos-rebuild switch --flake ~/git/nixos#nas01
                              on vm01, nas01 is data-only. photos/library is its
                              own child dataset — the NFS export needs crossmnt
                              or clients see it as an empty stub.
-  rsyslog/                  log01's remote syslog collection — NFS-mounted on
-                             log01 at /var/log/remote (same local path it used
-                             when it lived on log01's own disk, so rsyslog's
-                             config and goflow2's bind-mount needed no
-                             changes). quota=1.5T, compression=lz4. Moved here
-                             2026-10-25 after log01's root disk filled to 100%.
+  rsyslog/                  Universal fleet syslog collector's storage — the
+                             syslog-tailscale compose stack (rsyslog + Tailscale
+                             sidecar, reachable at syslog.warthog-royal.ts.net:5515
+                             independent of which host runs it — see that repo's
+                             README) writes here directly, and it's also
+                             bind-mounted locally at /var/log/remote so nas01's
+                             own wazuh-agent can read it via the existing
+                             fleet-wide wildcard localfile. quota=1.5T,
+                             compression=lz4. Created 2026-10-25 after log01's
+                             root disk (the previous fixed collector) filled to
+                             100%.
 
 /mnt/wd18t_3/               WD 18TB drive — functioning normally (confirmed 2026-08-22)
 ```
@@ -500,6 +505,33 @@ scripts (`immich-fleet-status.sh`, `immich-fleet-check.sh`,
 
 ---
 
+## Universal Syslog Collector (fleet-wide)
+
+`~/git/syslog-tailscale` (its own repo, [fkadriver/syslog-tailscale](https://github.com/fkadriver/syslog-tailscale)):
+a plain rsyslog container behind a Tailscale sidecar, reachable fleet-wide
+at `syslog.warthog-royal.ts.net:5515` regardless of which host actually
+runs it — currently here, not log01, so storage location and network
+identity aren't coupled to the same box (log01's root disk filling to
+100% on 2026-10-25 is part of why). TCP only — see the repo's README for
+why that's fine (every sender already uses TCP) and how to move it to a
+different host later.
+
+Writes to `/pool/rsyslog` directly (quota=1.5T — see
+[zfs-datasets.sh](../hosts/nas01/zfs-datasets.sh)); also bind-mounted
+locally at `/var/log/remote` so nas01's own wazuh-agent reads it via the
+existing fleet-wide wildcard `localfile` with zero Wazuh-side config
+changes. Every NixOS host forwards its own syslog straight here via
+`logging.forwardSyslog` (common.nix, on by default). `log01` additionally
+keeps a transitional receiver+relay (on `log01.warthog-royal.ts.net:514`)
+for devices that can't be repointed yet — OPNsense, pihole — see
+[hosts/log01/default.nix](../hosts/log01/default.nix).
+
+Deploy/restart: `systemd.services.syslog-docker` (same `tsDockerSidecarStart`
+pattern as every other docker-compose Tailscale sidecar — see
+[modules/tsauth.nix](../modules/tsauth.nix)).
+
+---
+
 ## Services
 
 All declared in [hosts/nas01/default.nix](../hosts/nas01/default.nix):
@@ -512,7 +544,8 @@ All declared in [hosts/nas01/default.nix](../hosts/nas01/default.nix):
 | hd-idle | custom `systemd.services.hd-idle` | by-id paths; pool 30 min, WD 10 min spindown |
 | smartd | `services.smartd` | drive health monitoring |
 | Wazuh agent | `services.wazuh-agent` | manager: wazuh.warthog-royal.ts.net |
-| rsyslog → log01 | `logging.forwardToLog01` (common.nix) | on by default |
+| Local syslog → collector | `logging.forwardSyslog` (common.nix) | nas01's own syslog, on by default — unrelated to the next row |
+| Syslog collector (fleet-wide) | `systemd.services.syslog-docker` | docker compose, `~/git/syslog-tailscale` — see [Universal Syslog Collector](#universal-syslog-collector-fleet-wide) below |
 | IDrive360 | runs on `sands-bak01`, not nas01 (`virtualisation.libvirtd` stays enabled for the decommissioned VM's disk-backup use only) | see below |
 
 **NFS restart-in-place wedges the kernel nfsd state (2026-09-17):** any change
@@ -590,9 +623,11 @@ they'd only matter again if the VM is deliberately relaunched.
 | `/pool/shares/SANS` | LAN (192.168.0.0/16) | ro |
 | `/pool/shares/SANS` | Tailscale (100.64.0.0/10) | rw |
 | `/pool/shares/photos` | Tailscale | rw |
-| `/pool/rsyslog` | Tailscale | rw (log01 only, in practice) |
 
 Verify: `sudo exportfs -v` on nas01, `showmount -e nas01` on a client.
+`/pool/rsyslog` is deliberately **not** NFS-exported — it's written directly
+by the syslog-tailscale container running on this same host (see below), not
+mounted by any remote client.
 
 ---
 

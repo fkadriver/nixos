@@ -31,7 +31,7 @@ let
     done
   '';
 
-  nixosModule = { config, lib, pkgs, ... }: {
+  nixosModule = { config, lib, pkgs, tsDockerSidecarStart, ... }: {
     imports = [
       ./hardware.nix
       ./syncthing.nix
@@ -40,6 +40,7 @@ let
       inputs.self.nixosModules.bitwarden-scott
       inputs.self.nixosModules.borg-backup
       inputs.self.nixosModules.vscode-server
+      inputs.self.nixosModules.tsauth
       inputs.self.nixosModules.wazuh-agent
       inputs.self.nixosModules.smart-monitor
       inputs.self.nixosModules.disk-usage-monitor
@@ -199,6 +200,42 @@ let
       # comment. Run after any rebuild that adds/changes an entry in its
       # DATASETS table: sudo bash /etc/nas01-zfs/zfs-datasets.sh
       environment.etc."nas01-zfs/zfs-datasets.sh".source = ./zfs-datasets.sh;
+
+      # Local bind mount (not NFS — this is the same host) so the native
+      # wazuh-agent here can read pool/rsyslog's content at the path its
+      # fleet-wide "default" group localfile already expects
+      # (/var/log/remote/*/*.log — same path log01's agent has always
+      # used). The syslog-tailscale compose stack (below) bind-mounts the
+      # same /pool/rsyslog directly too; both just point at the one
+      # dataset, no conflict.
+      fileSystems."/var/log/remote" = {
+        device = "/pool/rsyslog";
+        fsType = "none";
+        options = [ "bind" ];
+      };
+
+      # Universal fleet syslog collector — rsyslog + Tailscale sidecar,
+      # reachable at syslog.warthog-royal.ts.net:5515 regardless of which
+      # host actually runs it (currently here; see syslog-tailscale repo's
+      # README for why and how to move it). Replaces log01 as the fixed
+      # network target; log01 keeps a transitional receiver+relay for
+      # devices not yet repointed (OPNsense, pihole) — see its default.nix.
+      systemd.services.syslog-docker = {
+        description = "Syslog Collector Docker Compose Stack";
+        wantedBy = [ "multi-user.target" ];
+        after = [ "bitwarden-secrets-sync.service" "docker.service" "network-online.target" ];
+        wants = [ "network-online.target" ];
+        requires = [ "bitwarden-secrets-sync.service" "docker.service" ];
+        unitConfig.RequiresMountsFor = "/var/log/remote";
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+          WorkingDirectory = "/home/scott/git/syslog-tailscale";
+          ExecStart = tsDockerSidecarStart;
+          ExecStop = "${pkgs.docker}/bin/docker compose down";
+        };
+      };
+
       services.zfs.autoScrub.enable = true;
       services.zfs.trim.enable = true;
       services.zfs.zed = {
@@ -288,16 +325,6 @@ let
           # library data lives — without crossmnt, NFS clients see an empty
           # stub at the pool/photos/library mountpoint instead of its content.
           /pool/photos    100.64.0.0/10(rw,sync,wdelay,crossmnt,no_subtree_check,sec=sys,secure,no_root_squash,no_all_squash)
-
-          # rsyslog storage for log01's remote syslog collection
-          # (/var/log/remote on log01, mounted here from this export at the
-          # same local path — see hosts/log01/default.nix). Moved off
-          # log01's own root disk after it filled to 100% (2026-10-25,
-          # OpenSearch write-failure log spam, unrelated to this data but
-          # the trigger for getting this onto its own quota'd dataset).
-          # Tailscale only; no_root_squash since rsyslog runs as root on
-          # log01 and goflow2-docker's bind-mount needs root-owned dirs.
-          /pool/rsyslog    100.64.0.0/10(rw,sync,wdelay,no_subtree_check,sec=sys,secure,no_root_squash,no_all_squash)
 
           # nas01-backup migration (see MIGRATION.md in the idrive360 repo):
           # sands-bak01 replaces the nas01-backup VM's virtiofs shares of the
