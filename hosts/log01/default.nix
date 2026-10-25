@@ -241,7 +241,26 @@ let
         missingok = true;
         notifempty = true;
         sharedscripts = true;
-        postrotate = "systemctl kill -s HUP rsyslog.service 2>/dev/null || true";
+        postrotate = "systemctl kill -s HUP syslog.service 2>/dev/null || true";
+      };
+
+      # Logrotate for the base local syslog outputs — these had no rotation
+      # at all, which is how /var/log/messages grew to 22G (OpenSearch
+      # repeatedly logging write-failure stack traces as the disk filled,
+      # a feedback loop) and took the root filesystem to 100% full on
+      # 2026-10-25. The service unit is "syslog.service" on NixOS, not
+      # "rsyslog.service" — the postrotate hook above had been silently
+      # no-op'ing on the wrong unit name this whole time too.
+      services.logrotate.settings.local-syslog = {
+        files = "/var/log/messages /var/log/warn";
+        frequency = "daily";
+        rotate = 14;
+        compress = true;
+        dateext = true;
+        missingok = true;
+        notifempty = true;
+        sharedscripts = true;
+        postrotate = "systemctl kill -s HUP syslog.service 2>/dev/null || true";
       };
 
       system = {
