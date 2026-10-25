@@ -195,6 +195,26 @@ let
         };
       };
 
+      # Local UniFi Network API account (limited-role, local-only user created
+      # in Settings > Admins) used by bin/unifi-api in the unifi_controller
+      # repo. Standalone/self-hosted Network Application has no UniFi OS
+      # layer, so the X-API-KEY Integration API isn't available here — this
+      # is the legacy session-login local API instead.
+      services.bitwarden.secrets.unifi_api_username = {
+        name = "unifi_api_username";
+        itemId = "27592c71-0a84-46d9-903f-b4ee01062999"; # BW_Name: ClaudeAPI
+        field = "username";
+        mode = "0400";
+        owner = "scott";
+      };
+      services.bitwarden.secrets.unifi_api_password = {
+        name = "unifi_api_password";
+        itemId = "27592c71-0a84-46d9-903f-b4ee01062999"; # BW_Name: ClaudeAPI
+        field = "password";
+        mode = "0400";
+        owner = "scott";
+      };
+
       # Unifi Docker Compose stack
       systemd.services.unifi-docker = {
         description = "Unifi Docker Compose Stack";
