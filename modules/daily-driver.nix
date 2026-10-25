@@ -149,6 +149,11 @@
       # Claude desktop app is macOS/Windows only — no official Linux build or
       # nixpkgs package, so it lives on airbook-darwin (brew cask "claude") only.
 
+      # GPU-accelerated terminal emulator. Its terminfo entry already ships
+      # system-wide via enableAllTerminfo in common.nix, so tmux and SSH'd-into
+      # hosts handle TERM=xterm-ghostty without extra work.
+      ghostty
+
       shotwell
       mpv
       handbrake  # Video transcoding

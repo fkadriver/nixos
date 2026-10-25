@@ -19,7 +19,7 @@ let
     done
   '';
 
-  nixosModule = { config, lib, pkgs, ... }: {
+  nixosModule = { config, lib, pkgs, tsDockerSidecarStart, ... }: {
     imports = [
       ./hardware-configuration.nix
       inputs.home-manager.nixosModules.home-manager
@@ -178,9 +178,9 @@ let
       systemd.services.immich-docker = {
         description = "Immich Docker Compose Stack";
         wantedBy = [ "multi-user.target" ];
-        after = [ "docker.service" "network-online.target" ];
+        after = [ "bitwarden-secrets-sync.service" "docker.service" "network-online.target" ];
         wants = [ "network-online.target" ];
-        requires = [ "docker.service" ];
+        requires = [ "bitwarden-secrets-sync.service" "docker.service" ];
         # RequiresMountsFor belongs in [Unit], not [Service] — it was
         # silently ignored under serviceConfig, which is why this service
         # started (and finished) before the NFS mount even attempted on the
@@ -190,9 +190,29 @@ let
           Type = "oneshot";
           RemainAfterExit = true;
           WorkingDirectory = "/home/scott/git/immich-app";
-          ExecStart = "${pkgs.docker}/bin/docker compose up -d";
+          ExecStart = tsDockerSidecarStart;
           ExecStop = "${pkgs.docker}/bin/docker compose down";
         };
+      };
+
+      # Local UniFi Network API account (limited-role, local-only user created
+      # in Settings > Admins) used by bin/unifi-api in the unifi_controller
+      # repo. Standalone/self-hosted Network Application has no UniFi OS
+      # layer, so the X-API-KEY Integration API isn't available here — this
+      # is the legacy session-login local API instead.
+      services.bitwarden.secrets.unifi_api_username = {
+        name = "unifi_api_username";
+        itemId = "27592c71-0a84-46d9-903f-b4ee01062999"; # BW_Name: ClaudeAPI
+        field = "username";
+        mode = "0400";
+        owner = "scott";
+      };
+      services.bitwarden.secrets.unifi_api_password = {
+        name = "unifi_api_password";
+        itemId = "27592c71-0a84-46d9-903f-b4ee01062999"; # BW_Name: ClaudeAPI
+        field = "password";
+        mode = "0400";
+        owner = "scott";
       };
 
       # Unifi Docker Compose stack
@@ -206,11 +226,7 @@ let
           Type = "oneshot";
           RemainAfterExit = true;
           WorkingDirectory = "/home/scott/git/unifi_controller";
-          ExecStart = pkgs.writeShellScript "unifi-docker-start" ''
-            set -euo pipefail
-            export TS_AUTHKEY=$(cat /run/bitwarden-secrets/container_ts_authkey)
-            exec ${pkgs.docker}/bin/docker compose up -d
-          '';
+          ExecStart = tsDockerSidecarStart;
           ExecStop = "${pkgs.docker}/bin/docker compose down";
         };
       };
@@ -229,6 +245,32 @@ let
         timerConfig = {
           OnBootSec = "5min";
           OnUnitActiveSec = "10min";
+          Persistent = true;
+        };
+      };
+
+      # Renews the Tailscale HTTPS cert for the UniFi controller. Runs as
+      # scott (not root): `sudo tailscale set --operator=scott` was run
+      # once on vm01 so `tailscale cert` works without root, and scott is
+      # in the docker group for the keystore re-import. The script itself
+      # is a no-op unless the cert actually changed (see renew-cert.sh).
+      systemd.services.unifi-cert-renew = {
+        description = "Renew Tailscale HTTPS cert for UniFi controller";
+        after = [ "unifi-docker.service" "tailscaled.service" ];
+        requires = [ "unifi-docker.service" ];
+        path = [ pkgs.docker pkgs.tailscale ];
+        serviceConfig = {
+          Type = "oneshot";
+          User = "scott";
+          WorkingDirectory = "/home/scott/git/unifi_controller";
+          ExecStart = "${pkgs.bash}/bin/bash /home/scott/git/unifi_controller/renew-cert.sh";
+        };
+      };
+      systemd.timers.unifi-cert-renew = {
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          OnBootSec = "10min";
+          OnCalendar = "weekly";
           Persistent = true;
         };
       };

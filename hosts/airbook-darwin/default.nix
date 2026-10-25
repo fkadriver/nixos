@@ -577,6 +577,10 @@ let
         "balenaetcher"       # USB image writer
         "bitwarden"
         "firefox"
+        # Terminals. ghostty is a cask rather than a nixpkgs package because
+        # nixpkgs' ghostty is Linux-only (meta.platforms has no darwin); the
+        # cask ships a universal binary, so it runs on this Intel Mac.
+        "ghostty"
         "iterm2"
         "rectangle"          # Window management
         "scroll-reverser"    # Natural scroll for trackpad, reversed for mouse

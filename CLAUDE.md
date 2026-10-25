@@ -246,7 +246,7 @@ sudo darwin-rebuild switch --flake ~/git/nixos#airbook-darwin
 ### What nix-darwin Manages
 - **System packages**: CLI tools installed via Nix (age, sops, htop, go, nodejs, python3)
 - **Homebrew**: GUI apps and services
-  - Casks: Bitwarden, Firefox, iTerm2, Rectangle, Scroll Reverser, VSCode
+  - Casks: Bitwarden, Firefox, Ghostty, iTerm2, Rectangle, Scroll Reverser, VSCode
   - 3D Printing: OpenSCAD, PrusaSlicer, FreeCAD, Blender, MeshLab, Inkscape
   - Brews: syncthing, bitwarden-cli
 - **Fonts**: 3D printing fonts (EB Garamond, Libre Baskerville, Old Standard, Junicode, Inter, Source Sans)
@@ -284,7 +284,7 @@ sops updatekeys secrets/secrets.yaml
 - **CPU**: Intel Core i5-5250U/i7-5650U (Broadwell)
 - **Configuration**: `airbook-darwin` - macOS with nix-darwin (NixOS config archived)
 - **macOS config includes**:
-  - GUI apps: Bitwarden, Firefox, iTerm2, Rectangle, Scroll Reverser, VSCode
+  - GUI apps: Bitwarden, Firefox, Ghostty, iTerm2, Rectangle, Scroll Reverser, VSCode
   - Services: Tailscale VPN, Syncthing file sync
   - System settings: Dark mode, Touch ID sudo, dock/keyboard/trackpad preferences
   - Bluetooth: SEENDA keyboard and mouse (manual pairing required)
