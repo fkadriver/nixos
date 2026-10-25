@@ -600,14 +600,29 @@
         echo "Adding $type list: $address"
         local result
         result=$(PostFTLData "lists?type=$type" "$payload")
+        # .lists[0].id (indexed access) rather than .lists.[].id (iterate-all)
+        # because a "database_error" response has no .lists key at all — jq
+        # treats a missing key as null, and null[0] is a safe no-op, but
+        # null[] ("iterate over null") is a hard jq error. That error, hit via
+        # a failing command substitution assigned to `local`, is exactly the
+        # kind of failure `set -e` treats as fatal — it silently killed this
+        # whole script (and every list after the first) on every rebuild once
+        # gravity.db already had multi.txt from a prior run. Discovered
+        # 2026-10-25 when a rebuild's "new" lists never actually loaded.
         local id
-        id=$(${jq}/bin/jq -r '.lists.[].id? // empty' <<< "$result")
-        if [ -z "$id" ]; then
-          echo "Error: $(${jq}/bin/jq -r '.error.message // .processed.errors.[].error // "unknown"' <<< "$result")"
-          any_failed=1
-        else
+        id=$(${jq}/bin/jq -r '.lists[0].id? // empty' <<< "$result" 2>/dev/null || true)
+        if [ -n "$id" ]; then
           echo "Added list ID $id"
+          return
         fi
+        local hint
+        hint=$(${jq}/bin/jq -r '.error.hint // empty' <<< "$result" 2>/dev/null || true)
+        if [ "$hint" = "The item is already present" ]; then
+          echo "Already present, skipping: $address"
+          return
+        fi
+        echo "Error: $(${jq}/bin/jq -r '.error.message // .processed.errors.[].error // "unknown"' <<< "$result")"
+        any_failed=1
       }
 
       ${lib.concatMapStrings (l: ''
