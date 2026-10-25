@@ -379,12 +379,45 @@
       openFirewallWebserver = true;
 
       # Block and allow lists — managed here; user-added lists via Pi-Remote persist in gravity.db
+      #
+      # The native.* lists below target vendor telemetry/ACR/ad-SDK traffic for
+      # specific device classes on this network (Samsung TVs, Roku, Apple
+      # phones/laptops) — added 2026-10-25 after a query-log review showed
+      # Samsung TVs phoning home to samsungacr.com (Automatic Content
+      # Recognition) and samsungpositioning.com (location) in addition to ad
+      # traffic, and Roku hitting osm-ads.delivery.roku.com /
+      # pubads.g.doubleclick.net. whitelist-referral-native.txt (below) is
+      # Hagezi's companion allowlist specifically meant to pair with these
+      # native.* lists so core device/app functionality doesn't break.
+      # Deliberately NOT added: native.amazon.txt — the Blink camera and
+      # TP-Link/Tapo doorbells on this network only talk to their core cloud
+      # API domains (immedia-semi.com, *.i.tplinknbu.com); no ad/tracking
+      # subdomains were observed, and no Alexa/Fire TV/Kindle device is on
+      # this network to justify it.
       lists = [
         {
           url = "https://gitlab.com/hagezi/mirror/-/raw/main/dns-blocklists/adblock/multi.txt";
           type = "block";
           enabled = true;
           description = "Hagezi Multi blocklist";
+        }
+        {
+          url = "https://raw.githubusercontent.com/hagezi/dns-blocklists/refs/heads/main/adblock/native.samsung.txt";
+          type = "block";
+          enabled = true;
+          description = "Hagezi Samsung native tracking/ACR/ads blocklist";
+        }
+        {
+          url = "https://raw.githubusercontent.com/hagezi/dns-blocklists/refs/heads/main/adblock/native.roku.txt";
+          type = "block";
+          enabled = true;
+          description = "Hagezi Roku native tracking/ads blocklist";
+        }
+        {
+          url = "https://raw.githubusercontent.com/hagezi/dns-blocklists/refs/heads/main/adblock/native.apple.txt";
+          type = "block";
+          enabled = true;
+          description = "Hagezi Apple native tracking/ads blocklist";
         }
         {
           url = "https://raw.githubusercontent.com/hagezi/dns-blocklists/refs/heads/main/adblock/whitelist-referral-native.txt";
