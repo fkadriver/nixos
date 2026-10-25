@@ -1,6 +1,6 @@
 { inputs, ... }@flakeContext:
 let
-  nixosModule = { config, lib, pkgs, ... }: {
+  nixosModule = { config, lib, pkgs, tsDockerSidecarStart, ... }: {
     imports = [
       ./hardware.nix
       inputs.self.nixosModules.common
@@ -149,11 +149,7 @@ let
                 >> "$REPO/config/wazuh_indexer/internal_users.yml"
               chmod 600 "$REPO/config/wazuh_indexer/internal_users.yml"
             '';
-          ExecStart = pkgs.writeShellScript "wazuh-docker-start" ''
-            set -euo pipefail
-            export TS_AUTHKEY=$(cat /run/bitwarden-secrets/container_ts_authkey)
-            exec ${pkgs.docker}/bin/docker compose up -d
-          '';
+          ExecStart = tsDockerSidecarStart;
           ExecStop = "${pkgs.docker}/bin/docker compose down";
         };
       };

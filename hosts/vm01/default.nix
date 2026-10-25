@@ -19,7 +19,7 @@ let
     done
   '';
 
-  nixosModule = { config, lib, pkgs, ... }: {
+  nixosModule = { config, lib, pkgs, tsDockerSidecarStart, ... }: {
     imports = [
       ./hardware-configuration.nix
       inputs.home-manager.nixosModules.home-manager
@@ -178,9 +178,9 @@ let
       systemd.services.immich-docker = {
         description = "Immich Docker Compose Stack";
         wantedBy = [ "multi-user.target" ];
-        after = [ "docker.service" "network-online.target" ];
+        after = [ "bitwarden-secrets-sync.service" "docker.service" "network-online.target" ];
         wants = [ "network-online.target" ];
-        requires = [ "docker.service" ];
+        requires = [ "bitwarden-secrets-sync.service" "docker.service" ];
         # RequiresMountsFor belongs in [Unit], not [Service] — it was
         # silently ignored under serviceConfig, which is why this service
         # started (and finished) before the NFS mount even attempted on the
@@ -190,7 +190,7 @@ let
           Type = "oneshot";
           RemainAfterExit = true;
           WorkingDirectory = "/home/scott/git/immich-app";
-          ExecStart = "${pkgs.docker}/bin/docker compose up -d";
+          ExecStart = tsDockerSidecarStart;
           ExecStop = "${pkgs.docker}/bin/docker compose down";
         };
       };
@@ -226,11 +226,7 @@ let
           Type = "oneshot";
           RemainAfterExit = true;
           WorkingDirectory = "/home/scott/git/unifi_controller";
-          ExecStart = pkgs.writeShellScript "unifi-docker-start" ''
-            set -euo pipefail
-            export TS_AUTHKEY=$(cat /run/bitwarden-secrets/container_ts_authkey)
-            exec ${pkgs.docker}/bin/docker compose up -d
-          '';
+          ExecStart = tsDockerSidecarStart;
           ExecStop = "${pkgs.docker}/bin/docker compose down";
         };
       };

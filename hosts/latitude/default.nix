@@ -1,6 +1,6 @@
 { inputs, ... }@flakeContext:
 let
-  nixosModule = { config, lib, pkgs, ... }:
+  nixosModule = { config, lib, pkgs, tsDockerSidecarStart, ... }:
     let
       # wtfi2 — live, visual network path diagnostic that pinpoints which hop
       # (host/Wi-Fi/gateway/uplink/WAN/DNS/captive-portal) is breaking the
@@ -330,11 +330,7 @@ PYEOF
           Type = "oneshot";
           RemainAfterExit = true;
           WorkingDirectory = "/home/scott/git/immich_machine_learning";
-          ExecStart = pkgs.writeShellScript "immich-ml-docker-start" ''
-            set -euo pipefail
-            export TS_AUTHKEY=$(cat /run/bitwarden-secrets/container_ts_authkey)
-            exec ${pkgs.docker}/bin/docker compose up -d
-          '';
+          ExecStart = tsDockerSidecarStart;
           ExecStop = "${pkgs.docker}/bin/docker compose down";
         };
       };
