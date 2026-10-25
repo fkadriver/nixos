@@ -233,6 +233,32 @@ let
         };
       };
 
+      # Renews the Tailscale HTTPS cert for the UniFi controller. Runs as
+      # scott (not root): `sudo tailscale set --operator=scott` was run
+      # once on vm01 so `tailscale cert` works without root, and scott is
+      # in the docker group for the keystore re-import. The script itself
+      # is a no-op unless the cert actually changed (see renew-cert.sh).
+      systemd.services.unifi-cert-renew = {
+        description = "Renew Tailscale HTTPS cert for UniFi controller";
+        after = [ "unifi-docker.service" "tailscaled.service" ];
+        requires = [ "unifi-docker.service" ];
+        path = [ pkgs.docker pkgs.tailscale ];
+        serviceConfig = {
+          Type = "oneshot";
+          User = "scott";
+          WorkingDirectory = "/home/scott/git/unifi_controller";
+          ExecStart = "${pkgs.bash}/bin/bash /home/scott/git/unifi_controller/renew-cert.sh";
+        };
+      };
+      systemd.timers.unifi-cert-renew = {
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          OnBootSec = "10min";
+          OnCalendar = "weekly";
+          Persistent = true;
+        };
+      };
+
       # Borg backup to nas01
       # Passphrase comes from bitwarden-scott.nix -> /run/bitwarden-secrets/borg_passphrase
       services.borg-backup = {
