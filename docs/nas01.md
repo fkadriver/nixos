@@ -373,17 +373,37 @@ This step matters for recovery specifically because `/run/bitwarden-secrets/borg
 (needed to read the Borg repo in steps 4–5 below) only appears after this key
 is trusted and a rebuild has run.
 
-### 3. Import the ZFS pool
+### 3. Import the ZFS pool and ensure managed datasets
 
 ```bash
-sudo zpool import -f pool   # -f: pool wasn't cleanly exported from old OS
-zpool status                # confirm raidz1-0 is ONLINE, no errors
+sudo bash /etc/nas01-zfs/zfs-datasets.sh
 ```
 
-`boot.zfs.extraPools` auto-imports the pool on subsequent boots.
-`/pool/borg/nas01` (this host's own Borg repo — see below) and
-`/pool/borg/<hostname>` for every client already exist on the pool and need
-no re-creation; they came back with the import.
+Tries `zpool import -f pool` (the `-f` matters: it wasn't cleanly exported
+from the old OS), then ensures every dataset in its `DATASETS` table exists
+with the right quota/compression (currently just `pool/rsyslog` — see
+[hosts/nas01/zfs-datasets.sh](../hosts/nas01/zfs-datasets.sh)). Re-run it
+after any rebuild that adds/changes an entry in that table; it's idempotent.
+
+If the import step fails, that means the pool's member disks themselves are
+gone, not just the OS disk — **do not run `zpool create` speculatively**.
+Confirm which physical disks are actually gone (`ls /dev/disk/by-id/`,
+cross-check serials against the Hardware section above) before deciding
+whether any are salvageable, then build the new pool by hand once you're
+sure:
+```bash
+sudo zpool create -o ashift=12 pool raidz1 <disk-by-id> <disk-by-id> <disk-by-id>
+sudo zfs set compression=lz4 pool
+sudo bash /etc/nas01-zfs/zfs-datasets.sh   # recreate the managed datasets
+```
+This loses all prior data on the pool — it's the last resort, not a normal
+recovery path.
+
+`boot.zfs.extraPools` auto-imports the pool on subsequent boots (the script
+above only matters for the *first* boot after a from-scratch disk, or to
+apply a change to the DATASETS table). `/pool/borg/nas01` (this host's own
+Borg repo — see below) and `/pool/borg/<hostname>` for every client already
+exist on the pool and need no re-creation; they came back with the import.
 
 ### 4. Restore `/home` from Borg
 
@@ -458,6 +478,12 @@ sudo nixos-rebuild switch --flake ~/git/nixos#nas01
                              on vm01, nas01 is data-only. photos/library is its
                              own child dataset — the NFS export needs crossmnt
                              or clients see it as an empty stub.
+  rsyslog/                  log01's remote syslog collection — NFS-mounted on
+                             log01 at /var/log/remote (same local path it used
+                             when it lived on log01's own disk, so rsyslog's
+                             config and goflow2's bind-mount needed no
+                             changes). quota=1.5T, compression=lz4. Moved here
+                             2026-10-25 after log01's root disk filled to 100%.
 
 /mnt/wd18t_3/               WD 18TB drive — functioning normally (confirmed 2026-08-22)
 ```
@@ -482,7 +508,7 @@ All declared in [hosts/nas01/default.nix](../hosts/nas01/default.nix):
 |---|---|---|
 | NFS | `services.nfs.server` | fixed ports 4000/4001/20048 for firewall |
 | Syncthing | `services.syncthing-declarative` | Tailscale-only, device ID preserved |
-| ZFS | `boot.zfs.extraPools` | weekly autoScrub + TRIM enabled |
+| ZFS | `boot.zfs.extraPools` | weekly autoScrub + TRIM enabled; datasets (quota/compression) managed by [zfs-datasets.sh](../hosts/nas01/zfs-datasets.sh), deployed to `/etc/nas01-zfs/` |
 | hd-idle | custom `systemd.services.hd-idle` | by-id paths; pool 30 min, WD 10 min spindown |
 | smartd | `services.smartd` | drive health monitoring |
 | Wazuh agent | `services.wazuh-agent` | manager: wazuh.warthog-royal.ts.net |
@@ -564,6 +590,7 @@ they'd only matter again if the VM is deliberately relaunched.
 | `/pool/shares/SANS` | LAN (192.168.0.0/16) | ro |
 | `/pool/shares/SANS` | Tailscale (100.64.0.0/10) | rw |
 | `/pool/shares/photos` | Tailscale | rw |
+| `/pool/rsyslog` | Tailscale | rw (log01 only, in practice) |
 
 Verify: `sudo exportfs -v` on nas01, `showmount -e nas01` on a client.
 
@@ -757,8 +784,8 @@ sudo systemctl unmask --runtime borgbackup-job-system.timer borg-status.timer bo
 ### ZFS pool didn't import
 
 ```bash
-zpool import                 # list importable pools
-sudo zpool import -f pool    # force if never cleanly exported
+zpool import                            # list importable pools
+sudo bash /etc/nas01-zfs/zfs-datasets.sh # imports + ensures managed datasets
 zpool status
 ```
 

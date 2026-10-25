@@ -55,6 +55,35 @@ let
       # has its own bounded queue with discard — a dead target (like the retired
       # Splunk host) backpressures the main queue, stalls imtcp reads, and wedges
       # every sender's forward queue fleet-wide (Jun-Jul 2026 outage).
+      # /var/log/remote is NFS-mounted from nas01's quota'd pool/rsyslog
+      # dataset (see hosts/nas01/default.nix) rather than living on log01's
+      # own root disk — that disk filled to 100% on 2026-10-25 (see
+      # local-syslog logrotate stanza below for the actual cause; this move
+      # is about giving this specific collection its own bounded, growable
+      # home rather than competing with the OS for root-disk space again).
+      # Same automount pattern as vm01's immich-library NFS mount.
+      fileSystems."/var/log/remote" = {
+        device = "nas01.warthog-royal.ts.net:/pool/rsyslog";
+        fsType = "nfs";
+        options = [
+          "x-systemd.automount"
+          "noauto"
+          "_netdev"
+          "nofail"
+          "hard"
+          "timeo=30"
+          "retrans=3"
+          "x-systemd.requires=tailscaled.service"
+          "x-systemd.after=tailscaled.service"
+          "x-systemd.mount-timeout=30"
+        ];
+      };
+
+      # Both syslog.service (writes under /var/log/remote) and
+      # goflow2-docker (bind-mounts /var/log/remote/OPNsense.internal) need
+      # the NFS mount up first, not just the directory to exist locally.
+      systemd.services.syslog.unitConfig.RequiresMountsFor = "/var/log/remote";
+
       services.rsyslogd = {
         enable = true;
         extraConfig = ''
@@ -191,6 +220,8 @@ let
         after = [ "docker.service" "network-online.target" ];
         wants = [ "network-online.target" ];
         requires = [ "docker.service" ];
+        # Bind-mounts /var/log/remote/OPNsense.internal, now NFS-backed.
+        unitConfig.RequiresMountsFor = "/var/log/remote";
 
         serviceConfig = {
           Type = "oneshot";

@@ -193,6 +193,12 @@ let
       boot.supportedFilesystems = [ "zfs" ];
       boot.zfs.forceImportRoot = false;
       boot.zfs.extraPools = [ "pool" ];
+
+      # Declarative layer for ZFS *datasets* (quota/compression) that
+      # boot.zfs.extraPools doesn't cover — see the script's own header
+      # comment. Run after any rebuild that adds/changes an entry in its
+      # DATASETS table: sudo bash /etc/nas01-zfs/zfs-datasets.sh
+      environment.etc."nas01-zfs/zfs-datasets.sh".source = ./zfs-datasets.sh;
       services.zfs.autoScrub.enable = true;
       services.zfs.trim.enable = true;
       services.zfs.zed = {
@@ -282,6 +288,16 @@ let
           # library data lives — without crossmnt, NFS clients see an empty
           # stub at the pool/photos/library mountpoint instead of its content.
           /pool/photos    100.64.0.0/10(rw,sync,wdelay,crossmnt,no_subtree_check,sec=sys,secure,no_root_squash,no_all_squash)
+
+          # rsyslog storage for log01's remote syslog collection
+          # (/var/log/remote on log01, mounted here from this export at the
+          # same local path — see hosts/log01/default.nix). Moved off
+          # log01's own root disk after it filled to 100% (2026-10-25,
+          # OpenSearch write-failure log spam, unrelated to this data but
+          # the trigger for getting this onto its own quota'd dataset).
+          # Tailscale only; no_root_squash since rsyslog runs as root on
+          # log01 and goflow2-docker's bind-mount needs root-owned dirs.
+          /pool/rsyslog    100.64.0.0/10(rw,sync,wdelay,no_subtree_check,sec=sys,secure,no_root_squash,no_all_squash)
 
           # nas01-backup migration (see MIGRATION.md in the idrive360 repo):
           # sands-bak01 replaces the nas01-backup VM's virtiofs shares of the
