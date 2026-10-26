@@ -58,7 +58,6 @@
       kdePackages.plasma-pa
       kdePackages.bluedevil
       kdePackages.powerdevil
-      kdePackages.kgamma
 
       # Networking tools
       wireshark

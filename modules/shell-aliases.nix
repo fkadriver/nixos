@@ -81,7 +81,8 @@
         nix-update = "nix flake update";
 
         # NixOS system shortcuts with automatic hostname detection
-        nix-rebuild = "_d=$PWD; [ \"$_d\" != \"$HOME/git/nixos\" ] && cd ~/git/nixos; GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=accept-new' git pull && sudo nixos-rebuild switch --flake ~/git/nixos#$(hostname); [ \"$_d\" != \"$HOME/git/nixos\" ] && cd -; unset _d; source ~/.bashrc";
+        # Auto-runs `nix flake update` first if flake.lock is more than 7 days old
+        nix-rebuild = "_d=$PWD; [ \"$_d\" != \"$HOME/git/nixos\" ] && cd ~/git/nixos; GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=accept-new' git pull && { [ -z \"$(find flake.lock -mtime -7 2>/dev/null)\" ] && { echo 'flake.lock is over 7 days old, running nix flake update'; nix flake update; }; true; } && sudo nixos-rebuild switch --flake ~/git/nixos#$(hostname); [ \"$_d\" != \"$HOME/git/nixos\" ] && cd -; unset _d; source ~/.bashrc";
         # nix-sync, fw-check, host-status: daily-driver only (modules/daily-driver.nix)
 
         # Tmux shortcuts
