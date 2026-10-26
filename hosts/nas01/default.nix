@@ -31,7 +31,7 @@ let
     done
   '';
 
-  nixosModule = { config, lib, pkgs, ... }: {
+  nixosModule = { config, lib, pkgs, tsDockerSidecarStart, ... }: {
     imports = [
       ./hardware.nix
       ./syncthing.nix
@@ -40,6 +40,7 @@ let
       inputs.self.nixosModules.bitwarden-scott
       inputs.self.nixosModules.borg-backup
       inputs.self.nixosModules.vscode-server
+      inputs.self.nixosModules.tsauth
       inputs.self.nixosModules.wazuh-agent
       inputs.self.nixosModules.smart-monitor
       inputs.self.nixosModules.disk-usage-monitor
@@ -193,6 +194,48 @@ let
       boot.supportedFilesystems = [ "zfs" ];
       boot.zfs.forceImportRoot = false;
       boot.zfs.extraPools = [ "pool" ];
+
+      # Declarative layer for ZFS *datasets* (quota/compression) that
+      # boot.zfs.extraPools doesn't cover — see the script's own header
+      # comment. Run after any rebuild that adds/changes an entry in its
+      # DATASETS table: sudo bash /etc/nas01-zfs/zfs-datasets.sh
+      environment.etc."nas01-zfs/zfs-datasets.sh".source = ./zfs-datasets.sh;
+
+      # Local bind mount (not NFS — this is the same host) so the native
+      # wazuh-agent here can read pool/rsyslog's content at the path its
+      # fleet-wide "default" group localfile already expects
+      # (/var/log/remote/*/*.log — same path log01's agent has always
+      # used). The syslog-tailscale compose stack (below) bind-mounts the
+      # same /pool/rsyslog directly too; both just point at the one
+      # dataset, no conflict.
+      fileSystems."/var/log/remote" = {
+        device = "/pool/rsyslog";
+        fsType = "none";
+        options = [ "bind" ];
+      };
+
+      # Universal fleet syslog collector — rsyslog + Tailscale sidecar,
+      # reachable at syslog.warthog-royal.ts.net:5515 regardless of which
+      # host actually runs it (currently here; see syslog-tailscale repo's
+      # README for why and how to move it). Replaces log01 as the fixed
+      # network target; log01 keeps a transitional receiver+relay for
+      # devices not yet repointed (OPNsense, pihole) — see its default.nix.
+      systemd.services.syslog-docker = {
+        description = "Syslog Collector Docker Compose Stack";
+        wantedBy = [ "multi-user.target" ];
+        after = [ "bitwarden-secrets-sync.service" "docker.service" "network-online.target" ];
+        wants = [ "network-online.target" ];
+        requires = [ "bitwarden-secrets-sync.service" "docker.service" ];
+        unitConfig.RequiresMountsFor = "/var/log/remote";
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+          WorkingDirectory = "/home/scott/git/syslog-tailscale";
+          ExecStart = tsDockerSidecarStart;
+          ExecStop = "${pkgs.docker}/bin/docker compose down";
+        };
+      };
+
       services.zfs.autoScrub.enable = true;
       services.zfs.trim.enable = true;
       services.zfs.zed = {

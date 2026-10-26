@@ -48,10 +48,10 @@ in {
   ];
 
   options = {
-    logging.forwardToLog01 = lib.mkOption {
+    logging.forwardSyslog = lib.mkOption {
       type = lib.types.bool;
       default = true;
-      description = "Forward syslog to log01 collector via rsyslog TCP";
+      description = "Forward syslog to the fleet-wide collector via rsyslog TCP (syslog.warthog-royal.ts.net:5515 — see syslog-tailscale repo)";
     };
   };
 
@@ -366,17 +366,21 @@ in {
       "-a always,exit -F arch=b64 -S init_module,delete_module -k modules"
     ];
 
-    # rsyslog — forward all messages to log01 via TCP (disk-assisted queue for reliability)
-    services.rsyslogd = lib.mkIf config.logging.forwardToLog01 {
+    # rsyslog — forward all messages to the fleet-wide collector via TCP
+    # (disk-assisted queue for reliability). Was log01:514 directly; now
+    # the Tailscale-sidecar-fronted collector (syslog-tailscale repo,
+    # currently on nas01) at a fixed network identity independent of
+    # whichever host actually runs it — see that repo's README.
+    services.rsyslogd = lib.mkIf config.logging.forwardSyslog {
       enable = true;
       extraConfig = ''
-        # Forward all messages to log01 with disk-assisted queue for reliability
+        # Forward all messages to the collector with disk-assisted queue for reliability
         action(type="omfwd"
-          target="log01.warthog-royal.ts.net"
-          port="514"
+          target="syslog.warthog-royal.ts.net"
+          port="5515"
           protocol="tcp"
           queue.type="LinkedList"
-          queue.filename="log01fwd"
+          queue.filename="collectorfwd"
           queue.maxdiskspace="500m"
           queue.saveonshutdown="on"
           action.resumeRetryCount="-1"

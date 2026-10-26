@@ -373,17 +373,37 @@ This step matters for recovery specifically because `/run/bitwarden-secrets/borg
 (needed to read the Borg repo in steps 4–5 below) only appears after this key
 is trusted and a rebuild has run.
 
-### 3. Import the ZFS pool
+### 3. Import the ZFS pool and ensure managed datasets
 
 ```bash
-sudo zpool import -f pool   # -f: pool wasn't cleanly exported from old OS
-zpool status                # confirm raidz1-0 is ONLINE, no errors
+sudo bash /etc/nas01-zfs/zfs-datasets.sh
 ```
 
-`boot.zfs.extraPools` auto-imports the pool on subsequent boots.
-`/pool/borg/nas01` (this host's own Borg repo — see below) and
-`/pool/borg/<hostname>` for every client already exist on the pool and need
-no re-creation; they came back with the import.
+Tries `zpool import -f pool` (the `-f` matters: it wasn't cleanly exported
+from the old OS), then ensures every dataset in its `DATASETS` table exists
+with the right quota/compression (currently just `pool/rsyslog` — see
+[hosts/nas01/zfs-datasets.sh](../hosts/nas01/zfs-datasets.sh)). Re-run it
+after any rebuild that adds/changes an entry in that table; it's idempotent.
+
+If the import step fails, that means the pool's member disks themselves are
+gone, not just the OS disk — **do not run `zpool create` speculatively**.
+Confirm which physical disks are actually gone (`ls /dev/disk/by-id/`,
+cross-check serials against the Hardware section above) before deciding
+whether any are salvageable, then build the new pool by hand once you're
+sure:
+```bash
+sudo zpool create -o ashift=12 pool raidz1 <disk-by-id> <disk-by-id> <disk-by-id>
+sudo zfs set compression=lz4 pool
+sudo bash /etc/nas01-zfs/zfs-datasets.sh   # recreate the managed datasets
+```
+This loses all prior data on the pool — it's the last resort, not a normal
+recovery path.
+
+`boot.zfs.extraPools` auto-imports the pool on subsequent boots (the script
+above only matters for the *first* boot after a from-scratch disk, or to
+apply a change to the DATASETS table). `/pool/borg/nas01` (this host's own
+Borg repo — see below) and `/pool/borg/<hostname>` for every client already
+exist on the pool and need no re-creation; they came back with the import.
 
 ### 4. Restore `/home` from Borg
 
@@ -458,6 +478,17 @@ sudo nixos-rebuild switch --flake ~/git/nixos#nas01
                              on vm01, nas01 is data-only. photos/library is its
                              own child dataset — the NFS export needs crossmnt
                              or clients see it as an empty stub.
+  rsyslog/                  Universal fleet syslog collector's storage — the
+                             syslog-tailscale compose stack (rsyslog + Tailscale
+                             sidecar, reachable at syslog.warthog-royal.ts.net:5515
+                             independent of which host runs it — see that repo's
+                             README) writes here directly, and it's also
+                             bind-mounted locally at /var/log/remote so nas01's
+                             own wazuh-agent can read it via the existing
+                             fleet-wide wildcard localfile. quota=1.5T,
+                             compression=lz4. Created 2026-10-25 after log01's
+                             root disk (the previous fixed collector) filled to
+                             100%.
 
 /mnt/wd18t_3/               WD 18TB drive — functioning normally (confirmed 2026-08-22)
 ```
@@ -474,6 +505,33 @@ scripts (`immich-fleet-status.sh`, `immich-fleet-check.sh`,
 
 ---
 
+## Universal Syslog Collector (fleet-wide)
+
+`~/git/syslog-tailscale` (its own repo, [fkadriver/syslog-tailscale](https://github.com/fkadriver/syslog-tailscale)):
+a plain rsyslog container behind a Tailscale sidecar, reachable fleet-wide
+at `syslog.warthog-royal.ts.net:5515` regardless of which host actually
+runs it — currently here, not log01, so storage location and network
+identity aren't coupled to the same box (log01's root disk filling to
+100% on 2026-10-25 is part of why). TCP only — see the repo's README for
+why that's fine (every sender already uses TCP) and how to move it to a
+different host later.
+
+Writes to `/pool/rsyslog` directly (quota=1.5T — see
+[zfs-datasets.sh](../hosts/nas01/zfs-datasets.sh)); also bind-mounted
+locally at `/var/log/remote` so nas01's own wazuh-agent reads it via the
+existing fleet-wide wildcard `localfile` with zero Wazuh-side config
+changes. Every NixOS host forwards its own syslog straight here via
+`logging.forwardSyslog` (common.nix, on by default). `log01` additionally
+keeps a transitional receiver+relay (on `log01.warthog-royal.ts.net:514`)
+for devices that can't be repointed yet — OPNsense, pihole — see
+[hosts/log01/default.nix](../hosts/log01/default.nix).
+
+Deploy/restart: `systemd.services.syslog-docker` (same `tsDockerSidecarStart`
+pattern as every other docker-compose Tailscale sidecar — see
+[modules/tsauth.nix](../modules/tsauth.nix)).
+
+---
+
 ## Services
 
 All declared in [hosts/nas01/default.nix](../hosts/nas01/default.nix):
@@ -482,11 +540,12 @@ All declared in [hosts/nas01/default.nix](../hosts/nas01/default.nix):
 |---|---|---|
 | NFS | `services.nfs.server` | fixed ports 4000/4001/20048 for firewall |
 | Syncthing | `services.syncthing-declarative` | Tailscale-only, device ID preserved |
-| ZFS | `boot.zfs.extraPools` | weekly autoScrub + TRIM enabled |
+| ZFS | `boot.zfs.extraPools` | weekly autoScrub + TRIM enabled; datasets (quota/compression) managed by [zfs-datasets.sh](../hosts/nas01/zfs-datasets.sh), deployed to `/etc/nas01-zfs/` |
 | hd-idle | custom `systemd.services.hd-idle` | by-id paths; pool 30 min, WD 10 min spindown |
 | smartd | `services.smartd` | drive health monitoring |
 | Wazuh agent | `services.wazuh-agent` | manager: wazuh.warthog-royal.ts.net |
-| rsyslog → log01 | `logging.forwardToLog01` (common.nix) | on by default |
+| Local syslog → collector | `logging.forwardSyslog` (common.nix) | nas01's own syslog, on by default — unrelated to the next row |
+| Syslog collector (fleet-wide) | `systemd.services.syslog-docker` | docker compose, `~/git/syslog-tailscale` — see [Universal Syslog Collector](#universal-syslog-collector-fleet-wide) below |
 | IDrive360 | runs on `sands-bak01`, not nas01 (`virtualisation.libvirtd` stays enabled for the decommissioned VM's disk-backup use only) | see below |
 
 **NFS restart-in-place wedges the kernel nfsd state (2026-09-17):** any change
@@ -566,6 +625,9 @@ they'd only matter again if the VM is deliberately relaunched.
 | `/pool/shares/photos` | Tailscale | rw |
 
 Verify: `sudo exportfs -v` on nas01, `showmount -e nas01` on a client.
+`/pool/rsyslog` is deliberately **not** NFS-exported — it's written directly
+by the syslog-tailscale container running on this same host (see below), not
+mounted by any remote client.
 
 ---
 
@@ -757,8 +819,8 @@ sudo systemctl unmask --runtime borgbackup-job-system.timer borg-status.timer bo
 ### ZFS pool didn't import
 
 ```bash
-zpool import                 # list importable pools
-sudo zpool import -f pool    # force if never cleanly exported
+zpool import                            # list importable pools
+sudo bash /etc/nas01-zfs/zfs-datasets.sh # imports + ensures managed datasets
 zpool status
 ```
 

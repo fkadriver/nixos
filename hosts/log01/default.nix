@@ -19,8 +19,11 @@ let
     ];
 
     config = {
-      # Do not forward logs back to log01 (this IS log01)
-      logging.forwardToLog01 = false;
+      # No override needed anymore — the fleet-wide target is the
+      # Tailscale-fronted collector (currently nas01), not log01 itself,
+      # so log01 forwarding its own local syslog there is no longer a
+      # self-loop. Uses logging.forwardSyslog's default (true) like every
+      # other host.
 
       services.wazuh-agent = {
         enable = true;
@@ -50,11 +53,20 @@ let
       security.sudo.wheelNeedsPassword = false;
 
       # rsyslog: receive syslog from network devices on UDP/TCP 514
-      # Logs stored at /var/log/remote/<hostname>/<program>.log
+      # Logs stored locally at /var/log/remote/<hostname>/<program>.log
+      # (unchanged path/behavior) AND relayed on to nas01's quota'd
+      # pool/rsyslog dataset (see hosts/nas01/default.nix), which runs its
+      # own receiver and is the long-term copy. Local storage here is now
+      # just a short-retention resilience buffer (see logrotate below) in
+      # case nas01 is briefly unreachable — nas01's root disk filling to
+      # 100% on 2026-10-25 is exactly why this isn't the only copy anymore,
+      # and why local retention is kept short with a maxsize backstop.
       # NOTE: do not add a forward action that all messages pass through unless it
       # has its own bounded queue with discard — a dead target (like the retired
       # Splunk host) backpressures the main queue, stalls imtcp reads, and wedges
-      # every sender's forward queue fleet-wide (Jun-Jul 2026 outage).
+      # every sender's forward queue fleet-wide (Jun-Jul 2026 outage). The
+      # relay-to-nas01 action below reuses common.nix's already-proven
+      # disk-assisted queue pattern for exactly this reason.
       services.rsyslogd = {
         enable = true;
         extraConfig = ''
@@ -84,6 +96,32 @@ let
           $DirGroup adm
           $DirCreateMode 0750
           :fromhost-ip, !isequal, "127.0.0.1"   ?RemoteHost;WazuhSyslog
+
+          # Relay the same messages on to the universal collector
+          # (syslog-tailscale repo, currently running on nas01 — see its
+          # README) — except nas01's own traffic. Every NixOS host
+          # (including nas01) now forwards its own syslog directly there
+          # via common.nix's logging.forwardSyslog; relaying nas01's own
+          # traffic back to it here would round-trip and double-ingest in
+          # Wazuh. log01 itself stays as a transitional bridge for devices
+          # that can't be repointed yet (OPNsense, pihole). Same
+          # disk-assisted queue pattern as that existing forward action —
+          # bounded, retries instead of blocking, so a slow/unreachable
+          # collector can't backpressure imtcp/imudp reads and wedge every
+          # sender fleet-wide (the Jun-Jul 2026 failure mode noted above).
+          if $fromhost-ip != "127.0.0.1" and $fromhost-ip != "100.73.114.76" then {
+            action(type="omfwd"
+              target="syslog.warthog-royal.ts.net"
+              port="5515"
+              protocol="tcp"
+              queue.type="LinkedList"
+              queue.filename="collectorfwd"
+              queue.maxdiskspace="500m"
+              queue.saveonshutdown="on"
+              action.resumeRetryCount="-1"
+              action.resumeInterval="30")
+          }
+
           :fromhost-ip, !isequal, "127.0.0.1"   ~
         '';
       };
@@ -235,13 +273,40 @@ let
       services.logrotate.settings.remote-logs = {
         files = "/var/log/remote/*/*.log";
         frequency = "daily";
-        rotate = 30;
+        # 7 days, not 30 — nas01's pool/rsyslog dataset (quota=1.5T) is the
+        # long-term copy now; this is just a short resilience buffer for
+        # when nas01 is briefly unreachable. maxsize: rotate immediately on
+        # a volume burst too, not just the daily schedule — unbounded
+        # growth between scheduled rotations is exactly how log01's root
+        # disk hit 100% on 2026-10-25 in the first place.
+        rotate = 7;
+        maxsize = "500M";
         compress = true;
         dateext = true;
         missingok = true;
         notifempty = true;
         sharedscripts = true;
-        postrotate = "systemctl kill -s HUP rsyslog.service 2>/dev/null || true";
+        postrotate = "systemctl kill -s HUP syslog.service 2>/dev/null || true";
+      };
+
+      # Logrotate for the base local syslog outputs — these had no rotation
+      # at all, which is how /var/log/messages grew to 22G (OpenSearch
+      # repeatedly logging write-failure stack traces as the disk filled,
+      # a feedback loop) and took the root filesystem to 100% full on
+      # 2026-10-25. The service unit is "syslog.service" on NixOS, not
+      # "rsyslog.service" — the postrotate hook above had been silently
+      # no-op'ing on the wrong unit name this whole time too.
+      services.logrotate.settings.local-syslog = {
+        files = "/var/log/messages /var/log/warn";
+        frequency = "daily";
+        rotate = 14;
+        maxsize = "500M";
+        compress = true;
+        dateext = true;
+        missingok = true;
+        notifempty = true;
+        sharedscripts = true;
+        postrotate = "systemctl kill -s HUP syslog.service 2>/dev/null || true";
       };
 
       system = {
