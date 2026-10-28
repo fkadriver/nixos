@@ -44,7 +44,7 @@ NAS01_LAN_IP=192.168.10.20
 WAZUH_MANAGER_HOST=wazuh.warthog-royal.ts.net
 WAZUH_AGENT_VERSION=4.14.5-1
 
-echo "=== [1/15] Base packages ==="
+echo "=== [1/16] Base packages ==="
 apt-get update
 apt-get install -y \
   software-properties-common apt-transport-https ca-certificates \
@@ -54,9 +54,10 @@ apt-get install -y \
   borgbackup jq \
   smartmontools \
   net-tools \
+  tmux \
   btop strace iperf3
 
-echo "=== [2/15] Passwordless sudo for scott ==="
+echo "=== [2/16] Passwordless sudo for scott ==="
 # This host isn't behind the nixos repo's narrowly-scoped
 # security.sudo.extraRules (nixos-rebuild/nix/tailscale/borg only) - it gets
 # full passwordless sudo instead, since it's single-user hardware with no
@@ -66,7 +67,7 @@ scott ALL=(ALL) NOPASSWD: ALL
 EOF
 visudo -c -f /etc/sudoers.d/scott-nopasswd
 
-echo "=== [3/15] Tailscale ==="
+echo "=== [3/16] Tailscale ==="
 if ! command -v tailscale >/dev/null 2>&1; then
   curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/noble.noarmor.gpg \
     -o /usr/share/keyrings/tailscale-archive-keyring.gpg
@@ -77,7 +78,7 @@ if ! command -v tailscale >/dev/null 2>&1; then
 fi
 systemctl enable --now tailscaled
 
-echo "=== [4/15] Fix tailscaled boot ordering ==="
+echo "=== [4/16] Fix tailscaled boot ordering ==="
 # The stock unit only orders After=network-pre.target (fires very early,
 # before eno1 has DHCP/a default route). Confirmed live (2026-09-25):
 # tailscaled starting on a still-dead network hits "network is unreachable"
@@ -111,7 +112,7 @@ else
   echo "  'sudo tailscale up --ssh' by hand if this host predates it.)"
 fi
 
-echo "=== [5/15] xpra (remote GUI view, no VNC) ==="
+echo "=== [5/16] xpra (remote GUI view, no VNC) ==="
 if ! command -v xpra >/dev/null 2>&1; then
   curl -fsSL https://xpra.org/xpra.asc -o /usr/share/keyrings/xpra.asc
   cat > /etc/apt/sources.list.d/xpra.sources <<'EOF'
@@ -189,7 +190,7 @@ WantedBy=multi-user.target
 EOF
 systemctl daemon-reload
 
-echo "=== [6/15] LightDM autologin (scott -> LXDE) ==="
+echo "=== [6/16] LightDM autologin (scott -> LXDE) ==="
 install -d /etc/lightdm/lightdm.conf.d
 cat > /etc/lightdm/lightdm.conf.d/50-autologin.conf <<'EOF'
 [Seat:*]
@@ -198,7 +199,7 @@ autologin-user-timeout=0
 autologin-session=LXDE
 EOF
 
-echo "=== [7/15] Chromium sandbox fix (AppArmor unprivileged userns) ==="
+echo "=== [7/16] Chromium sandbox fix (AppArmor unprivileged userns) ==="
 # Ubuntu 24.04 hardening (kernel.apparmor_restrict_unprivileged_userns=1)
 # blocks Electron/Chromium's sandbox from acquiring CAP_SYS_ADMIN, which
 # breaks the IDrive360 client GUI. Confirmed this session.
@@ -207,7 +208,7 @@ kernel.apparmor_restrict_unprivileged_userns=0
 EOF
 sysctl --system >/dev/null
 
-echo "=== [8/15] Disable all automatic updates ==="
+echo "=== [8/16] Disable all automatic updates ==="
 # Deliberate: an automatic update broke the nas01-backup VM in the past
 # (see MIGRATION.md in the idrive360 repo). This host is administered by
 # hand (apt run manually) instead - masked, not just disabled, so nothing
@@ -235,10 +236,10 @@ fi
 pro disable livepatch 2>/dev/null || true
 snap remove canonical-livepatch 2>/dev/null || true
 
-echo "=== [9/15] Timezone ==="
+echo "=== [9/16] Timezone ==="
 timedatectl set-timezone America/Chicago
 
-echo "=== [10/15] NFS mounts to nas01 ==="
+echo "=== [10/16] NFS mounts to nas01 ==="
 # /pool and /mnt: read-only, this host only ever reads source data for
 # backup. ~/git/idrive360: read-write, it's a live shared checkout (this
 # repo's twin - see idrive360-agent-status.sh below).
@@ -271,14 +272,14 @@ done
 systemctl daemon-reload
 mount -a || echo "  (some mounts may need tailscale/nas01 reachable first - rerun 'mount -a' later)"
 
-echo "=== [11/15] Starship prompt ==="
+echo "=== [11/16] Starship prompt ==="
 if ! command -v starship >/dev/null 2>&1; then
   curl -sS https://starship.rs/install.sh | sh -s -- -y
 fi
 su - scott -c 'grep -q "starship init bash" ~/.bashrc' || \
   su - scott -c 'printf "\n# Starship prompt\neval \"\$(starship init bash)\"\n" >> ~/.bashrc'
 
-echo "=== [12/15] Fleet SSH aliases + idrive-status ==="
+echo "=== [12/16] Fleet SSH aliases + idrive-status ==="
 # Matches modules/shell-aliases.nix in this repo (kept in sync by hand,
 # since this host can't import it directly).
 su - scott -c 'grep -q "Fleet SSH shortcuts" ~/.bashrc' || su - scott -c "cat >> ~/.bashrc" <<'EOF'
@@ -301,7 +302,7 @@ else
   echo "    sudo install -m 0755 ~/git/idrive360/idrive360-agent-status.sh /usr/local/bin/"
 fi
 
-echo "=== [13/15] Borg backup of /opt/IDrive360 ==="
+echo "=== [13/16] Borg backup of /opt/IDrive360 ==="
 # IDrive360 doesn't back up its own install/identity directory - despite
 # /opt/ being in its backup set, no backup log ever showed a [SUCCESS]
 # entry under /opt/IDrive360/ itself. That directory holds the exact
@@ -378,7 +379,7 @@ systemctl daemon-reload
 su - scott -c "BORG_RELOCATED_REPO_ACCESS_IS_OK=yes BORG_RSH='ssh -i $SCOTT_HOME/.ssh/id_ed25519_borg_lan -o StrictHostKeyChecking=accept-new' borg init --encryption none ssh://scott@${NAS01_LAN_IP}/pool/borg/sands-bak01" 2>/dev/null || true
 systemctl enable --now borg-backup-idrive360.timer
 
-echo "=== [14/15] Wazuh agent ==="
+echo "=== [14/16] Wazuh agent ==="
 if ! dpkg -l wazuh-agent >/dev/null 2>&1; then
   curl -sS -o /tmp/wazuh-agent.deb \
     "https://packages.wazuh.com/4.x/apt/pool/main/w/wazuh-agent/wazuh-agent_${WAZUH_AGENT_VERSION}_amd64.deb"
@@ -855,7 +856,7 @@ if [ "$total_size_kb" -gt 0 ]; then
 fi
 DISKUSAGEEOF
 
-echo "=== [15/15] Tailscale self-heal timer ==="
+echo "=== [15/16] Tailscale self-heal timer ==="
 # This host is headless/unattended by design (set-it-and-forget-it) - the
 # tailscaled boot-ordering fix (step 4) addresses the one root cause found
 # so far, but this catches any *other* reason tailscale ever goes stale,
@@ -928,6 +929,143 @@ WantedBy=timers.target
 EOF
 systemctl daemon-reload
 systemctl enable --now tailscale-selfheal.timer
+
+echo "=== [16/16] tmux + ghostty terminfo ==="
+# Ghostty was added fleet-wide as the daily-driver terminal (see
+# modules/daily-driver.nix in this repo) - NixOS hosts get its terminfo
+# entry for free via environment.enableAllTerminfo (modules/common.nix),
+# so tmux there doesn't reject the TERM=xterm-ghostty forwarded over SSH.
+# sands-bak01 is plain Ubuntu, so it never got that: SSHing in from a
+# ghostty window and starting tmux hit tmux's "open terminal failed:
+# missing or unsuitable term" (confirmed live 2026-10-28, since Ubuntu's
+# ncurses-term package doesn't ship ghostty's entry). Installed system-wide
+# (not just ~scott/.terminfo) so it also covers the root shell. Reconstructed
+# via `infocmp -x xterm-ghostty` on nas01 (a NixOS host that already has it)
+# rather than built from ghostty source - avoids needing a C toolchain here.
+tic -x -o /usr/share/terminfo /dev/stdin <<'TERMINFOEOF'
+xterm-ghostty|ghostty|Ghostty,
+	am, bce, ccc, hs, km, mc5i, mir, msgr, npc, xenl, AX, Su, Tc, XT, fullkbd,
+	colors#0x100, cols#80, it#8, lines#24, pairs#0x7fff,
+	acsc=++\,\,--..00``aaffgghhiijjkkllmmnnooppqqrrssttuuvvwwxxyyzz{{||}}~~,
+	bel=^G, blink=\E[5m, bold=\E[1m, cbt=\E[Z, civis=\E[?25l,
+	clear=\E[H\E[2J, cnorm=\E[?12l\E[?25h, cr=\r,
+	csr=\E[%i%p1%d;%p2%dr, cub=\E[%p1%dD, cub1=^H,
+	cud=\E[%p1%dB, cud1=\n, cuf=\E[%p1%dC, cuf1=\E[C,
+	cup=\E[%i%p1%d;%p2%dH, cuu=\E[%p1%dA, cuu1=\E[A,
+	cvvis=\E[?12;25h, dch=\E[%p1%dP, dch1=\E[P, dim=\E[2m,
+	dl=\E[%p1%dM, dl1=\E[M, dsl=\E]2;\007, ech=\E[%p1%dX,
+	ed=\E[J, el=\E[K, el1=\E[1K, flash=\E[?5h$<100/>\E[?5l,
+	fsl=^G, home=\E[H, hpa=\E[%i%p1%dG, ht=^I, hts=\EH,
+	ich=\E[%p1%d@, ich1=\E[@, il=\E[%p1%dL, il1=\E[L, ind=\n,
+	indn=\E[%p1%dS,
+	initc=\E]4;%p1%d;rgb:%p2%{255}%*%{1000}%/%2.2X/%p3%{255}%*%{1000}%/%2.2X/%p4%{255}%*%{1000}%/%2.2X\E\\,
+	invis=\E[8m, kDC=\E[3;2~, kEND=\E[1;2F, kHOM=\E[1;2H,
+	kIC=\E[2;2~, kLFT=\E[1;2D, kNXT=\E[6;2~, kPRV=\E[5;2~,
+	kRIT=\E[1;2C, kbs=^?, kcbt=\E[Z, kcub1=\EOD, kcud1=\EOB,
+	kcuf1=\EOC, kcuu1=\EOA, kdch1=\E[3~, kend=\EOF, kent=\EOM,
+	kf1=\EOP, kf10=\E[21~, kf11=\E[23~, kf12=\E[24~,
+	kf13=\E[1;2P, kf14=\E[1;2Q, kf15=\E[1;2R, kf16=\E[1;2S,
+	kf17=\E[15;2~, kf18=\E[17;2~, kf19=\E[18;2~, kf2=\EOQ,
+	kf20=\E[19;2~, kf21=\E[20;2~, kf22=\E[21;2~,
+	kf23=\E[23;2~, kf24=\E[24;2~, kf25=\E[1;5P, kf26=\E[1;5Q,
+	kf27=\E[1;5R, kf28=\E[1;5S, kf29=\E[15;5~, kf3=\EOR,
+	kf30=\E[17;5~, kf31=\E[18;5~, kf32=\E[19;5~,
+	kf33=\E[20;5~, kf34=\E[21;5~, kf35=\E[23;5~,
+	kf36=\E[24;5~, kf37=\E[1;6P, kf38=\E[1;6Q, kf39=\E[1;6R,
+	kf4=\EOS, kf40=\E[1;6S, kf41=\E[15;6~, kf42=\E[17;6~,
+	kf43=\E[18;6~, kf44=\E[19;6~, kf45=\E[20;6~,
+	kf46=\E[21;6~, kf47=\E[23;6~, kf48=\E[24;6~,
+	kf49=\E[1;3P, kf5=\E[15~, kf50=\E[1;3Q, kf51=\E[1;3R,
+	kf52=\E[1;3S, kf53=\E[15;3~, kf54=\E[17;3~,
+	kf55=\E[18;3~, kf56=\E[19;3~, kf57=\E[20;3~,
+	kf58=\E[21;3~, kf59=\E[23;3~, kf6=\E[17~, kf60=\E[24;3~,
+	kf61=\E[1;4P, kf62=\E[1;4Q, kf63=\E[1;4R, kf7=\E[18~,
+	kf8=\E[19~, kf9=\E[20~, khome=\EOH, kich1=\E[2~,
+	kind=\E[1;2B, kmous=\E[<, knp=\E[6~, kpp=\E[5~,
+	kri=\E[1;2A, oc=\E]104\007, op=\E[39;49m, rc=\E8,
+	rep=%p1%c\E[%p2%{1}%-%db, rev=\E[7m, ri=\EM,
+	rin=\E[%p1%dT, ritm=\E[23m, rmacs=\E(B, rmam=\E[?7l,
+	rmcup=\E[?1049l, rmir=\E[4l, rmkx=\E[?1l\E>, rmso=\E[27m,
+	rmul=\E[24m, rs1=\E]\E\\\Ec, sc=\E7,
+	setab=\E[%?%p1%{8}%<%t4%p1%d%e%p1%{16}%<%t10%p1%{8}%-%d%e48;5;%p1%d%;m,
+	setaf=\E[%?%p1%{8}%<%t3%p1%d%e%p1%{16}%<%t9%p1%{8}%-%d%e38;5;%p1%d%;m,
+	sgr=%?%p9%t\E(0%e\E(B%;\E[0%?%p6%t;1%;%?%p5%t;2%;%?%p2%t;4%;%?%p1%p3%|%t;7%;%?%p4%t;5%;%?%p7%t;8%;m,
+	sgr0=\E(B\E[m, sitm=\E[3m, smacs=\E(0, smam=\E[?7h,
+	smcup=\E[?1049h, smir=\E[4h, smkx=\E[?1h\E=, smso=\E[7m,
+	smul=\E[4m, tbc=\E[3g, tsl=\E]2;, u6=\E[%i%d;%dR, u7=\E[6n,
+	u8=\E[?%[;0123456789]c, u9=\E[c, vpa=\E[%i%p1%dd,
+	BD=\E[?2004l, BE=\E[?2004h, Clmg=\E[s,
+	Cmg=\E[%i%p1%d;%p2%ds, Dsmg=\E[?69l, E3=\E[3J,
+	Enmg=\E[?69h, Ms=\E]52;%p1%s;%p2%s\007, PE=\E[201~,
+	PS=\E[200~, RV=\E[>c, Se=\E[2 q,
+	Setulc=\E[58:2::%p1%{65536}%/%d:%p1%{256}%/%{255}%&%d:%p1%{255}%&%d%;m,
+	Smulx=\E[4:%p1%dm, Ss=\E[%p1%d q,
+	Sync=\E[?2026%?%p1%{1}%-%tl%eh%;,
+	XM=\E[?1006;1000%?%p1%{1}%=%th%el%;, XR=\E[>0q,
+	fd=\E[?1004l, fe=\E[?1004h, kDC3=\E[3;3~, kDC4=\E[3;4~,
+	kDC5=\E[3;5~, kDC6=\E[3;6~, kDC7=\E[3;7~, kDN=\E[1;2B,
+	kDN3=\E[1;3B, kDN4=\E[1;4B, kDN5=\E[1;5B, kDN6=\E[1;6B,
+	kDN7=\E[1;7B, kEND3=\E[1;3F, kEND4=\E[1;4F,
+	kEND5=\E[1;5F, kEND6=\E[1;6F, kEND7=\E[1;7F,
+	kHOM3=\E[1;3H, kHOM4=\E[1;4H, kHOM5=\E[1;5H,
+	kHOM6=\E[1;6H, kHOM7=\E[1;7H, kIC3=\E[2;3~, kIC4=\E[2;4~,
+	kIC5=\E[2;5~, kIC6=\E[2;6~, kIC7=\E[2;7~, kLFT3=\E[1;3D,
+	kLFT4=\E[1;4D, kLFT5=\E[1;5D, kLFT6=\E[1;6D,
+	kLFT7=\E[1;7D, kNXT3=\E[6;3~, kNXT4=\E[6;4~,
+	kNXT5=\E[6;5~, kNXT6=\E[6;6~, kNXT7=\E[6;7~,
+	kPRV3=\E[5;3~, kPRV4=\E[5;4~, kPRV5=\E[5;5~,
+	kPRV6=\E[5;6~, kPRV7=\E[5;7~, kRIT3=\E[1;3C,
+	kRIT4=\E[1;4C, kRIT5=\E[1;5C, kRIT6=\E[1;6C,
+	kRIT7=\E[1;7C, kUP=\E[1;2A, kUP3=\E[1;3A, kUP4=\E[1;4A,
+	kUP5=\E[1;5A, kUP6=\E[1;6A, kUP7=\E[1;7A, kxIN=\E[I,
+	kxOUT=\E[O, rmxx=\E[29m, rv=\E\\[[0-9]+;[0-9]+;[0-9]+c,
+	setrgbb=\E[48:2:%p1%d:%p2%d:%p3%dm,
+	setrgbf=\E[38:2:%p1%d:%p2%d:%p3%dm, smxx=\E[9m,
+	xm=\E[<%i%p3%d;%p1%d;%p2%d;%?%p4%tM%em%;,
+	xr=\EP>\\|[ -~]+a\E\\,
+TERMINFOEOF
+
+# ~/.tmux.conf - manual equivalent of modules/common.nix's home-manager
+# programs.tmux block (vi keys, 24h clock, mouse on, 1-indexed panes/windows,
+# status bar styling, vi-style pane nav), since this host can't import that
+# module directly. default-terminal is deliberately still screen-256color
+# (not xterm-ghostty) - that's the TERM tmux hands to programs *inside* its
+# panes, unrelated to the outer-client terminfo problem above, and
+# screen-256color is what every other fleet host's tmux.conf also uses.
+install -o scott -g scott -m 0644 /dev/stdin "$SCOTT_HOME/.tmux.conf" <<'TMUXCONFEOF'
+set -g mode-keys vi
+set -g clock-mode-style 24
+set -g history-limit 10000
+
+# Enable mouse support
+set -g mouse on
+
+# Start windows and panes at 1, not 0
+set -g base-index 1
+setw -g pane-base-index 1
+
+# Renumber windows when one is closed
+set -g renumber-windows on
+
+# Better colors
+set -g default-terminal "screen-256color"
+set -ga terminal-overrides ",*256col*:Tc"
+
+# Status bar styling
+set -g status-style 'bg=#333333 fg=#ffffff'
+set -g status-left-length 40
+set -g status-right '%H:%M %d-%b-%y'
+
+# Easy splits with | and -
+bind | split-window -h -c "#{pane_current_path}"
+bind - split-window -v -c "#{pane_current_path}"
+
+# Vim-style pane navigation
+bind h select-pane -L
+bind j select-pane -D
+bind k select-pane -U
+bind l select-pane -R
+TMUXCONFEOF
 
 echo ""
 echo "=== Automated steps done. Manual steps remaining: ==="
