@@ -725,6 +725,48 @@ in
     source = ./claude-hooks/sync-memory-pull.sh;
   };
 
+  # ── Kali transfer directory ────────────────────────────────────────────────
+  # ~/kali is the host side of the Kali container's /root/work mount (see
+  # docs/kali-docker.md). Declared here so the directory, its README and its
+  # .envrc exist before the first `kali` run rather than being conjured by the
+  # wrapper's mkdir.
+  #
+  # Only these two leaf files are home-manager symlinks — ~/kali itself is a
+  # real, writable directory, so dropping transfer files into it is fine and
+  # home-manager will not touch them.
+  home.file."kali/README.md".text = ''
+    # Kali transfer directory
+
+    Host side of the `kali` container's `/root/work` mount, and the container's
+    working directory. Drop files here to reach them inside the container; write
+    results here to get them back out.
+
+    This path crosses macOS -> colima VM (sshfs) -> container, so it is fine for
+    moving files around but slow for heavy random I/O. Keep hashcat potfiles,
+    large captures and similar on the container filesystem and copy the results
+    here when done.
+
+    This README and `.envrc` are symlinks managed by
+    `hosts/airbook-darwin/home.nix`; everything else in this directory is yours.
+    Full documentation: `docs/kali-docker.md` in the nixos repo.
+  '';
+
+  # direnv: entering ~/kali points plain `docker` at the kali colima profile, so
+  # `docker ps` and friends work here without `--context colima-kali`. Scoped to
+  # this directory on purpose — exporting DOCKER_HOST globally would silently
+  # redirect every docker command on the machine at a VM that is usually off.
+  #
+  # Needs a one-time `direnv allow ~/kali`, and again whenever this text changes
+  # (direnv hashes the content, and a rebuild rewrites the store path).
+  #
+  # airbook-only. The NixOS daily drivers run Docker natively, so there is no
+  # DOCKER_HOST to set and no equivalent .envrc there.
+  home.file."kali/.envrc".text = ''
+    export DOCKER_HOST="unix://$HOME/.colima/kali/docker.sock"
+
+    log_status "kali: docker -> colima 'kali' profile | 'kali' enters the container | 'kali --stop' frees its RAM"
+  '';
+
   # Managed SSH client hosts — used for outbound git, borg (nas01), and
   # tailscale ssh. No sshd server on this box (removed 11ecf08). This file is
   # store-backed (read-only) and pulled in via `Include` from the writable

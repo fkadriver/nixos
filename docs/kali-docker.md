@@ -22,7 +22,9 @@ way on both; the colima-specific parts (VM creation, `--status` VM line,
 `airbook` is a MacBookAir7,2: dual-core i5 @1.8 GHz, 8 GB RAM. VMware Fusion 25
 *is* installed on it, but a full Kali desktop there wants 3–4 GB and both cores,
 leaving the host starved and the guest sluggish. The headless tool set is what
-actually gets used on this machine, and it runs comfortably in ~3 GiB.
+actually gets used on this machine, and the VM is capped at 3 GiB (though see
+[what it actually costs](#what-it-actually-costs) — the host-side footprint is
+larger than that cap suggests).
 
 Being Intel, Kali amd64 runs **natively** either way — there is no emulation
 penalty, which is the one hardware advantage this box has over Apple Silicon.
@@ -37,7 +39,7 @@ real VM — use the installed Fusion if that day comes.
 kali                # enter a zsh shell in the container (creates it if needed)
 kali nmap -sS host  # run a single command inside the container
 kali --status       # container/image state (airbook: + colima VM state)
-kali --stop         # stop the container (airbook: + shuts the VM down, frees ~3 GiB)
+kali --stop         # stop the container (airbook: + shuts the VM down, reclaiming its RAM)
 kali --rebuild      # rebuild the image from scratch, recreate the container
 kali --help
 ```
@@ -50,6 +52,43 @@ On airbook that mount crosses two hops (macOS → colima VM via sshfs → the
 container), so it is fine for moving files around but slow for heavy random
 I/O. Keep hashcat potfiles, large captures and similar inside the container
 filesystem and copy results out when done.
+
+### The transfer directory and its direnv
+
+On airbook, `~/kali` is declared in `hosts/airbook-darwin/home.nix` so the
+directory, a short `README.md`, and an `.envrc` all exist before the first
+`kali` run. Only those two leaf files are home-manager symlinks — the directory
+itself is real and writable, so transfer files dropped in it are untouched by
+rebuilds.
+
+The `.envrc` exports `DOCKER_HOST` for the `kali` colima profile, so inside
+`~/kali` plain `docker` talks to the right daemon:
+
+```bash
+cd ~/kali
+docker ps          # no --context colima-kali needed here
+```
+
+It is scoped to the directory deliberately. Exporting `DOCKER_HOST` globally
+would point every `docker` command on the machine at a VM that is usually shut
+down.
+
+Note that `colima start` already registers a `colima-kali` docker context *and
+makes it active globally*, so plain `docker` tends to target the Kali daemon
+anyway. The `.envrc` is the explicit form: it keeps working regardless of which
+context happens to be active, which matters once there is a second colima
+profile. While the VM is stopped, `docker context ls` shows `colima-kali` with
+an error — that is cosmetic, the socket simply does not exist yet.
+
+The `.envrc` needs a one-time approval, and again after any rebuild that
+changes the file:
+
+```bash
+direnv allow ~/kali
+```
+
+This part is airbook-only — the NixOS daily drivers run Docker natively, so
+there is no `DOCKER_HOST` to set and no equivalent `.envrc`.
 
 ## First run
 
@@ -77,12 +116,38 @@ Measured after a real build on airbook, not estimated:
 | Image size | **13.5 GB** |
 | Packages installed | **1912** (the metapackage names ~200 directly; the rest is dependency closure) |
 | colima data disk | **22 GiB used of 40 GiB**, ~16 GiB free |
-| VM memory, idle | ~570 MiB of the 3 GiB allocated |
+| Host memory held, VM idle | **5.7 GB `phys_footprint`** — 1.3 GB resident, 1.3 GB swapped out, rest reserved-but-untouched |
+
+Be careful reading memory figures here, because the guest and the host
+disagree wildly. Inside the VM, `free -h` reports a reassuring ~570 MiB used.
+That number is misleading: the guest also holds ~2.4 GiB of page cache from
+the image build, and the host has to back it. The figure that matters on an
+8 GB laptop is the host-side `phys_footprint` of the `qemu` process — 5.7 GB,
+of which macOS has already paged ~1.3 GB to swap because the VM sits idle.
 
 The 40 GiB disk sizing is therefore right but not generous — a second large
 image would not fit. Note the VM has two disks: `/` is a fixed 19 GB system
 disk, and `/dev/vdb1` is the 40 GiB data disk holding `/var/lib/docker`. Only
 the latter is what `--disk 40` sets.
+
+### Nothing stops on its own
+
+**Exiting the `kali` shell reclaims nothing.** `kali` ends a `docker exec`; the
+container's PID 1 is `sleep infinity` and the colima VM is an independent
+background `qemu` process. Neither notices the shell leaving, and neither
+colima nor lima has an idle timeout. The VM keeps its footprint until told
+otherwise:
+
+```bash
+kali --stop
+```
+
+That stops the container and shuts the VM down, terminating the `qemu` process
+and returning everything including the swap. On an 8 GB machine, leave it
+stopped between sessions rather than idling.
+
+It does not survive a reboot either — there is no launchd agent, deliberately,
+so after a restart the stack is down until the next `kali`.
 
 ## What's in it
 
@@ -199,7 +264,7 @@ The ceiling differs by host, though:
 | Packages | `colima`, `docker-client`, `kali` in `environment.systemPackages` | `kali` in `environment.systemPackages` (Docker CLI/daemon already provided by `common.nix`) |
 | VM | dedicated colima profile `kali` (its own profile, **not** the default one) | none — Docker daemon runs natively |
 | Image / container | `kali-headless:local` / `kali` | `kali-headless:local` / `kali` |
-| Shared directory | `~/kali` → `/root/work` | `~/kali` → `/root/work` |
+| Shared directory | `~/kali` → `/root/work`, declared in `hosts/airbook-darwin/home.nix` with a `README.md` and a `DOCKER_HOST` `.envrc` | `~/kali` → `/root/work`, created by the wrapper |
 
 `docker-client` on airbook is CLI-only — the daemon lives inside the colima
 VM, so there is nothing Docker-ish running on macOS itself (no Docker
