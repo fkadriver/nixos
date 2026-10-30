@@ -49,9 +49,6 @@ let
         settings.PasswordAuthentication = false;
       };
 
-      # Headless managed device — no sudo password needed for wheel
-      security.sudo.wheelNeedsPassword = false;
-
       # rsyslog: receive syslog from network devices on UDP/TCP 514
       # Logs stored locally at /var/log/remote/<hostname>/<program>.log
       # (unchanged path/behavior) AND relayed on to nas01's quota'd

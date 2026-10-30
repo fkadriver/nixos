@@ -24,7 +24,8 @@ let
         blocking = { force4 = true; IPv4 = "192.168.10.11"; };
       };
 
-      # Headless managed device — no sudo password needed for wheel
+      # scripts/deploy-piholes.sh cross-builds on vm01 and pushes the result
+      # unattended — no human in the loop to type a sudo password.
       security.sudo.wheelNeedsPassword = false;
 
       # Kernel version lock — Pi 3B (nixos-hardware kernel)
