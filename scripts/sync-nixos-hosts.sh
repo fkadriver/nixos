@@ -14,16 +14,30 @@
 # each reachable, clean host. Hosts that are behind origin prompt first.
 # Remote apply uses an interactive TTY so sudo prompts work.
 #
+# With --update-lock, runs `nix flake update` on the current host before
+# probing, then commits and pushes flake.lock if it changed — so a later
+# --sync/--apply propagates the bump (e.g. a kernel or package CVE fix) to
+# every host. Aborts if the current host's tree isn't clean.
+#
+# With --reboot (only meaningful alongside --apply), checks each host's
+# booted vs. built kernel/initrd after a successful rebuild and reboots it
+# if they differ — i.e. the rebuild changed something a running switch
+# alone can't pick up. Prompts first unless --yes. No-op on darwin hosts.
+#
 # --host <name> limits the run to one or more hosts (repeat the flag or
 # pass a comma-separated list); names must be in the HOSTS array.
 #
 # Usage:
-#   ./scripts/sync-nixos-hosts.sh                       # status only
-#   ./scripts/sync-nixos-hosts.sh --sync                # status, then sync
-#   ./scripts/sync-nixos-hosts.sh --apply               # status, then apply
-#   ./scripts/sync-nixos-hosts.sh --sync --apply        # sync, then apply
-#   ./scripts/sync-nixos-hosts.sh --sync --apply --yes  # no prompts
-#   ./scripts/sync-nixos-hosts.sh --host vm01 --apply   # just one host
+#   ./scripts/sync-nixos-hosts.sh                                # status only
+#   ./scripts/sync-nixos-hosts.sh --sync                         # status, then sync
+#   ./scripts/sync-nixos-hosts.sh --apply                        # status, then apply
+#   ./scripts/sync-nixos-hosts.sh --sync --apply                 # sync, then apply
+#   ./scripts/sync-nixos-hosts.sh --sync --apply --yes           # no prompts
+#   ./scripts/sync-nixos-hosts.sh --host vm01 --apply             # just one host
+#   ./scripts/sync-nixos-hosts.sh --update-lock --sync --apply --reboot
+#                                                                 # pull in a flake.lock
+#                                                                 # bump, roll it out, and
+#                                                                 # reboot hosts that need it
 #
 # Exit 0 if every reachable host ends in-sync (or check-only completes).
 # Exit 1 if any host was left out of sync (dirty tree, unreachable, or
@@ -50,18 +64,22 @@ declare -A FLAKE_CONFIG=(
 SYNC=false
 APPLY=false
 ASSUME_YES=false
+UPDATE_LOCK=false
+REBOOT=false
 HOST_FILTER=()
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --sync) SYNC=true ;;
         --apply) APPLY=true ;;
         --yes|-y) ASSUME_YES=true ;;
+        --update-lock) UPDATE_LOCK=true ;;
+        --reboot) REBOOT=true ;;
         --host)
             shift; [[ $# -gt 0 ]] || { echo "--host requires a hostname" >&2; exit 2; }
             IFS=',' read -ra _hs <<<"$1"; HOST_FILTER+=("${_hs[@]}") ;;
         --host=*)
             IFS=',' read -ra _hs <<<"${1#--host=}"; HOST_FILTER+=("${_hs[@]}") ;;
-        -h|--help) sed -n '2,26p' "$0" | sed 's/^# \?//'; exit 0 ;;
+        -h|--help) sed -n '2,40p' "$0" | sed 's/^# \?//'; exit 0 ;;
         *) echo "Unknown argument: $1" >&2; exit 2 ;;
     esac
     shift
@@ -218,6 +236,70 @@ sync_host() {
     return $?
 }
 
+# Runs `nix flake update` on the current host and, if flake.lock changed,
+# commits and pushes it to origin/main. Meant to run before probing so a
+# later --sync/--apply rolls the bump out to every other host. Refuses to
+# touch a dirty tree rather than guessing what to do with it.
+update_flake_lock() {
+    echo -e "${BLUE}[$CURRENT_HOST] updating flake.lock...${NC}"
+    local out
+    if ! out="$(run_on "$CURRENT_HOST" "cd ${REPO_PATH} && \
+        if [[ -n \$(git status --porcelain) ]]; then echo __DIRTY__; exit 1; fi; \
+        git pull --ff-only origin main && \
+        nix flake update && \
+        if ! git diff --quiet -- flake.lock; then \
+            git add flake.lock && git commit -m 'Update flake.lock' -q && echo __UPDATED__; \
+        else \
+            echo __NOCHANGE__; \
+        fi" 2>&1)"; then
+        if [[ "$out" == *__DIRTY__* ]]; then
+            echo -e "${RED}[$CURRENT_HOST] working tree dirty — resolve manually before --update-lock${NC}"
+        else
+            echo -e "${RED}[$CURRENT_HOST] flake.lock update failed:${NC}"
+            echo "$out"
+        fi
+        return 1
+    fi
+    echo "$out" | grep -v '__UPDATED__\|__NOCHANGE__' || true
+    if [[ "$out" == *__UPDATED__* ]]; then
+        echo -e "${BLUE}[$CURRENT_HOST] pushing updated flake.lock...${NC}"
+        run_on "$CURRENT_HOST" "cd ${REPO_PATH} && git push origin main"
+        echo -e "${GREEN}[$CURRENT_HOST] flake.lock updated and pushed${NC}"
+    else
+        echo -e "${GREEN}[$CURRENT_HOST] flake.lock already current${NC}"
+    fi
+}
+
+# True if a host's booted kernel/initrd differ from what's actually built —
+# i.e. the last switch changed something that only takes effect on reboot.
+# Always false for darwin (no equivalent concept); false is also the safe
+# fallback if the check itself fails for any other reason.
+needs_reboot() {
+    local host="$1"
+    [[ "$host" == "airbook" ]] && return 1
+    local out
+    out="$(run_on "$host" "[[ \$(readlink -f /run/booted-system/kernel) != \$(readlink -f /run/current-system/kernel) || \$(readlink -f /run/booted-system/initrd) != \$(readlink -f /run/current-system/initrd) ]] && echo yes || echo no" 2>/dev/null)" || return 1
+    [[ "$out" == "yes" ]]
+}
+
+# Reboots a host if its last switch needs one to take effect. Prompts first
+# unless --yes. The SSH connection drops the moment reboot runs, so a
+# nonzero/hung return from that is expected, not a failure.
+reboot_host() {
+    local host="$1"
+    if ! needs_reboot "$host"; then
+        echo -e "${GREEN}[$host] no reboot needed${NC}"
+        return 0
+    fi
+    echo -e "${YELLOW}[$host] kernel/initrd changed since boot — reboot needed${NC}"
+    if ! confirm "Reboot [$host] now?"; then
+        echo -e "${YELLOW}[$host] reboot skipped — remember to reboot manually${NC}"
+        return 1
+    fi
+    echo -e "${BLUE}[$host] rebooting...${NC}"
+    run_on_tty "$host" "sudo reboot" || true
+}
+
 # Run nixos-rebuild switch (or darwin-rebuild) on a host.
 apply_host() {
     local host="$1"
@@ -253,8 +335,18 @@ apply_host() {
     fi
 
     echo -e "${BLUE}[$host] applying...${NC}"
-    run_on_tty "$host" "$rebuild_cmd"
+    if ! run_on_tty "$host" "$rebuild_cmd"; then
+        return 1
+    fi
+
+    if $REBOOT; then
+        reboot_host "$host"
+    fi
 }
+
+if $UPDATE_LOCK; then
+    update_flake_lock || exit 1
+fi
 
 echo "Probing hosts..."
 gather_status
