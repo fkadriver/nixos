@@ -254,9 +254,11 @@
     # fontconfig generates cache/config even with no fonts installed.
     fonts.fontconfig.enable = false;
 
-    # nixpkgs switched to a systemd-based stage-1 init which fails to mount
-    # root on the Pi 4B. Keep the bash stage-1 that worked in prior builds.
-    boot.initrd.systemd.enable = false;
+    # Was forced to the bash stage-1 here (nixpkgs' systemd stage-1 used to
+    # fail mounting root on the Pi 4B) but nixpkgs has since removed scripted
+    # initrd entirely — systemd stage-1 is now the only option, so there's
+    # nothing left to opt out with. If Pi 4B root-mount issues resurface,
+    # they'll need a different fix; see commit 949e21c for the original bug.
 
     # ── Minimal kernel footprint ──────────────────────────────────────────────
     # Restrict supported filesystems to what the Pi actually uses.
