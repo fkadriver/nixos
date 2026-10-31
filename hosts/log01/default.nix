@@ -14,6 +14,7 @@ let
       inputs.self.nixosModules.disk-usage-monitor
       inputs.self.nixosModules.user-scott
       inputs.self.nixosModules.fwupd
+      inputs.self.nixosModules.distributed-builds
       inputs.home-manager.nixosModules.home-manager
       (inputs.self.homeConfigurations.scott).nixosModule
     ];

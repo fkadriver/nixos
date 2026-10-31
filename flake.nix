@@ -2,6 +2,13 @@
   description = "Scott's NixOS Configurations";
   inputs = {
     nixpkgs.url = "flake:nixpkgs/nixpkgs-unstable";
+    # nixos-unstable only advances once Hydra's full NixOS build+test matrix
+    # passes, so whatever revision it's on is already near-fully cached —
+    # used for desktop/app packages that don't need to be bleeding-edge.
+    # Base nixpkgs (above) stays on the faster-moving nixpkgs-unstable branch
+    # for common.nix and security-relevant modules (kernel, tailscale, borg,
+    # bitwarden) where freshness matters more than cache-hit rate.
+    nixpkgs-nixos.url = "github:NixOS/nixpkgs/nixos-unstable";
     nixpkgs-2511.url = "github:NixOS/nixpkgs/nixos-25.11";
     # Darwin-specific: nixpkgs-unstable moved to 26.11pre and dropped x86_64-darwin.
     # 26.05 is the last supported branch (through end of 2026) for MacBookAir7,2.

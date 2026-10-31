@@ -1,5 +1,12 @@
 { inputs, ... }@flakeContext:
-{ config, lib, pkgs, ... }: {
+{ config, lib, pkgs, ... }:
+let
+  # Standalone apps — safe on the better-cached nixos-unstable input.
+  # The nix-ld libraries below stay on base pkgs — they bridge non-Nix
+  # binaries to the system's own glibc/openssl/systemd, so they need to
+  # track the same revision as the rest of the base system, not an app.
+  pkgsNixos = inputs.nixpkgs-nixos.legacyPackages.${pkgs.stdenv.hostPlatform.system};
+in {
   imports = [
   ];
 
@@ -28,7 +35,7 @@
   services.blueman.enable = true;  # Blueman GUI for XFCE
 
     # Minimal laptop applications (no Hyprland, no Bitwarden, no 3D printing, no home design)
-    environment.systemPackages = with pkgs; [
+    environment.systemPackages = with pkgsNixos; [
       # Development
       vscodium          # Install Syncing extension manually: codium --install-extension nonoroazoro.syncing
       python3Minimal

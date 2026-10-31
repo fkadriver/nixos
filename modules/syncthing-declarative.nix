@@ -132,6 +132,9 @@ in
     # Basic Syncthing service
     services.syncthing = {
       enable = true;
+      # Standalone daemon, no system coupling — fine on the better-cached
+      # nixos-unstable input.
+      package = inputs.nixpkgs-nixos.legacyPackages.${pkgs.stdenv.hostPlatform.system}.syncthing;
       user = "scott";
       dataDir = "/home/scott";
       configDir = "/home/scott/.config/syncthing";

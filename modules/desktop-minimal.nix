@@ -1,5 +1,13 @@
 { inputs, ... }@flakeContext:
-{ config, lib, pkgs, ... }: {
+{ config, lib, pkgs, ... }:
+let
+  # Standalone apps — safe on the better-cached nixos-unstable input.
+  # python3/gcc/opencv and the nix-ld libraries below stay together on base
+  # pkgs: native extension builds (numpy/mediapipe/etc.) need the compiler,
+  # interpreter, and linked libraries from one consistent glibc revision.
+  # kdePackages.* also stay on base pkgs (see laptop-kde.nix for why).
+  pkgsNixos = inputs.nixpkgs-nixos.legacyPackages.${pkgs.stdenv.hostPlatform.system};
+in {
   imports = [
     inputs.self.nixosModules.bitwarden
     inputs.self.nixosModules.bitwarden-scott
@@ -36,13 +44,12 @@
     };
 
     # Minimal desktop applications - focused on programmatic photo processing and AI
-    environment.systemPackages = with pkgs; [
+    environment.systemPackages = (with pkgs; [
       # Development & AI/ML tools
       python3
       python3Packages.pip
       python3Packages.virtualenv
       git
-      vscode-fhs  # VSCode with FHS environment for AI tools
 
       # System libraries for photoAlbumOrganizer and computer vision
       gcc                          # Compiler for native extensions
@@ -59,6 +66,8 @@
       kdePackages.spectacle        # Screenshot tool
       kdePackages.ark              # Archive manager
       kdePackages.filelight        # Disk usage visualizer
+    ]) ++ (with pkgsNixos; [
+      vscode-fhs  # VSCode with FHS environment for AI tools
 
       # Essential utilities
       firefox
@@ -66,7 +75,7 @@
 
       # Prevent screen blanking/sleep
       caffeine-ng
-    ];
+    ]);
 
     # Auto-start caffeine to prevent screen blanking
     environment.etc."xdg/autostart/caffeine.desktop".text = ''

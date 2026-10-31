@@ -1,5 +1,12 @@
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }:
+let
+  # Standalone apps/utilities (not xfce4-panel plugins or Thunar plugins,
+  # which load into the same session as services.xserver.desktopManager.xfce
+  # below and stay on base pkgs to avoid version skew) — safe on the
+  # better-cached nixos-unstable input.
+  pkgsNixos = inputs.nixpkgs-nixos.legacyPackages.${pkgs.stdenv.hostPlatform.system};
+in
 {
   imports = [
     inputs.self.nixosModules.daily-driver
@@ -31,16 +38,7 @@
     services.blueman.enable = true;
 
     # XFCE-specific apps/plugins (appended to daily-driver list)
-    environment.systemPackages = lib.mkAfter (with pkgs; [
-      # Office / viewers (XFCE side)
-      evince
-
-      # Utilities
-      xarchiver
-      xdotool
-      xbindkeys
-      xorg.xev
-
+    environment.systemPackages = lib.mkAfter ((with pkgs; [
       # XFCE plugins and utilities
       xfce4-battery-plugin
       xfce4-clipman-plugin
@@ -58,6 +56,15 @@
       thunar-archive-plugin
       thunar-volman
       thunar-media-tags-plugin
+    ]) ++ (with pkgsNixos; [
+      # Office / viewers (XFCE side)
+      evince
+
+      # Utilities
+      xarchiver
+      xdotool
+      xbindkeys
+      xorg.xev
 
       # Additional XFCE apps
       ristretto
@@ -65,7 +72,7 @@
 
       # Prevent screen blanking/sleep
       caffeine-ng
-    ]);
+    ]));
 
     # Auto-start caffeine to prevent screen blanking
     environment.etc."xdg/autostart/caffeine.desktop".text = ''

@@ -1,5 +1,14 @@
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }:
+let
+  # Standalone apps that don't share a session/framework with KDE — safe on
+  # the better-cached nixos-unstable input. kdePackages.* stay on the base
+  # pkgs: they run inside the same Plasma session as services.desktopManager.plasma6
+  # below, which always pulls from base pkgs with no override point, so
+  # splitting just the app list would create Qt/KDE-frameworks version skew
+  # against the shell they load into.
+  pkgsNixos = inputs.nixpkgs-nixos.legacyPackages.${pkgs.stdenv.hostPlatform.system};
+in
 {
   imports = [
     inputs.self.nixosModules.daily-driver
@@ -58,7 +67,7 @@
       kdePackages.plasma-pa
       kdePackages.bluedevil
       kdePackages.powerdevil
-
+    ]) ++ (with pkgsNixos; [
       # Networking tools
       wireshark
 

@@ -1,6 +1,9 @@
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }:
 let
+  # Standalone app, no system coupling — fine on the better-cached nixos-unstable input.
+  pkgsNixos = inputs.nixpkgs-nixos.legacyPackages.${pkgs.stdenv.hostPlatform.system};
+
   # Sweet Home 3D plugins
   # Note: Plugins must be manually downloaded and placed in ~/.local/share/Sweet Home 3D/plugins/
   # This creates a helper script to manage plugin installation
@@ -91,14 +94,13 @@ in
   config = {
     # Home design and remodeling software for deck planning and home projects
 
-    environment.systemPackages = with pkgs; [
+    environment.systemPackages = [
       # Sweet Home 3D - Interior design application
       # Great for floor plans, deck layouts, and home remodeling visualization
-      sweethome3d.application
+      pkgsNixos.sweethome3d.application
 
       # Sweet Home 3D plugin installer helper
       installPluginsScript
-
     ];
 
     # Sweet Home 3D Plugins Installation:

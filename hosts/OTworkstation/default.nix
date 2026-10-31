@@ -80,6 +80,7 @@ let
       inputs.self.nixosModules.vmware
       inputs.self.nixosModules.wireless
       inputs.self.nixosModules.fwupd
+      inputs.self.nixosModules.distributed-builds
     ];
     config = {
       networking.hostName = "OTworkstation";

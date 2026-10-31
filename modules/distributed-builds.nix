@@ -30,6 +30,25 @@ let
     sshUser = "scott";
     sshKey = "/home/scott/.ssh/id_ed25519_legacy";
   };
+
+  # Every fleet host that peer-shares locally-built store paths via binary-
+  # cache substitution (distinct from the job-offloading above, which stays
+  # scoped to latitude/vm01 — substitution just answers "has anyone already
+  # built this path?", no speedFactor/maxJobs tuning needed). Piholes are
+  # excluded: they're aarch64 appliances built via explicit --build-host
+  # cross-compilation (scripts/deploy-piholes.sh), not daemon-managed peers.
+  #
+  # configName must match config.networking.hostName on that host; sshHost
+  # is the Tailscale-reachable name used to actually dial it — OTworkstation
+  # is capitalized in its hostName but not in its Tailscale/ssh name.
+  peers = [
+    { configName = "latitude"; sshHost = "latitude"; }
+    { configName = "vm01"; sshHost = "vm01"; }
+    { configName = "nas01"; sshHost = "nas01"; }
+    { configName = "log01"; sshHost = "log01"; }
+    { configName = "OTworkstation"; sshHost = "otworkstation"; }
+  ];
+  otherPeers = builtins.filter (p: p.configName != hostname) peers;
 in {
   imports = [ inputs.sops-nix.nixosModules.sops ];
 
@@ -45,23 +64,22 @@ in {
     lib.optionals (hostname != "latitude") [ latitudeMachine ] ++
     lib.optionals (hostname != "vm01")     [ vm01Machine ];
 
-  # SSH config for cross-machine builds (applies system-wide, used by root/nix daemon).
-  programs.ssh.extraConfig = lib.optionalString (hostname != "latitude") ''
-    Host latitude
+  # SSH config for cross-machine builds and peer substitution (applies
+  # system-wide, used by root/the nix daemon).
+  programs.ssh.extraConfig = lib.concatMapStrings (p: ''
+    Host ${p.sshHost}
       IdentityFile /home/scott/.ssh/id_ed25519_legacy
       StrictHostKeyChecking no
-  '' + lib.optionalString (hostname != "vm01") ''
-    Host vm01
-      IdentityFile /home/scott/.ssh/id_ed25519_legacy
-      StrictHostKeyChecking no
-  '';
+  '') otherPeers;
 
-  # Mutual binary-cache substitution: whatever either machine has already built
-  # (e.g. the aarch64 pihole closures — hours of QEMU cross-compilation), the
-  # other can fetch instead of rebuilding. Both sign locally-built paths with
-  # the same shared key so either side can verify paths built by the other,
-  # without weakening signature checking against the real substituters
-  # (cache.nixos.org, cachix) the way require-sigs=false would.
+  # Mutual binary-cache substitution across the whole fleet (piholes
+  # excluded): whatever any host has already built — the aarch64 pihole
+  # closures (hours of QEMU cross-compilation), or a package rebuilt
+  # fleet-wide for a CVE fix before Hydra's cache catches up — every other
+  # host can fetch instead of rebuilding. All hosts sign locally-built paths
+  # with the same shared key so any peer can verify paths built by any
+  # other, without weakening signature checking against the real
+  # substituters (cache.nixos.org, cachix) the way require-sigs=false would.
   sops.age.keyFile = lib.mkDefault "/var/lib/sops-nix/key.txt";
   sops.secrets."nix_cache/signing_key" = {
     sopsFile = ../secrets/secrets.yaml;
@@ -71,9 +89,7 @@ in {
 
   nix.settings = {
     secret-key-files = [ config.sops.secrets."nix_cache/signing_key".path ];
-    extra-substituters =
-      lib.optionals (hostname != "latitude") [ "ssh-ng://scott@latitude" ] ++
-      lib.optionals (hostname != "vm01")     [ "ssh-ng://scott@vm01" ];
+    extra-substituters = map (p: "ssh-ng://scott@${p.sshHost}") otherPeers;
     extra-trusted-public-keys = [
       "jen-acres-builders:rYBoDlCKPnKYZe4K90CFBGy0QTmhuTBChyGzYxw1Nzs="
     ];
