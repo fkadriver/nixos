@@ -5,7 +5,12 @@ let
   # the better-cached nixos-unstable input. gnome-keyring/libsecret/seahorse
   # stay on the base pkgs since they're wired through services.gnome.gnome-keyring
   # and PAM below, from the same revision as the rest of the login stack.
-  pkgsNixos = inputs.nixpkgs-nixos.legacyPackages.${pkgs.stdenv.hostPlatform.system};
+  # import (not legacyPackages): vscode is unfree, and legacyPackages' default
+  # instantiation doesn't inherit nixpkgs.config.allowUnfree from the main pkgs.
+  pkgsNixos = import inputs.nixpkgs-nixos {
+    system = pkgs.stdenv.hostPlatform.system;
+    config.allowUnfree = true;
+  };
 in
 {
   config = {

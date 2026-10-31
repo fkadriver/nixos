@@ -42,7 +42,7 @@ in
     services.power-profiles-daemon.enable = false;
 
     # KDE / Plasma apps and utilities (appended to daily-driver list)
-    environment.systemPackages = lib.mkAfter (with pkgs; [
+    environment.systemPackages = lib.mkAfter ((with pkgs; [
       # Media / viewing
       kdePackages.gwenview
       kdePackages.okular
@@ -73,7 +73,7 @@ in
 
       # Prevent screen blanking/sleep
       caffeine-ng
-    ]);
+    ]));
 
     # Auto-start caffeine to prevent screen blanking
     environment.etc."xdg/autostart/caffeine.desktop".text = ''

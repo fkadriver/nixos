@@ -5,7 +5,12 @@ let
   # The nix-ld libraries below stay on base pkgs — they bridge non-Nix
   # binaries to the system's own glibc/openssl/systemd, so they need to
   # track the same revision as the rest of the base system, not an app.
-  pkgsNixos = inputs.nixpkgs-nixos.legacyPackages.${pkgs.stdenv.hostPlatform.system};
+  # import (not legacyPackages): claude-code is unfree, and legacyPackages'
+  # default instantiation doesn't inherit nixpkgs.config.allowUnfree.
+  pkgsNixos = import inputs.nixpkgs-nixos {
+    system = pkgs.stdenv.hostPlatform.system;
+    config.allowUnfree = true;
+  };
 in {
   imports = [
   ];

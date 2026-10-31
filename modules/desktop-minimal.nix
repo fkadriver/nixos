@@ -6,7 +6,12 @@ let
   # pkgs: native extension builds (numpy/mediapipe/etc.) need the compiler,
   # interpreter, and linked libraries from one consistent glibc revision.
   # kdePackages.* also stay on base pkgs (see laptop-kde.nix for why).
-  pkgsNixos = inputs.nixpkgs-nixos.legacyPackages.${pkgs.stdenv.hostPlatform.system};
+  # import (not legacyPackages): vscode-fhs is unfree, and legacyPackages'
+  # default instantiation doesn't inherit nixpkgs.config.allowUnfree.
+  pkgsNixos = import inputs.nixpkgs-nixos {
+    system = pkgs.stdenv.hostPlatform.system;
+    config.allowUnfree = true;
+  };
 in {
   imports = [
     inputs.self.nixosModules.bitwarden
