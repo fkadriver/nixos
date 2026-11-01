@@ -49,6 +49,28 @@ in
   };
 
   config = {
+    # TEMPORARY WORKAROUND (remove once fixed upstream): nixpkgs' kernel
+    # module aggregator now requires every external module to carry a
+    # matching .ko.cer cert file (NixOS/nixpkgs#575192, "deterministic
+    # module signatures", merged ~2026-10-17) — without one, the whole
+    # system build fails at the aggregator step, not just vmware's own
+    # derivation. vmware-host-modules installs vmmon.ko/vmnet.ko by hand
+    # instead of via kbuild's modules_install, so it never produces one.
+    # broadcom_sta, openrazer, and framework-laptop-kmod got the proper
+    # modules_install-based fix upstream (PRs #576651, #575818, #576293);
+    # vmware hadn't as of 2026-10-31. Module-signing enforcement isn't on
+    # for this kernel config, so an empty placeholder cert is harmless —
+    # it only needs to exist for the aggregator's `cat` step to succeed.
+    boot.kernelPackages = pkgs.linuxPackages.extend (final: prev: {
+      vmware = prev.vmware.overrideAttrs (old: {
+        postInstall = (old.postInstall or "") + ''
+          for m in vmmon vmnet; do
+            touch "$out/lib/modules/${final.kernel.modDirVersion}/misc/$m.ko.cer"
+          done
+        '';
+      });
+    });
+
     environment.systemPackages = [ pkgs.vmware-workstation ];
 
     virtualisation.vmware.host.enable = true;
