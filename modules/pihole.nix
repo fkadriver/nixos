@@ -636,22 +636,16 @@
     '');
 
 
-    # Rotate pihole's DNS query log daily — it grows quickly (1 DNS entry per line)
-    # and is not rotated by the upstream pihole-ftl NixOS module.
-    # copytruncate is required: FTL/dnsmasq never reopens its log fd, so a
-    # rename-based rotation leaves it writing to a deleted inode until the next
-    # FTL restart (local archives silently lost days of queries). rsyslog's
-    # imfile follows the truncation via reopenOnTruncate="on".
-    services.logrotate.settings.pihole-dns = {
-      files = "/var/log/pihole/pihole.log";
-      frequency = "daily";
-      rotate = 7;
-      compress = true;
-      copytruncate = true;
-      dateext = true;
-      missingok = true;
-      notifempty = true;
-    };
+    # pihole-ftl's NixOS module now rotates /var/log/pihole/pihole.log itself
+    # (services.logrotate.settings.pihole-dnsmasq, upstream, via SIGUSR2 to
+    # make FTL reopen the file — the actual documented pi-hole mechanism,
+    # https://docs.pi-hole.net/ftldns/signals/#sigusr2). Our own duplicate
+    # rule for the same file (removed here) started colliding with it after
+    # a nixpkgs update added that upstream rule — logrotate's checkConfig
+    # rejects two rules for the same path. rsyslog's imfile watches in
+    # Mode="inotify" below, which detects the rename+recreate this rotation
+    # does, not just in-place truncation, so forwarding to log01 should keep
+    # working without our old copytruncate-specific workaround.
 
     # Expose Pi-hole web UI over Tailscale with HTTPS (tailnet-only, not public)
     # Accessible at https://pihole0x.<tailnet>.ts.net after Tailscale authenticates.
