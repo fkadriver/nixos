@@ -54,7 +54,7 @@ apt-get install -y \
   borgbackup jq \
   smartmontools \
   net-tools \
-  tmux \
+  tmux wget less vim \
   btop strace iperf3
 
 echo "=== [2/16] Passwordless sudo for scott ==="
