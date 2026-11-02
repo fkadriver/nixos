@@ -97,6 +97,20 @@ fi
 
 CURRENT_HOST="$(hostname -s | tr '[:upper:]' '[:lower:]')"
 
+# Always finish on the current host. With --apply --reboot, rebooting a
+# remote host just drops its SSH connection — rebooting the LOCAL host kills
+# the script itself, so any host still later in HOSTS never gets applied.
+# Moving the current host to the end (if present) guarantees everything
+# else is done first regardless of where it falls in the HOSTS array.
+_reordered=()
+for h in "${HOSTS[@]}"; do
+    [[ "$h" == "$CURRENT_HOST" ]] || _reordered+=("$h")
+done
+for h in "${HOSTS[@]}"; do
+    [[ "$h" == "$CURRENT_HOST" ]] && _reordered+=("$h")
+done
+HOSTS=("${_reordered[@]}")
+
 # Runs a shell snippet on $host, either locally or via Tailscale SSH.
 #
 # `tailscale ssh` (rather than plain ssh) lets these checks run from anywhere

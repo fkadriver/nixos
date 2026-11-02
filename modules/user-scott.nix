@@ -58,6 +58,17 @@
             command = "/nix/store/*/bin/switch-to-configuration *";
             options = [ "NOPASSWD" ];
           }
+          # Reboot only — single-user hosts, so a reboot isn't disruptive to
+          # anyone else. Deliberately NOT extended to shutdown/poweroff/halt,
+          # which stay password-gated.
+          {
+            command = "/run/current-system/sw/bin/reboot";
+            options = [ "NOPASSWD" ];
+          }
+          {
+            command = "/nix/store/*/bin/reboot";
+            options = [ "NOPASSWD" ];
+          }
           {
             command = "/run/current-system/sw/bin/borg *";
             options = [ "NOPASSWD" ];
