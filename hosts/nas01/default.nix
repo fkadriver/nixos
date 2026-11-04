@@ -351,6 +351,16 @@ let
           # call, which a reboot/nfs-server restart silently wiped - now
           # declared here so it survives both.
           /home/scott/git/idrive360    100.64.189.120/32(rw,sync,wdelay,no_subtree_check,sec=sys,secure,no_root_squash,no_all_squash)
+
+          # HA Green's native Backups feature (Settings > System > Storage, a
+          # Backup-usage NFS share). Tailscale only, scoped to HA Green's single
+          # Tailscale IP, same pattern as sands-bak01 above — deliberately NOT
+          # routed over the LAN, since the HomeAssist VLAN is firewall-isolated
+          # from Secure_Net (where this host lives) by design; going via
+          # Tailscale sidesteps that isolation instead of punching a hole in it.
+          # rw + no_root_squash: HA Core's backup process writes as root inside
+          # its container.
+          /pool/shares/ha-backups    100.114.4.66/32(rw,sync,wdelay,no_subtree_check,sec=sys,secure,no_root_squash,no_all_squash)
         '';
       };
 
@@ -385,6 +395,7 @@ let
       '';
       systemd.tmpfiles.rules = [
         "d /pool/borg 0750 scott users -"
+        "d /pool/shares/ha-backups 0777 nobody nogroup -"
         "d /usr/local/bin 0755 root root -"
         "L+ /usr/local/bin/wazuh-zfs-pool-status - - - - ${pkgs.writeShellScript "wazuh-zfs-pool-status" (builtins.readFile ./wazuh-zfs-pool-status.sh)}"
       ];
