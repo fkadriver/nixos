@@ -91,6 +91,7 @@ let
             log01    = "tailscale ssh log01";
             otworkstation = "tailscale ssh OTworkstation";
             ot       = "tailscale ssh OTworkstation";
+            ha       = "tailscale ssh root@homeassistant";
 
             # Tailscale troubleshooting
             ts-status   = "tailscale status";

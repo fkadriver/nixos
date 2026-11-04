@@ -231,6 +231,7 @@ in
         vm01 = "tailscale ssh vm01";
         otworkstation = "tailscale ssh OTworkstation";
         ot = "tailscale ssh OTworkstation";
+        ha = "tailscale ssh root@homeassistant";
 
         # Herdr -h shortcuts — same targets as above, but through
         # `herdr --remote` (see herdr in default.nix) instead of a plain
@@ -384,6 +385,7 @@ in
         vm01 = "tailscale ssh vm01";
         otworkstation = "tailscale ssh OTworkstation";
         ot = "tailscale ssh OTworkstation";
+        ha = "tailscale ssh root@homeassistant";
 
         # Herdr -h shortcuts — same targets as above, but through
         # `herdr --remote` (see herdr in default.nix) instead of a plain

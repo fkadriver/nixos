@@ -31,6 +31,7 @@
         vm01 = "tailscale ssh vm01";
         otworkstation = "tailscale ssh OTworkstation";
         work-debian = "tailscale ssh sjensen@work-debian";
+        ha = "tailscale ssh root@homeassistant";
 
         # iDRAC8 (nas01's T330 remote management), 192.168.10.19. LAN-only —
         # OPNsense doesn't route this from the wifi VLAN, so this alias only
