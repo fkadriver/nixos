@@ -4,8 +4,11 @@
 let
   cfg = config.services.esphomeFlash;
 
-  # ESP32 boards flashed here (M5Stack Atom Lite, etc.) use a CH340
-  # USB-serial chip - stable /dev/esp32-flash symlink regardless of which
+  # M5Stack Atom Lite (confirmed via lsusb/udevadm with the office unit
+  # plugged in) uses an FTDI FT232 chip (0403:6001) - same generic ID as
+  # modules/forscan.nix's OBDLink EX rule, so matched on ATTRS{product}
+  # =="M5stack" too, not vendor/product alone, to avoid colliding with
+  # that rule. Stable /dev/esp32-flash symlink regardless of which
   # ttyUSBn/ttyACMn node the kernel assigns on a given plug-in.
   flashScript = pkgs.writeShellScriptBin "esphome-flash" ''
     set -euo pipefail
@@ -44,11 +47,8 @@ in
       flashScript
     ];
 
-    # M5Stack Atom Lite's onboard CH340 USB-serial chip (confirmed via lsusb:
-    # "1a86:7523 QinHeng Electronics CH340 serial converter"). Same rule
-    # covers other ESP32 dev boards using the same common chip.
     services.udev.extraRules = ''
-      SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", GROUP="dialout", MODE="0660", SYMLINK+="esp32-flash"
+      SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{product}=="M5stack", GROUP="dialout", MODE="0660", SYMLINK+="esp32-flash"
     '';
 
     users.groups.dialout = {};
