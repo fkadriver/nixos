@@ -51,6 +51,7 @@ let
       inputs.self.nixosModules.deploy-pihole
       inputs.self.nixosModules.screen-recording
       inputs.self.nixosModules.forscan
+      inputs.self.nixosModules.esphome-flash
       inputs.self.nixosModules.mcp-nixos
       inputs.self.nixosModules.fwupd
       inputs.tether.nixosModules.tether
@@ -81,6 +82,7 @@ let
       };
 
       services.forscan.enable = true;
+      services.esphomeFlash.enable = true;
       programs.mcp-nixos.enable = true;
 
       # NFS mounts for nas01 shares via Tailscale
