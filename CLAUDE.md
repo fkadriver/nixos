@@ -246,7 +246,7 @@ sudo darwin-rebuild switch --flake ~/git/nixos#airbook-darwin
 ### What nix-darwin Manages
 - **System packages**: CLI tools installed via Nix (age, sops, htop, go, nodejs, python3)
 - **Homebrew**: GUI apps and services
-  - Casks: Bitwarden, Firefox, Ghostty, iTerm2, Rectangle, Scroll Reverser, VSCode
+  - Casks: Bitwarden, Firefox, Ghostty, iTerm2, Pocket Casts, Rectangle, Scroll Reverser, VSCode
   - 3D Printing: OpenSCAD, PrusaSlicer, FreeCAD, Blender, MeshLab, Inkscape
   - Brews: syncthing, bitwarden-cli
 - **Fonts**: 3D printing fonts (EB Garamond, Libre Baskerville, Old Standard, Junicode, Inter, Source Sans)

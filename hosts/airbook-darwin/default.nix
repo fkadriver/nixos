@@ -596,6 +596,9 @@ let
         # Chat (from daily-driver.nix)
         "discord"
 
+        # Podcasts (from daily-driver.nix) — official Pocket Casts desktop app
+        "pocket-casts"
+
         # Gaming (from daily-driver.nix)
         "heroic"           # Epic, GOG, Amazon Prime games launcher
 

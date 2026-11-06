@@ -156,6 +156,10 @@
 
       shotwell
       mpv
+
+      # Pocket Casts: nixpkgs' Electron wrapper around play.pocketcasts.com
+      # (no official Linux client). airbook-darwin uses the official cask.
+      pocket-casts
       handbrake  # Video transcoding
       discord
 
