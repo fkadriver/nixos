@@ -44,7 +44,7 @@ NAS01_LAN_IP=192.168.10.20
 WAZUH_MANAGER_HOST=wazuh.warthog-royal.ts.net
 WAZUH_AGENT_VERSION=4.14.5-1
 
-echo "=== [1/16] Base packages ==="
+echo "=== [1/17] Base packages ==="
 apt-get update
 apt-get install -y \
   software-properties-common apt-transport-https ca-certificates \
@@ -57,7 +57,7 @@ apt-get install -y \
   tmux wget less vim \
   btop strace iperf3
 
-echo "=== [2/16] Passwordless sudo for scott ==="
+echo "=== [2/17] Passwordless sudo for scott ==="
 # This host isn't behind the nixos repo's narrowly-scoped
 # security.sudo.extraRules (nixos-rebuild/nix/tailscale/borg only) - it gets
 # full passwordless sudo instead, since it's single-user hardware with no
@@ -67,7 +67,7 @@ scott ALL=(ALL) NOPASSWD: ALL
 EOF
 visudo -c -f /etc/sudoers.d/scott-nopasswd
 
-echo "=== [3/16] Tailscale ==="
+echo "=== [3/17] Tailscale ==="
 if ! command -v tailscale >/dev/null 2>&1; then
   curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/noble.noarmor.gpg \
     -o /usr/share/keyrings/tailscale-archive-keyring.gpg
@@ -78,7 +78,7 @@ if ! command -v tailscale >/dev/null 2>&1; then
 fi
 systemctl enable --now tailscaled
 
-echo "=== [4/16] Fix tailscaled boot ordering ==="
+echo "=== [4/17] Fix tailscaled boot ordering ==="
 # The stock unit only orders After=network-pre.target (fires very early,
 # before eno1 has DHCP/a default route). Confirmed live (2026-09-25):
 # tailscaled starting on a still-dead network hits "network is unreachable"
@@ -112,7 +112,7 @@ else
   echo "  'sudo tailscale up --ssh' by hand if this host predates it.)"
 fi
 
-echo "=== [5/16] xpra (remote GUI view, no VNC) ==="
+echo "=== [5/17] xpra (remote GUI view, no VNC) ==="
 if ! command -v xpra >/dev/null 2>&1; then
   curl -fsSL https://xpra.org/xpra.asc -o /usr/share/keyrings/xpra.asc
   cat > /etc/apt/sources.list.d/xpra.sources <<'EOF'
@@ -190,7 +190,7 @@ WantedBy=multi-user.target
 EOF
 systemctl daemon-reload
 
-echo "=== [6/16] LightDM autologin (scott -> LXDE) ==="
+echo "=== [6/17] LightDM autologin (scott -> LXDE) ==="
 install -d /etc/lightdm/lightdm.conf.d
 cat > /etc/lightdm/lightdm.conf.d/50-autologin.conf <<'EOF'
 [Seat:*]
@@ -199,7 +199,7 @@ autologin-user-timeout=0
 autologin-session=LXDE
 EOF
 
-echo "=== [7/16] Chromium sandbox fix (AppArmor unprivileged userns) ==="
+echo "=== [7/17] Chromium sandbox fix (AppArmor unprivileged userns) ==="
 # Ubuntu 24.04 hardening (kernel.apparmor_restrict_unprivileged_userns=1)
 # blocks Electron/Chromium's sandbox from acquiring CAP_SYS_ADMIN, which
 # breaks the IDrive360 client GUI. Confirmed this session.
@@ -208,7 +208,7 @@ kernel.apparmor_restrict_unprivileged_userns=0
 EOF
 sysctl --system >/dev/null
 
-echo "=== [8/16] Disable all automatic updates ==="
+echo "=== [8/17] Disable all automatic updates ==="
 # Deliberate: an automatic update broke the nas01-backup VM in the past
 # (see MIGRATION.md in the idrive360 repo). This host is administered by
 # hand (apt run manually) instead - masked, not just disabled, so nothing
@@ -236,10 +236,10 @@ fi
 pro disable livepatch 2>/dev/null || true
 snap remove canonical-livepatch 2>/dev/null || true
 
-echo "=== [9/16] Timezone ==="
+echo "=== [9/17] Timezone ==="
 timedatectl set-timezone America/Chicago
 
-echo "=== [10/16] NFS mounts to nas01 ==="
+echo "=== [10/17] NFS mounts to nas01 ==="
 # /pool and /mnt: read-only, this host only ever reads source data for
 # backup. ~/git/idrive360: read-write, it's a live shared checkout (this
 # repo's twin - see idrive360-agent-status.sh below).
@@ -272,14 +272,14 @@ done
 systemctl daemon-reload
 mount -a || echo "  (some mounts may need tailscale/nas01 reachable first - rerun 'mount -a' later)"
 
-echo "=== [11/16] Starship prompt ==="
+echo "=== [11/17] Starship prompt ==="
 if ! command -v starship >/dev/null 2>&1; then
   curl -sS https://starship.rs/install.sh | sh -s -- -y
 fi
 su - scott -c 'grep -q "starship init bash" ~/.bashrc' || \
   su - scott -c 'printf "\n# Starship prompt\neval \"\$(starship init bash)\"\n" >> ~/.bashrc'
 
-echo "=== [12/16] Fleet SSH aliases + idrive-status ==="
+echo "=== [12/17] Fleet SSH aliases + idrive-status ==="
 # Matches modules/shell-aliases.nix in this repo (kept in sync by hand,
 # since this host can't import it directly).
 su - scott -c 'grep -q "Fleet SSH shortcuts" ~/.bashrc' || su - scott -c "cat >> ~/.bashrc" <<'EOF'
@@ -302,7 +302,7 @@ else
   echo "    sudo install -m 0755 ~/git/idrive360/idrive360-agent-status.sh /usr/local/bin/"
 fi
 
-echo "=== [13/16] Borg backup of /opt/IDrive360 ==="
+echo "=== [13/17] Borg backup of /opt/IDrive360 ==="
 # IDrive360 doesn't back up its own install/identity directory - despite
 # /opt/ being in its backup set, no backup log ever showed a [SUCCESS]
 # entry under /opt/IDrive360/ itself. That directory holds the exact
@@ -379,7 +379,7 @@ systemctl daemon-reload
 su - scott -c "BORG_RELOCATED_REPO_ACCESS_IS_OK=yes BORG_RSH='ssh -i $SCOTT_HOME/.ssh/id_ed25519_borg_lan -o StrictHostKeyChecking=accept-new' borg init --encryption none ssh://scott@${NAS01_LAN_IP}/pool/borg/sands-bak01" 2>/dev/null || true
 systemctl enable --now borg-backup-idrive360.timer
 
-echo "=== [14/16] Wazuh agent ==="
+echo "=== [14/17] Wazuh agent ==="
 if ! dpkg -l wazuh-agent >/dev/null 2>&1; then
   curl -sS -o /tmp/wazuh-agent.deb \
     "https://packages.wazuh.com/4.x/apt/pool/main/w/wazuh-agent/wazuh-agent_${WAZUH_AGENT_VERSION}_amd64.deb"
@@ -856,7 +856,7 @@ if [ "$total_size_kb" -gt 0 ]; then
 fi
 DISKUSAGEEOF
 
-echo "=== [15/16] Tailscale self-heal timer ==="
+echo "=== [15/17] Tailscale self-heal timer ==="
 # This host is headless/unattended by design (set-it-and-forget-it) - the
 # tailscaled boot-ordering fix (step 4) addresses the one root cause found
 # so far, but this catches any *other* reason tailscale ever goes stale,
@@ -930,7 +930,7 @@ EOF
 systemctl daemon-reload
 systemctl enable --now tailscale-selfheal.timer
 
-echo "=== [16/16] tmux + ghostty terminfo ==="
+echo "=== [16/17] tmux + ghostty terminfo ==="
 # Ghostty was added fleet-wide as the daily-driver terminal (see
 # modules/daily-driver.nix in this repo) - NixOS hosts get its terminfo
 # entry for free via environment.enableAllTerminfo (modules/common.nix),
@@ -1067,6 +1067,87 @@ bind k select-pane -U
 bind l select-pane -R
 TMUXCONFEOF
 
+echo "=== [17/17] Shutdown listener (HA closet high-temp automation) ==="
+# Hand-reimplemented equivalent of modules/shutdown-listener.nix (nas01/vm01/
+# log01) since this host has no flake target. HA Green's Core container has
+# no SSH client and sits on a different VLAN, so HA reaches this listener
+# over Tailscale instead - a plain HTTP POST with a bearer token triggers a
+# graceful poweroff. Unlike the NixOS hosts (firewalled per-interface via
+# networking.firewall), this host has no firewall active at all and this
+# script isn't introducing one (risk of a botched default-deny locking out
+# SSH on a remote backup box) - so the listener binds directly to this
+# host's Tailscale IP instead of 0.0.0.0, which is unreachable from the LAN
+# side by construction.
+SHUTDOWN_LISTENER_PORT=9090
+install -d -m 0755 /opt/shutdown-listener
+install -o root -g root -m 0644 /dev/stdin /opt/shutdown-listener/listener.py <<'LISTENEREOF'
+import sys, hmac, subprocess
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+bind_ip = sys.argv[1]
+port = int(sys.argv[2])
+token = open(sys.argv[3]).read().strip()
+
+class Handler(BaseHTTPRequestHandler):
+    def do_POST(self):
+        if self.path != "/shutdown":
+            self.send_response(404)
+            self.end_headers()
+            return
+        supplied = self.headers.get("Authorization", "").removeprefix("Bearer ")
+        if not hmac.compare_digest(supplied, token):
+            self.send_response(403)
+            self.end_headers()
+            return
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"shutting down\n")
+        # Delay so this HTTP response actually reaches the caller before
+        # the host goes down, instead of the connection just dying.
+        subprocess.Popen(["systemd-run", "--on-active=2s", "systemctl", "poweroff"])
+
+    def log_message(self, fmt, *args):
+        sys.stderr.write("%s - %s\n" % (self.address_string(), fmt % args))
+
+ThreadingHTTPServer((bind_ip, port), Handler).serve_forever()
+LISTENEREOF
+
+install -o root -g root -m 0755 /dev/stdin /opt/shutdown-listener/run.sh <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+# Resolved at start, not baked in - Tailscale brings the interface up after
+# boot, and this avoids hardcoding an IP that could change.
+BIND_IP=\$(tailscale ip -4)
+exec /usr/bin/python3 /opt/shutdown-listener/listener.py "\$BIND_IP" $SHUTDOWN_LISTENER_PORT /opt/shutdown-listener/token
+EOF
+
+# Token file installed empty - needs the real secret written by hand, same
+# reasoning as the Wazuh password/borg key manual steps below.
+touch /opt/shutdown-listener/token
+chmod 600 /opt/shutdown-listener/token
+
+cat > /etc/systemd/system/shutdown-listener.service <<EOF
+[Unit]
+Description=Authenticated remote-shutdown listener (Tailscale-only)
+After=network-online.target tailscaled.service
+Wants=network-online.target
+
+[Service]
+ExecStart=/opt/shutdown-listener/run.sh
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable shutdown-listener.service
+# Not started yet - the token file is still empty (manual step 6 below), so
+# starting it now would just mean every request fails to authenticate until
+# the real token is written anyway. Enabled so it comes up on next reboot
+# once the token's in place.
+
 echo ""
 echo "=== Automated steps done. Manual steps remaining: ==="
 echo ""
@@ -1111,3 +1192,11 @@ echo "     docker compose exec wazuh.manager /var/ossec/bin/agent_groups -a -i <
 echo "   Until that's done, the hourly wazuh-smart-status poll won't run -"
 echo "   real-time smartd alerts (rule 100818) work regardless, no group"
 echo "   assignment needed for those."
+echo ""
+echo "6. Shutdown listener token (same shared secret as nas01/vm01/log01's"
+echo "   sops entry \"shutdown_listener_token\" - can't be scripted, it's a"
+echo "   secret):"
+echo "     echo -n '<token>' | sudo tee /opt/shutdown-listener/token"
+echo "     sudo chmod 600 /opt/shutdown-listener/token"
+echo "     sudo systemctl start shutdown-listener.service"
+echo "   Until that's done, the service is enabled but not running."

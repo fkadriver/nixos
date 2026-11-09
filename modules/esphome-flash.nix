@@ -8,8 +8,12 @@ let
   # plugged in) uses an FTDI FT232 chip (0403:6001) - same generic ID as
   # modules/forscan.nix's OBDLink EX rule, so matched on ATTRS{product}
   # =="M5stack" too, not vendor/product alone, to avoid colliding with
-  # that rule. Stable /dev/esp32-flash symlink regardless of which
-  # ttyUSBn/ttyACMn node the kernel assigns on a given plug-in.
+  # that rule. The garage unit instead uses the ESP32's native USB-JTAG/
+  # serial (303a:1001, Espressif's own VID), confirmed via udevadm with
+  # that unit plugged in - distinctive enough to match on vendor/product
+  # alone. Both rules point at the same stable /dev/esp32-flash symlink
+  # regardless of which ttyUSBn/ttyACMn node the kernel assigns, since
+  # only one board is flashed at a time.
   flashScript = pkgs.writeShellScriptBin "esphome-flash" ''
     set -euo pipefail
 
@@ -49,6 +53,7 @@ in
 
     services.udev.extraRules = ''
       SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{product}=="M5stack", GROUP="dialout", MODE="0660", SYMLINK+="esp32-flash"
+      SUBSYSTEM=="tty", ATTRS{idVendor}=="303a", ATTRS{idProduct}=="1001", GROUP="dialout", MODE="0660", SYMLINK+="esp32-flash"
     '';
 
     users.groups.dialout = {};

@@ -38,9 +38,12 @@ let
       inputs.self.nixosModules.smart-monitor
       inputs.self.nixosModules.disk-usage-monitor
       inputs.self.nixosModules.fwupd
+      inputs.self.nixosModules.shutdown-listener
     ];
 
     config = {
+      services.shutdownListener.enable = true;
+
       # Home-manager configuration
       home-manager.useGlobalPkgs = true;
       home-manager.useUserPackages = true;

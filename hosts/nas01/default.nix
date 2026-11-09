@@ -49,11 +49,14 @@ let
       inputs.self.nixosModules.fwupd
       inputs.self.nixosModules.nix-cache-proxy
       inputs.self.nixosModules.distributed-builds
+      inputs.self.nixosModules.shutdown-listener
       inputs.home-manager.nixosModules.home-manager
       (inputs.self.homeConfigurations.scott).nixosModule
     ];
 
     config = {
+      services.shutdownListener.enable = true;
+
       # nas01 is headless (SSH/VNC-only, no console login or SDDM session), so
       # vscode-server.nix's PAM auto-unlock (wired to "login"/"sddm") never
       # fires here. Every SSH session then tries to prompt gnome-keyring to

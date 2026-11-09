@@ -15,11 +15,14 @@ let
       inputs.self.nixosModules.user-scott
       inputs.self.nixosModules.fwupd
       inputs.self.nixosModules.distributed-builds
+      inputs.self.nixosModules.shutdown-listener
       inputs.home-manager.nixosModules.home-manager
       (inputs.self.homeConfigurations.scott).nixosModule
     ];
 
     config = {
+      services.shutdownListener.enable = true;
+
       # No override needed anymore — the fleet-wide target is the
       # Tailscale-fronted collector (currently nas01), not log01 itself,
       # so log01 forwarding its own local syslog there is no longer a
