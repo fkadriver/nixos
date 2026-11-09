@@ -1078,33 +1078,58 @@ echo "=== [17/17] Shutdown listener (HA closet high-temp automation) ==="
 # SSH on a remote backup box) - so the listener binds directly to this
 # host's Tailscale IP instead of 0.0.0.0, which is unreachable from the LAN
 # side by construction.
+#
+# Also doubles as a status mirror: HA pushes the closet temp to /status on
+# every sensor update, written to a local file - check it directly on this
+# host via `closet-status`, no HA round-trip needed.
 SHUTDOWN_LISTENER_PORT=9090
 install -d -m 0755 /opt/shutdown-listener
 install -o root -g root -m 0644 /dev/stdin /opt/shutdown-listener/listener.py <<'LISTENEREOF'
-import sys, hmac, subprocess
+import sys, hmac, json, os, time, subprocess
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 bind_ip = sys.argv[1]
 port = int(sys.argv[2])
 token = open(sys.argv[3]).read().strip()
+status_path = sys.argv[4]
 
 class Handler(BaseHTTPRequestHandler):
-    def do_POST(self):
-        if self.path != "/shutdown":
-            self.send_response(404)
-            self.end_headers()
-            return
+    def _authed(self):
         supplied = self.headers.get("Authorization", "").removeprefix("Bearer ")
-        if not hmac.compare_digest(supplied, token):
+        return hmac.compare_digest(supplied, token)
+
+    def do_POST(self):
+        if not self._authed():
             self.send_response(403)
             self.end_headers()
             return
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(b"shutting down\n")
-        # Delay so this HTTP response actually reaches the caller before
-        # the host goes down, instead of the connection just dying.
-        subprocess.Popen(["systemd-run", "--on-active=2s", "systemctl", "poweroff"])
+
+        if self.path == "/shutdown":
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b"shutting down\n")
+            # Delay so this HTTP response actually reaches the caller
+            # before the host goes down, instead of the connection just
+            # dying.
+            subprocess.Popen(["systemd-run", "--on-active=2s", "systemctl", "poweroff"])
+        elif self.path == "/status":
+            length = int(self.headers.get("Content-Length", 0))
+            try:
+                payload = json.loads(self.rfile.read(length))
+            except ValueError:
+                self.send_response(400)
+                self.end_headers()
+                return
+            payload["received_at"] = int(time.time())
+            tmp = status_path + ".tmp"
+            with open(tmp, "w") as f:
+                json.dump(payload, f)
+            os.replace(tmp, status_path)
+            self.send_response(200)
+            self.end_headers()
+        else:
+            self.send_response(404)
+            self.end_headers()
 
     def log_message(self, fmt, *args):
         sys.stderr.write("%s - %s\n" % (self.address_string(), fmt % args))
@@ -1112,14 +1137,34 @@ class Handler(BaseHTTPRequestHandler):
 ThreadingHTTPServer((bind_ip, port), Handler).serve_forever()
 LISTENEREOF
 
+touch /opt/shutdown-listener/status.json
+chmod 644 /opt/shutdown-listener/status.json
+
 install -o root -g root -m 0755 /dev/stdin /opt/shutdown-listener/run.sh <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
 # Resolved at start, not baked in - Tailscale brings the interface up after
 # boot, and this avoids hardcoding an IP that could change.
 BIND_IP=\$(tailscale ip -4)
-exec /usr/bin/python3 /opt/shutdown-listener/listener.py "\$BIND_IP" $SHUTDOWN_LISTENER_PORT /opt/shutdown-listener/token
+exec /usr/bin/python3 /opt/shutdown-listener/listener.py "\$BIND_IP" $SHUTDOWN_LISTENER_PORT /opt/shutdown-listener/token /opt/shutdown-listener/status.json
 EOF
+
+install -o root -g root -m 0755 /dev/stdin /usr/local/bin/closet-status <<'CLOSETSTATUSEOF'
+#!/usr/bin/env python3
+import json, sys, time
+
+try:
+    with open("/opt/shutdown-listener/status.json") as f:
+        data = json.load(f)
+except (FileNotFoundError, ValueError):
+    print("No closet status received from HA yet.")
+    sys.exit(0)
+
+age = int(time.time()) - data.get("received_at", 0)
+temp = data.get("temp")
+flag = " - ABOVE SHUTDOWN THRESHOLD" if data.get("above_threshold") else ""
+print(f"Closet temp: {temp}F (updated {age}s ago){flag}")
+CLOSETSTATUSEOF
 
 # Token file installed empty - needs the real secret written by hand, same
 # reasoning as the Wazuh password/borg key manual steps below.
