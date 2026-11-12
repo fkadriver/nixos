@@ -483,6 +483,15 @@
           "trust-anchor=20.168.192.in-addr.arpa"
           "trust-anchor=21.168.192.in-addr.arpa"
           "trust-anchor=30.168.192.in-addr.arpa"
+
+          # Cync LAN (Home Assistant, homeassist repo): Cync/GE Wi-Fi lights phone
+          # home to these hosts; answering with the HA Green makes them connect to
+          # the cync_lan listener (TCP 23779) instead of Cync's cloud. Network-wide,
+          # so the Cync phone app's cloud control channel also can't reach the real
+          # cloud while on the home network. Power-cycle the lights after rebuilding.
+          "address=/cm.gelighting.com/192.168.21.138"
+          "address=/cm-sec.gelighting.com/192.168.21.138"
+          "address=/cm-ge.xlink.cn/192.168.21.138"
         ];
         webserver = {
           interface.theme = "default-dark";
