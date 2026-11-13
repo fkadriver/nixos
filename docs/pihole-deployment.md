@@ -220,7 +220,7 @@ The script:
 - Auto-detects the available build host (vm01 first, then localhost)
 - **Checks the kernel version** before building — warns and prompts if the kernel
   has changed from the locked version (a full kernel recompile takes ~2 hours)
-- Deploys pihole01 then pihole02 sequentially
+- Deploys pihole02 then pihole01 sequentially — pihole02 is the canary, so a bad build stops there and pihole01 (primary DNS) is never touched
 - Creates a GC root after each deploy so the compiled kernel is not garbage collected
 
 ### Kernel version locking

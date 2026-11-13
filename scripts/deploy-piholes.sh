@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Deploy NixOS updates to pihole01 and pihole02 sequentially.
+# Deploy NixOS updates to pihole02 and pihole01 sequentially (pihole02 first).
 # Verifies each Pi is healthy before moving to the next.
 #
 # Build host selection (in order of preference):
@@ -24,7 +24,7 @@
 
 set -euo pipefail
 
-SCRIPT_VERSION="1.3.0"
+SCRIPT_VERSION="1.4.0"
 SCRIPT_URL="https://raw.githubusercontent.com/fkadriver/nixos/main/scripts/deploy-piholes.sh"
 
 RED='\033[0;31m'
@@ -58,7 +58,10 @@ declare -A PI_DNS_RETRIES
 PI_DNS_RETRIES[pihole01]=5
 PI_DNS_RETRIES[pihole02]=15
 
-PIHOLES=("pihole01" "pihole02")
+# pihole02 goes first: it is the canary. If a change breaks boot (e.g. the
+# systemd stage-1 initrd switch in aaf668a), the deploy stops there and
+# pihole01 — the primary DNS server — keeps serving untouched.
+PIHOLES=("pihole02" "pihole01")
 
 log()  { $QUIET || echo -e "${BLUE}[$(date +%H:%M:%S)]${NC} $*"; }
 ok()   { $QUIET || echo -e "${GREEN}  ✓${NC} $*"; }

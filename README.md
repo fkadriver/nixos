@@ -135,7 +135,7 @@ See [docs/bitwarden-secrets-setup.md](docs/bitwarden-secrets-setup.md) for compr
 
 ### deploy-piholes.sh
 
-Deploys NixOS updates to pihole01 and pihole02 sequentially, verifying DNS health after each reboot.
+Deploys NixOS updates to pihole02 then pihole01 sequentially (pihole02 is the canary), verifying DNS health after each reboot.
 
 ```bash
 ./scripts/deploy-piholes.sh                        # deploy both; log → /tmp/pihole-update_<ts>.log
