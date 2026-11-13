@@ -367,6 +367,11 @@
       # LAN address and the Tailscale LE certificate still matches. Tailscale
       # clients resolve this via MagicDNS (100.x) instead and never ask Pi-hole.
       192.168.1.1   opnsense.warthog-royal.ts.net
+      # UniFi controller's Tailscale Serve FQDN, for Home Assistant (homeassist
+      # repo): HA's containers don't use MagicDNS, and the controller's LE cert is
+      # only served on its Tailscale address. /etc/hosts (not dns.hosts) so AAAA
+      # gets NODATA instead of NXDOMAIN, which musl treats as "no such name".
+      100.123.7.26  unifi.warthog-royal.ts.net
       192.168.1.2   aruba2530  # HPE Aruba 2530-24G PoE+ (SW01)
       192.168.1.3   sw02  # TL-SG108E
       192.168.11.50 LBP162  # Canon LBP
