@@ -1,0 +1,19 @@
+libbpf: make next_path const in resolve_full_path()
+
+glibc 2.43 (C23) makes strchr() return const char * for a const char *
+argument. The libbpf bundled with rpi kernel 6.6.78 assigns that to a
+plain char *, which trips -Wdiscarded-qualifiers and, under the tools
+build's -Werror, breaks tools/bpf/resolve_btfids (and the whole kernel
+build). Same change as upstream libbpf's C23 const fix.
+
+--- a/tools/lib/bpf/libbpf.c
++++ b/tools/lib/bpf/libbpf.c
+@@ -11233,7 +11233,7 @@
+ 		if (!search_paths[i])
+ 			continue;
+ 		for (s = search_paths[i]; s != NULL; s = strchr(s, ':')) {
+-			char *next_path;
++			const char *next_path;
+ 			int seg_len;
+ 
+ 			if (s[0] == ':')

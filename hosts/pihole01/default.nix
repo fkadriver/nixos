@@ -32,6 +32,14 @@ let
       # Update alongside LOCKED_KERNEL_VERSIONS in scripts/deploy-piholes.sh
       pihole.lockedKernelVersion = "6.6.78";
 
+      # 6.6.78's bundled libbpf fails under glibc 2.43 / gcc 16 (-Werror
+      # -Wdiscarded-qualifiers on a strchr() result in resolve_btfids).
+      # Drop this once the kernel lock moves past a libbpf with the fix.
+      boot.kernelPatches = [{
+        name = "libbpf-strchr-const";
+        patch = ./libbpf-strchr-const.patch;
+      }];
+
       system = {
         stateVersion = "25.11";
         nixos.label = "pihole01";
