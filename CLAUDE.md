@@ -246,7 +246,7 @@ sudo darwin-rebuild switch --flake ~/git/nixos#airbook-darwin
 ### What nix-darwin Manages
 - **System packages**: CLI tools installed via Nix (age, sops, htop, go, nodejs, python3)
 - **Homebrew**: GUI apps and services
-  - Casks: Bitwarden, Firefox, Ghostty, iTerm2, Pocket Casts, Rectangle, Scroll Reverser, VSCode
+  - Casks: Bitwarden, Firefox, Ghostty, Home Assistant, iTerm2, Pocket Casts, Rectangle, Scroll Reverser, VSCode
   - 3D Printing: OpenSCAD, PrusaSlicer, FreeCAD, Blender, MeshLab, Inkscape
   - Brews: syncthing, bitwarden-cli
 - **Fonts**: 3D printing fonts (EB Garamond, Libre Baskerville, Old Standard, Junicode, Inter, Source Sans)
@@ -284,7 +284,7 @@ sops updatekeys secrets/secrets.yaml
 - **CPU**: Intel Core i5-5250U/i7-5650U (Broadwell)
 - **Configuration**: `airbook-darwin` - macOS with nix-darwin (NixOS config archived)
 - **macOS config includes**:
-  - GUI apps: Bitwarden, Firefox, Ghostty, iTerm2, Rectangle, Scroll Reverser, VSCode
+  - GUI apps: Bitwarden, Firefox, Ghostty, Home Assistant, iTerm2, Rectangle, Scroll Reverser, VSCode
   - Services: Tailscale VPN, Syncthing file sync
   - System settings: Dark mode, Touch ID sudo, dock/keyboard/trackpad preferences
   - Bluetooth: SEENDA keyboard and mouse (manual pairing required)
@@ -299,6 +299,12 @@ sops updatekeys secrets/secrets.yaml
     tools and no USB Wi-Fi passthrough — those need the installed VMware Fusion
     25. Defined inline in `hosts/airbook-darwin/default.nix`, not a module. See
     `docs/kali-docker.md`.
+  - Home Assistant: official companion app (`home-assistant` cask). Sign in with
+    HA's advertised internal URL `http://192.168.21.138` — HA listens on **port
+    80, not 8123** — and it picks up the external
+    `https://homeassistant.warthog-royal.ts.net` from HA afterwards. Registers
+    the Mac as an HA device (same as the work Mac's `Work_MAC`). HA's own config
+    lives in the separate `homeassist` repo, not this flake.
 
 ### Dell Latitude 7480 (latitude)
 - **Service Tag**: 3BLBPQ2
@@ -308,6 +314,13 @@ sops updatekeys secrets/secrets.yaml
   (`modules/kali-docker.nix`, imported by `daily-driver.nix`) — same image and
   interface as airbook-darwin's, no VM layer needed since Docker already runs
   natively here. See `docs/kali-docker.md`.
+- **Home Assistant**: no official Linux client, so `daily-driver.nix` installs
+  the community companion agent `go-hass-agent` plus two desktop entries ("Home
+  Assistant Agent", "Home Assistant" dashboard in Firefox). The agent needs a
+  one-time `go-hass-agent register --server https://homeassistant.warthog-royal.ts.net
+  --token <long-lived token>`; the `systemd.user.services.go-hass-agent` unit
+  stays inactive (ExecCondition on `~/.config/go-hass-agent/preferences.toml`)
+  until that is done, then starts it at login.
 
 ### Dell Latitude E7270 (vm01)
 - **Purpose**: Immich app + Postgres (frontend/database only — library data lives on nas01)

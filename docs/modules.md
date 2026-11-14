@@ -18,7 +18,7 @@ This document provides a high-level overview of all available modules in this re
 | `laptop-xfce.nix` | Full XFCE desktop with development tools, gaming support, media tools |
 | `laptop-kde.nix` | Full KDE Plasma 6 with Windows 11-like taskbar, gaming, KDE Connect |
 | `laptop-minimal.nix` | Minimal XFCE for testing (no WiFi auto-config, no Bitwarden) |
-| `daily-driver.nix` | Shared configuration for Scott's daily-driver machines (applications, fonts, 3D printing). Also carries the `nix-sync`/`fw-check`/`host-status` fleet-management aliases and the IDrive360 client shortcuts (`idrive-app`, `idrive-start`/`stop`/`restart`, plus an `idrive-status` script and the `xpra` client they need — all point at `sands-bak01`, dedicated hardware, not a VM). Imported via `laptop-kde.nix`/`laptop-xfce.nix` → latitude; mirrored by hand in `hosts/airbook-darwin/home.nix` |
+| `daily-driver.nix` | Shared configuration for Scott's daily-driver machines (applications, fonts, 3D printing). Also carries the `nix-sync`/`fw-check`/`host-status` fleet-management aliases and the IDrive360 client shortcuts (`idrive-app`, `idrive-start`/`stop`/`restart`, plus an `idrive-status` script and the `xpra` client they need — all point at `sands-bak01`, dedicated hardware, not a VM). Also the Home Assistant client side: `go-hass-agent` (community Linux companion agent — no official Linux client), its desktop entries, and a `systemd.user.services.go-hass-agent` unit that stays inactive until the agent is registered; airbook-darwin's counterpart is the `home-assistant` cask. Imported via `laptop-kde.nix`/`laptop-xfce.nix` → latitude; mirrored by hand in `hosts/airbook-darwin/home.nix` |
 
 ## Pi-hole Modules
 

@@ -163,6 +163,39 @@
       handbrake  # Video transcoding
       discord
 
+      # Home Assistant: there is no official HA desktop/companion client for
+      # Linux, so this is the community one (joshuar/go-hass-agent) — same role
+      # as the "home-assistant" companion cask on airbook-darwin: it registers
+      # the machine with HA as a device and reports sensors (battery, network,
+      # power, app state) and receives notifications.
+      #
+      # One-time registration, with a long-lived access token from HA →
+      # profile → security (HA listens on port 80, not 8123; this is HA's
+      # advertised external URL, so it also works off-LAN over Tailscale):
+      #   go-hass-agent register \
+      #     --server https://homeassistant.warthog-royal.ts.net --token <token>
+      # After that the go-hass-agent user service below starts it at login.
+      go-hass-agent
+
+      # nixpkgs' go-hass-agent ships only the binary — upstream's own packages
+      # include a .desktop file, so add the launcher entries by hand: one to run
+      # the agent (its first run serves the registration form on
+      # http://localhost:8223), one for HA's web dashboard.
+      (makeDesktopItem {
+        name = "go-hass-agent";
+        desktopName = "Home Assistant Agent";
+        comment = "Report this machine's sensors to Home Assistant";
+        exec = "${go-hass-agent}/bin/go-hass-agent run";
+        categories = [ "Utility" ];
+      })
+      (makeDesktopItem {
+        name = "home-assistant";
+        desktopName = "Home Assistant";
+        comment = "Jen Acres home automation dashboard";
+        exec = "firefox --new-window https://homeassistant.warthog-royal.ts.net";
+        categories = [ "Network" ];
+      })
+
       libreoffice
 
       borgbackup
@@ -189,6 +222,23 @@
         ssh scott@sands-bak01.warthog-royal.ts.net /usr/local/bin/idrive360-agent-status.sh
       '')
     ];
+
+    # Start go-hass-agent at login, but only once it has been registered with
+    # HA: before registration there is no preferences.toml and the agent exits,
+    # so the ExecCondition keeps the unit quietly inactive instead of
+    # crash-looping on every fresh machine. See the registration command in the
+    # go-hass-agent entry above.
+    systemd.user.services.go-hass-agent = {
+      description = "Go Hass Agent — report sensors to Home Assistant";
+      wantedBy = [ "graphical-session.target" ];
+      after = [ "graphical-session.target" ];
+      serviceConfig = {
+        ExecCondition = "${pkgs.coreutils}/bin/test -f %h/.config/go-hass-agent/preferences.toml";
+        ExecStart = "${pkgs.go-hass-agent}/bin/go-hass-agent run";
+        Restart = "on-failure";
+        RestartSec = 30;
+      };
+    };
 
     programs.nix-ld = {
       enable = true;
