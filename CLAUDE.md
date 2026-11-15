@@ -255,7 +255,7 @@ sudo darwin-rebuild switch --flake ~/git/nixos#airbook-darwin
 - **Kali Linux**: headless Kali in a Docker container on a dedicated `colima` VM,
   via the `kali` wrapper command (no Docker Desktop; `docker-client` is CLI-only).
   See `docs/kali-docker.md`
-- **Home Manager**: Shell config (bash, zsh, starship), VSCode extensions, SSH config, dotfiles
+- **Home Manager**: Shell config (bash, zsh, starship), SSH config, dotfiles. Not VS Code: that is the `visual-studio-code` cask, with extensions/settings from VS Code's own GitHub Settings Sync (`programs.vscode` was dropped 2026-11-15 — nixpkgs' x86_64-darwin vscode 1.144.0 is broken, and it only duplicated the cask)
 - **Secrets**: SSH keys deployed via sops-nix from encrypted secrets.yaml
 
 ### Useful Aliases

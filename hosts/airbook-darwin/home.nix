@@ -532,13 +532,18 @@ in
 
     jq.enable = true;
 
-    # VSCode - plain install, extensions managed via Settings Sync (GitHub account)
-    # This allows installing any marketplace extension without Nix store limitations
-    vscode = {
-      enable = true;
-      package = pkgs.vscode;
-      # Extensions installed via VS Code marketplace and synced via GitHub Settings Sync
-    };
+    # NOTE: no programs.vscode. VS Code on this host is the Homebrew cask
+    # "visual-studio-code" (see default.nix) — that is the app in /Applications,
+    # it self-updates (1.145.2 as of 2026-11-15), and it symlinks the `code` CLI
+    # into /usr/local/bin. This block added a second, nixpkgs-built copy under
+    # ~/Applications/Home Manager Apps for no extra function: extensions and
+    # settings come from VS Code's own GitHub Settings Sync, never from
+    # home-manager. Removed 2026-11-15 because nixpkgs' x86_64-darwin vscode
+    # 1.144.0 fails to build — upstream moved the bundled ripgrep to
+    # node_modules.asar.unpacked/@vscode/ripgrep-universal/bin/darwin-x64/rg,
+    # so the derivation's `chmod` of node_modules/@vscode/ripgrep/bin/rg dies in
+    # patchPhase and takes the whole darwin-rebuild with it. Not worth an
+    # overlay to keep a duplicate of an app Homebrew already manages.
 
     starship = {
       enable = true;
