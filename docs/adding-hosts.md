@@ -257,7 +257,7 @@ sudo nixos-rebuild switch --flake .#hostname-kde
 - `multi-monitor.nix` - Multi-monitor autorandr profiles
 - `virtualbox.nix` - VirtualBox support
 - `wireless.nix` - WiFi configuration (for laptops without NetworkManager)
-- `3d-printing.nix` - 3D printing tools (Orca Slicer, PrusaSlicer, FreeCAD)
+- `3d-printing.nix` - 3D printing tools (Orca Slicer, FreeCAD)
 - `printing.nix` - Printer support (CUPS)
 - `vscode.nix` - VSCode with gnome-keyring
 - `borg-backup.nix` - Borg backup module (enable via services.borg-backup)

@@ -201,7 +201,6 @@ in
       (with pkgs; [
         openscad
         orca-slicer
-        prusa-slicer
         blender
         meshlab
         sweethome3d.application

@@ -117,7 +117,7 @@ The flake automatically discovers all `.nix` files in `./modules/` and exposes t
 - `borg-backup.nix` - Encrypted backups to remote servers
 - `disko-config.nix` - Automated disk partitioning (1GB boot + LVM)
 - `wireless.nix` - WiFi auto-connect for JEN_ACRES network
-- `3d-printing.nix` - OrcaSlicer, PrusaSlicer, FreeCAD 1.1.0 (nixpkgs 25.11), OpenSCAD, Blender, MeshLab, SolveSpace, f3d, Sweet Home 3D
+- `3d-printing.nix` - OrcaSlicer, FreeCAD 1.1.0 (nixpkgs 25.11), OpenSCAD, Blender, MeshLab, SolveSpace, f3d, Sweet Home 3D
 - `home-design.nix` - Sweet Home 3D for interior design and floor plans (with plugin installer)
 - `vscode.nix` - VSCode with gnome-keyring integration
 - `syncthing.nix` - File synchronization service
@@ -247,7 +247,7 @@ sudo darwin-rebuild switch --flake ~/git/nixos#airbook-darwin
 - **System packages**: CLI tools installed via Nix (age, sops, htop, go, nodejs, python3)
 - **Homebrew**: GUI apps and services
   - Casks: Bitwarden, Firefox, Ghostty, Home Assistant, iTerm2, Pocket Casts, Rectangle, Scroll Reverser, VSCode
-  - 3D Printing: OpenSCAD, PrusaSlicer, FreeCAD, Blender, MeshLab, Inkscape
+  - 3D Printing: OrcaSlicer, FreeCAD (OpenSCAD, PrusaSlicer, Blender, MeshLab, Inkscape dropped in the 2026-09-04 cask trim)
   - Brews: syncthing, bitwarden-cli
 - **Fonts**: 3D printing fonts (EB Garamond, Libre Baskerville, Old Standard, Junicode, Inter, Source Sans)
 - **macOS settings**: Dock, Finder, keyboard, trackpad, dark mode, Touch ID for sudo
