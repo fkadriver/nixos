@@ -71,6 +71,41 @@ in
       });
     });
 
+    # TEMPORARY WORKAROUND (remove once fixed upstream): vmnet-natd (VMware's
+    # NAT daemon for vmnet8) SEGVs in glibc's dl_main before main() on every
+    # start since the 2026-11-01 nixpkgs bump moved glibc 2.42 -> 2.43+, so
+    # vmware-networks.service fails ("Failed to start NAT service on vmnet8")
+    # and anything that Requires= it (vmnet-bridge-pin below) never starts.
+    # Cause: nixpkgs' patchelf pass mangled this one binary (the only non-PIE
+    # ELF in the package with the defect): the LOAD it added at the file start
+    # is too short to cover PHDR/INTERP/NOTE, and .dynamic ended up in a
+    # read-only LOAD. glibc >= 2.43 reads those notes from memory and writes
+    # DT_DEBUG into .dynamic, so it faults. vmware-natd-elf-fix.py grows that
+    # LOAD and marks the .dynamic LOAD writable, in place (idempotent; prints
+    # "nothing to fix" once upstream is fixed). Runs as a postPhase, after
+    # fixupPhase, so no later patchelf step can undo it.
+    nixpkgs.overlays = [
+      (final: prev: {
+        vmware-workstation = prev.vmware-workstation.overrideAttrs (old: {
+          nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ final.python3 ];
+          postPhases = (old.postPhases or [ ]) ++ [ "fixNatdElfPhase" ];
+          fixNatdElfPhase = ''
+            natd=$(readlink -f "$out/bin/vmnet-natd")
+            chmod u+w "$natd"
+            python3 ${./vmware-natd-elf-fix.py} "$natd"
+            chmod u-w "$natd"
+            # -h prints usage and exits non-zero even when healthy (stdenv runs
+            # with pipefail), so capture first; a SEGV prints no usage at all.
+            usage=$("$natd" -h 2>&1 || true)
+            case "$usage" in
+              *"Usage: vmnet-natd"*) ;;
+              *) echo "vmnet-natd still fails to run after ELF fix" >&2; exit 1 ;;
+            esac
+          '';
+        });
+      })
+    ];
+
     environment.systemPackages = [ pkgs.vmware-workstation ];
 
     virtualisation.vmware.host.enable = true;
