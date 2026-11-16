@@ -64,7 +64,7 @@ in
       xarchiver
       xdotool
       xbindkeys
-      xorg.xev
+      xev
 
       # Additional XFCE apps
       ristretto

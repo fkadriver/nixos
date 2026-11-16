@@ -120,17 +120,18 @@ in
         orbitron
       ];
 
-      # Nerd fonts: nixpkgs naming/packaging has changed over time.
-      # We only attempt the classic nerdfonts override when pkgs.nerdfonts exists.
-      # Otherwise we fall back to regular JetBrains Mono + Fira Code (non-nerd).
-      nerdFonts =
-        if pkgs ? nerdfonts then
-          [ (pkgs.nerdfonts.override { fonts = [ "JetBrainsMono" "FiraCode" ]; }) ]
-        else
-          (with pkgs; [
-            jetbrains-mono
-            fira-code
-          ]);
+      # Nerd fonts (patched glyphs the starship prompt in common.nix uses).
+      # The monolithic `nerdfonts` package was split into per-font
+      # `nerd-fonts.*` attrs in nixpkgs 25.05; the old `pkgs ? nerdfonts`
+      # guard silently fell back to the unpatched fonts ever since. Plain
+      # jetbrains-mono/fira-code kept too: fontconfig's monospace default
+      # below names those families.
+      nerdFonts = with pkgs; [
+        nerd-fonts.jetbrains-mono
+        nerd-fonts.fira-code
+        jetbrains-mono
+        fira-code
+      ];
 
       selectedFonts = lib.flatten [
         (lib.optionals cfg.documents documentFonts)

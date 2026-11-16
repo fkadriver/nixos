@@ -9,12 +9,17 @@
     # for common.nix and security-relevant modules (kernel, tailscale, borg,
     # bitwarden) where freshness matters more than cache-hit rate.
     nixpkgs-nixos.url = "github:NixOS/nixpkgs/nixos-unstable";
-    nixpkgs-2511.url = "github:NixOS/nixpkgs/nixos-25.11";
     # Darwin-specific: nixpkgs-unstable moved to 26.11pre and dropped x86_64-darwin.
     # 26.05 is the last supported branch (through end of 2026) for MacBookAir7,2.
     nixpkgs-darwin.url = "github:NixOS/nixpkgs/nixpkgs-26.05-darwin";
-    home-manager.url = "flake:home-manager";
-    nixos-hardware.url = "flake:nixos-hardware";
+    home-manager = {
+      url = "flake:home-manager";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    nixos-hardware = {
+      url = "flake:nixos-hardware";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     disko = {
       url = "github:nix-community/disko";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -23,10 +28,9 @@
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    vscode-server = {
-      url = "github:nix-community/nixos-vscode-server";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    # No nixpkgs follows: this flake has no nixpkgs input of its own (only
+    # flake-parts), so a follows here just produces an eval warning.
+    vscode-server.url = "github:nix-community/nixos-vscode-server";
     raspberry-pi-nix = {
       url = "github:nix-community/raspberry-pi-nix";
       inputs.nixpkgs.follows = "nixpkgs";

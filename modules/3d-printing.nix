@@ -4,10 +4,6 @@
 let
   cfg = config.my.printing;
 
-  # FreeCAD 1.1.0 is available in nixpkgs 25.11 but not yet in nixpkgs-unstable
-  pkgs2511 = inputs.nixpkgs-2511.legacyPackages.${pkgs.stdenv.hostPlatform.system};
-  freecad = pkgs2511.freecad;
-
   # Some font package names can vary across nixpkgs revisions. Only include those that exist.
   fontPkgs =
     (if pkgs ? "eb-garamond" then [ pkgs."eb-garamond" ] else []) ++
@@ -197,8 +193,8 @@ in
 
     # Core modeling / slicing
     environment.systemPackages =
-      [ freecad ] ++  # FreeCAD 1.1.0 from nixpkgs 25.11
       (with pkgs; [
+        freecad
         openscad
         orca-slicer
         blender
@@ -223,12 +219,16 @@ in
     # Stable path for FreeCAD Draft→ShapeString font browsing
     environment.etc."freecad/fonts".source = lib.mkIf cfg.fonts.enable freecadFontDir;
 
-    # Install BOSL2 library to OpenSCAD user libraries directory
+    # Install BOSL2 library to OpenSCAD user libraries directory.
+    # Re-pointed whenever the target differs (not just when missing): the old
+    # "only if not already a symlink" guard left the link on the previous
+    # store path after a rev bump, which then dangled once GC removed it.
+    # The store path stays alive because it's referenced from this script.
     system.activationScripts.openscadBosl2 = {
       text = ''
         OPENSCAD_LIB="/home/scott/.local/share/OpenSCAD/libraries"
         mkdir -p "$OPENSCAD_LIB"
-        if [ ! -L "$OPENSCAD_LIB/BOSL2" ]; then
+        if [ "$(readlink "$OPENSCAD_LIB/BOSL2" 2>/dev/null)" != "${bosl2}" ]; then
           rm -rf "$OPENSCAD_LIB/BOSL2"
           ln -sfn ${bosl2} "$OPENSCAD_LIB/BOSL2"
           chown -h scott:users "$OPENSCAD_LIB/BOSL2" 2>/dev/null || true

@@ -19,7 +19,7 @@ let
     done
   '';
 
-  nixosModule = { config, lib, pkgs, tsDockerSidecarStart, ... }: {
+  nixosModule = { config, lib, pkgs, options, tsDockerSidecarStart, ... }: {
     imports = [
       ./hardware-configuration.nix
       inputs.home-manager.nixosModules.home-manager
@@ -283,10 +283,19 @@ let
       services.borg-backup = {
         enable = true;
         repository = "ssh://scott@nas01.warthog-royal.ts.net/pool/borg/vm01";
-        # /mnt/immich (old USB drive) removed; immich's Postgres data now
-        # lives under /home/scott/git/immich-app/postgres-vm01, already
-        # covered by /home.
+        # /mnt/immich (old USB drive) removed. Immich's live Postgres data dir
+        # (/home/scott/git/immich-app/postgres-vm01) is excluded: copying a
+        # running cluster's files file-by-file isn't a restorable backup.
+        # The database is covered instead by Immich's own nightly dump
+        # (02:00, pg_dumpall → UPLOAD_LOCATION/backups, i.e. nas01's
+        # /pool/photos/backups on ZFS, picked up offsite by IDrive360 via
+        # sands-bak01) — restore with Immich's documented dump-restore flow.
         paths = [ "/home" ];
+        # Append to (not replace) the module's default cache/node_modules
+        # excludes — setting the option directly would drop them.
+        exclude = options.services.borg-backup.exclude.default ++ [
+          "/home/scott/git/immich-app/postgres-vm01"
+        ];
         encryption.passphraseFile = "/run/bitwarden-secrets/borg_passphrase";
         sshKeyFile = "/home/scott/.ssh/id_ed25519_legacy";
       };
