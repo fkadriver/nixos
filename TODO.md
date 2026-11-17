@@ -54,7 +54,7 @@ it. Two separate faults mean Wazuh gets almost nothing useful.
       read-only and passed as `-mapping=/mapping.yaml` in `docker-compose.yml`.
       Note: `formatter.fields` is a whitelist, so the always-empty keys (MACs,
       VLANs, MPLS, AS path, …) are now dropped from the JSON.
-- [ ] Confirm in Wazuh Discover that netflow events show non-zero bytes.
+- [x] Confirm in Wazuh Discover that netflow events show non-zero bytes.
 - [ ] Optional: report upstream. goflow2 shouldn't let `OUT_*` clobber `IN_*`
       when a template carries both.
 
@@ -78,7 +78,7 @@ it. Two separate faults mean Wazuh gets almost nothing useful.
       that `/var/log/remote/*` and the collector still get OPNsense/pihole,
       and that no new `collectorfwd.bad.*` dirs appear. Then
       `sudo rm -rf /var/spool/rsyslog/collectorfwd.bad.*`. All done 2026-11-16.
-- [ ] Still large but left alone: Wazuh `queue/vd/feed` (12 GB, the
+- [x] Still large but left alone: Wazuh `queue/vd/feed` (12 GB, the
       vulnerability-detector feed) and `/nix/store` (18 GB, weekly GC).
 
 ## 2. Infrastructure
