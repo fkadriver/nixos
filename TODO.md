@@ -55,8 +55,8 @@ it. Two separate faults mean Wazuh gets almost nothing useful.
       Note: `formatter.fields` is a whitelist, so the always-empty keys (MACs,
       VLANs, MPLS, AS path, …) are now dropped from the JSON.
 - [x] Confirm in Wazuh Discover that netflow events show non-zero bytes.
-- [ ] Optional: report upstream. goflow2 shouldn't let `OUT_*` clobber `IN_*`
-      when a template carries both.
+- [x] Optional: report upstream. goflow2 shouldn't let `OUT_*` clobber `IN_*`
+      when a template carries both. Already reported as netsampler/goflow2#524, with a fix in PR #593. Both got a 👍 on 2026-11-16. The goflow2-netflow README has the steps to drop `mapping.yaml` once a fixed release ships.
 
 ### 1c. Related
 
