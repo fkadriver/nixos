@@ -71,16 +71,29 @@ let
       services.rsyslogd = {
         enable = true;
         extraConfig = ''
-          # Load input modules for remote syslog reception
+          # Remote inputs are bound to their own ruleset, so network traffic
+          # never enters the default ruleset at all. NixOS emits
+          # services.rsyslogd.defaultConfig (the *.* -> /var/log/messages and
+          # warn rules) and common.nix's forward-everything action BEFORE this
+          # extraConfig, so the old "filter remote, then ~ discard" here was too
+          # late. Every OPNsense/pihole message was also written to
+          # /var/log/messages (5.4G by 2026-11-16) and forwarded twice to the
+          # collector: once by common.nix's action, once by the relay below.
+          # Both actions also shared queue.filename="collectorfwd", which
+          # corrupted the disk queue repeatedly (rsyslog quarantined it as
+          # collectorfwd.bad.* on Nov 1/2/5/9 and dropped 798615 messages on
+          # Nov 15). The relay now has its own queue file.
           module(load="imudp")
           module(load="imtcp")
 
-          input(type="imudp" port="514")
-          input(type="imtcp" port="514")
+          input(type="imudp" port="514" ruleset="remote")
+          input(type="imtcp" port="514" ruleset="remote")
 
-          # Per-host log file path template
+          # Per-host log file path template. secpath-replace: HOSTNAME and
+          # PROGRAMNAME come from the sender, so neutralise "/" and ".." to
+          # keep a crafted message from writing outside /var/log/remote.
           template(name="RemoteHost" type="string"
-            string="/var/log/remote/%HOSTNAME%/%PROGRAMNAME%.log")
+            string="/var/log/remote/%HOSTNAME:::secpath-replace%/%PROGRAMNAME:::secpath-replace%.log")
 
           # Per-host log message format: RFC 3164 (traditional syslog) timestamp so
           # Wazuh's syslog pre-decoder extracts hostname and program_name correctly.
@@ -88,42 +101,48 @@ let
           # predecoder.hostname and making it impossible to filter by source host in OSD.
           # Pi-hole sends Tag="pihole-dns:" (colon included) so %syslogtag% already
           # satisfies Wazuh's requirement for a colon after the program name.
-          $template WazuhSyslog,"%TIMESTAMP:::date-rfc3164% %HOSTNAME% %syslogtag%%msg%\n"
+          template(name="WazuhSyslog" type="string"
+            string="%TIMESTAMP:::date-rfc3164% %HOSTNAME% %syslogtag%%msg%\n")
 
-          $FileOwner root
-          $FileGroup adm
-          $FileCreateMode 0640
-          $DirOwner root
-          $DirGroup adm
-          $DirCreateMode 0750
-          :fromhost-ip, !isequal, "127.0.0.1"   ?RemoteHost;WazuhSyslog
+          ruleset(name="remote") {
+            # Anything local that happens to send to 127.0.0.1:514 keeps its
+            # old treatment (default ruleset: messages/warn + common.nix's
+            # forward) instead of being filed as a remote host.
+            if $fromhost-ip == "127.0.0.1" then {
+              call RSYSLOG_DefaultRuleset
+              stop
+            }
 
-          # Relay the same messages on to the universal collector
-          # (syslog-tailscale repo, currently running on nas01 — see its
-          # README) — except nas01's own traffic. Every NixOS host
-          # (including nas01) now forwards its own syslog directly there
-          # via common.nix's logging.forwardSyslog; relaying nas01's own
-          # traffic back to it here would round-trip and double-ingest in
-          # Wazuh. log01 itself stays as a transitional bridge for devices
-          # that can't be repointed yet (OPNsense, pihole). Same
-          # disk-assisted queue pattern as that existing forward action —
-          # bounded, retries instead of blocking, so a slow/unreachable
-          # collector can't backpressure imtcp/imudp reads and wedge every
-          # sender fleet-wide (the Jun-Jul 2026 failure mode noted above).
-          if $fromhost-ip != "127.0.0.1" and $fromhost-ip != "100.73.114.76" then {
-            action(type="omfwd"
-              target="syslog.warthog-royal.ts.net"
-              port="5515"
-              protocol="tcp"
-              queue.type="LinkedList"
-              queue.filename="collectorfwd"
-              queue.maxdiskspace="500m"
-              queue.saveonshutdown="on"
-              action.resumeRetryCount="-1"
-              action.resumeInterval="30")
+            action(type="omfile" dynaFile="RemoteHost" template="WazuhSyslog"
+              fileOwner="root" fileGroup="adm" fileCreateMode="0640"
+              dirOwner="root" dirGroup="adm" dirCreateMode="0750")
+
+            # Relay the same messages on to the universal collector
+            # (syslog-tailscale repo, currently running on nas01 — see its
+            # README) — except nas01's own traffic. Every NixOS host
+            # (including nas01) now forwards its own syslog directly there
+            # via common.nix's logging.forwardSyslog; relaying nas01's own
+            # traffic back to it here would round-trip and double-ingest in
+            # Wazuh. log01 itself stays as a transitional bridge for devices
+            # that can't be repointed yet (OPNsense, pihole). Same
+            # disk-assisted queue pattern as common.nix's forward action, but
+            # its OWN queue file (see above). Bounded, and it retries instead
+            # of blocking, so a slow/unreachable collector can't
+            # backpressure imtcp/imudp reads and wedge every sender
+            # fleet-wide (the Jun-Jul 2026 failure mode noted above).
+            if $fromhost-ip != "100.73.114.76" then {
+              action(type="omfwd"
+                target="syslog.warthog-royal.ts.net"
+                port="5515"
+                protocol="tcp"
+                queue.type="LinkedList"
+                queue.filename="relayfwd"
+                queue.maxdiskspace="500m"
+                queue.saveonshutdown="on"
+                action.resumeRetryCount="-1"
+                action.resumeInterval="30")
+            }
           }
-
-          :fromhost-ip, !isequal, "127.0.0.1"   ~
         '';
       };
 
@@ -220,6 +239,34 @@ let
         };
       };
 
+      # Wazuh on-disk log retention. The manager writes one archives/alerts
+      # file per day under /var/ossec/logs/{archives,alerts}/YYYY/Mon/ and
+      # gzips it at midnight, but never deletes anything. By 2026-11-16 it
+      # held 24 GB back to July on log01's 108 GB root disk. The searchable
+      # copy lives in the indexer and the long-term raw copy on nas01, so
+      # 60 days on disk is plenty. Only rotated *.gz (and their *.sum)
+      # files are touched, never the live day's .json/.log. Runs inside the
+      # manager container so ownership and paths match Wazuh's own view. If
+      # the stack is down the unit just fails, and the next day catches up.
+      systemd.timers.wazuh-log-retention = {
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          OnCalendar = "*-*-* 03:30:00";
+          Persistent = true;
+          RandomizedDelaySec = "10m";
+        };
+      };
+      systemd.services.wazuh-log-retention = {
+        description = "Delete Wazuh archives/alerts older than 60 days";
+        after = [ "wazuh-docker.service" ];
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = "${pkgs.docker}/bin/docker exec wazuh-tailscale-wazuh.manager-1 "
+            + "find /var/ossec/logs/archives /var/ossec/logs/alerts -mindepth 3 -type f "
+            + "( -name '*.gz' -o -name '*.sum' ) -mtime +60 -print -delete";
+        };
+      };
+
       # goflow2 Netflow collector — standalone from the Wazuh stack, writes
       # NDJSON flow records into the same directory rsyslog uses for OPNsense's
       # other forwarded logs (see goflow2-netflow repo + wazuh-tailscale's
@@ -303,7 +350,11 @@ let
       # "rsyslog.service" — the postrotate hook above had been silently
       # no-op'ing on the wrong unit name this whole time too.
       services.logrotate.settings.local-syslog = {
-        files = "/var/log/messages /var/log/warn";
+        # Must be a list: a single space-separated string is emitted as ONE
+        # quoted path ("/var/log/messages /var/log/warn"), which matches no
+        # file, and missingok hid that — neither log rotated from 2026-10-25
+        # until this was fixed on 2026-11-16 (messages had reached 5.4G).
+        files = [ "/var/log/messages" "/var/log/warn" ];
         frequency = "daily";
         rotate = 14;
         maxsize = "500M";

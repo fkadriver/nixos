@@ -62,9 +62,24 @@ it. Two separate faults mean Wazuh gets almost nothing useful.
 
 - [x] `goflow2-netflow` on log01 is `git init`'d with files staged, but has no
       commits and no remote. Commit it, create a private GitHub repo, and push. Done 2026-11-16: github.com/fkadriver/goflow2-netflow (private).
-- [ ] log01's root disk is at 89% (91 of 108 GB on 2026-11-16). Find what's
-      using it. Likely the Wazuh indexer, made worse by the deleted netflow
-      file in 1a.
+- [x] log01's root disk at 86–89%. Found on 2026-11-16: not the indexer
+      (9.8 GB). The causes:
+  - Wazuh `logs/archives` + `alerts` (24 GB) are never deleted, and 5 days
+    were never gzipped. Those days were gzipped by hand, and the new
+    `wazuh-log-retention` timer keeps 60 days.
+  - `/var/log/messages` (5.4 GB) never rotated. `files` was one
+    space-separated string, which became a single bogus quoted path. Now a
+    list.
+  - `messages` was full of remote OPNsense/pihole traffic. It was also
+    forwarded twice, through two omfwd actions that shared queue file
+    `collectorfwd`, which corrupted it (798615 messages lost on Nov 15).
+    Remote inputs now use their own `remote` ruleset and `relayfwd` queue.
+- [ ] After deploying: check that `/var/log/messages` rotates within the hour,
+      that `/var/log/remote/*` and the collector still get OPNsense/pihole,
+      and that no new `collectorfwd.bad.*` dirs appear. Then
+      `sudo rm -rf /var/spool/rsyslog/collectorfwd.bad.*`.
+- [ ] Still large but left alone: Wazuh `queue/vd/feed` (12 GB, the
+      vulnerability-detector feed) and `/nix/store` (18 GB, weekly GC).
 
 ## 2. Infrastructure
 
