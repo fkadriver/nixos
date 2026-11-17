@@ -34,8 +34,8 @@ it. Two separate faults mean Wazuh gets almost nothing useful.
       `02102001`), and so does rsyslog.
 - [x] Then run `docker restart goflow2` once on log01, to get a live
       `netflow.log` back and free the deleted file's space.
-- [ ] Afterwards, confirm netflow events show up in Wazuh (rule 100500 in
-      `wazuh-tailscale`'s `netflow-rules.xml`).
+- [x] Afterwards, confirm netflow events show up in Wazuh (rule 100500 in
+      `wazuh-tailscale`'s `netflow-rules.xml`). Verified 2026-11-16 in the manager archives and with wazuh-logtest. The indexer wasn't checked.
 
 ### 1b. Every record has `bytes: 0, packets: 0`: root cause found, fix applied
 
@@ -74,10 +74,10 @@ it. Two separate faults mean Wazuh gets almost nothing useful.
     forwarded twice, through two omfwd actions that shared queue file
     `collectorfwd`, which corrupted it (798615 messages lost on Nov 15).
     Remote inputs now use their own `remote` ruleset and `relayfwd` queue.
-- [ ] After deploying: check that `/var/log/messages` rotates within the hour,
+- [x] After deploying: check that `/var/log/messages` rotates within the hour,
       that `/var/log/remote/*` and the collector still get OPNsense/pihole,
       and that no new `collectorfwd.bad.*` dirs appear. Then
-      `sudo rm -rf /var/spool/rsyslog/collectorfwd.bad.*`.
+      `sudo rm -rf /var/spool/rsyslog/collectorfwd.bad.*`. All done 2026-11-16.
 - [ ] Still large but left alone: Wazuh `queue/vd/feed` (12 GB, the
       vulnerability-detector feed) and `/nix/store` (18 GB, weekly GC).
 
