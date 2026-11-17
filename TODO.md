@@ -60,8 +60,8 @@ it. Two separate faults mean Wazuh gets almost nothing useful.
 
 ### 1c. Related
 
-- [ ] `goflow2-netflow` on log01 is `git init`'d with files staged, but has no
-      commits and no remote. Commit it, create a private GitHub repo, and push.
+- [x] `goflow2-netflow` on log01 is `git init`'d with files staged, but has no
+      commits and no remote. Commit it, create a private GitHub repo, and push. Done 2026-11-16: github.com/fkadriver/goflow2-netflow (private).
 - [ ] log01's root disk is at 89% (91 of 108 GB on 2026-11-16). Find what's
       using it. Likely the Wazuh indexer, made worse by the deleted netflow
       file in 1a.
