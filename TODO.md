@@ -37,36 +37,26 @@ it. Two separate faults mean Wazuh gets almost nothing useful.
 - [ ] Afterwards, confirm netflow events show up in Wazuh (rule 100500 in
       `wazuh-tailscale`'s `netflow-rules.xml`).
 
-### 1b. Every record has `bytes: 0, packets: 0`: needs the template
+### 1b. Every record has `bytes: 0, packets: 0`: root cause found, fix applied
 
-- **Since day one:** every sampled record from Nov 1, 3, 9 and 16, plus the
-  live stream, has zero counters. All other fields decode correctly.
-- **Diagnosis so far** (135-packet capture from 2026-11-16, hand-decoded):
-  - Data flowset 256 has 57-byte records, matching FreeBSD `ng_netflow`'s
-    IPv4 layout.
-  - The real counters are at record offsets 16–23, as two 32-bit fields:
-    packets, then bytes. For example `0x00000001_00000034` is 1 packet,
-    52 bytes, a TCP SYN.
-  - Offsets 24–31 are always zero. That's what goflow2 reports as bytes and
-    packets.
-  - So the template most likely labels the real counters with field IDs that
-    goflow2's default mapping doesn't read as bytes and packets, and puts the
-    standard IDs (`IN_BYTES`=1, `IN_PKTS`=2) on the zero field.
-- **Blocker:** the capture missed the template. OPNsense resends it about
-  every 10 minutes (goflow2 metric `nf_flowset_total{type="TemplateFlowSet"}`
-  was 95 over about 16 h), and goflow2 has no HTTP endpoint that dumps its
-  template cache.
-- [ ] Capture only template packets (up to 15 minutes; sudo needs your password):
-
-      ! ssh -t log01 "sudo timeout 900 tcpdump -i eno1 -c 2 -w /tmp/nf-tmpl.pcap 'udp port 2055 and udp[28:2] = 0'"
-
-- [ ] Decode it to get the field types and lengths:
-      `tshark -r nf-tmpl.pcap -d udp.port==2055,cflow -V`.
-- [ ] Fix it, then confirm records show `bytes > 0`. Either:
-  - add a goflow2 mapping file in the `goflow2-netflow` repo (mount it and
-    pass `-mapping=/mapping.yaml`) that maps those field IDs to
-    `bytes`/`packets`; or
-  - switch OPNsense to IPFIX if its template uses standard IDs there.
+- **Root cause (2026-11-16, template capture decoded with tshark):** OPNsense's
+  v9 templates (256 IPv4, 259 IPv6) are standard: `IN_PKTS`(2)/`IN_BYTES`(1)
+  at record offsets 16–23 hold the real counters, then
+  `OUT_PKTS`(24)/`OUT_BYTES`(23) at 24–31, which are always 0. goflow2
+  (`producer/proto/producer_nf.go`) decodes **both** pairs into the same
+  `Bytes`/`Packets` fields, so the trailing zeros overwrite the real values.
+- A mapping can't suppress that overwrite (the default switch still runs
+  after `MapCustomNetFlow`). So the fix copies fields 1/2 into custom protobuf
+  fields `in_bytes`/`in_packets` (index 1001/1002) and renames them to
+  `bytes`/`packets` on output, leaving the native ones out of
+  `formatter.fields`. Wazuh rule 100500 needs no change.
+- [x] `mapping.yaml` added to `~/git/goflow2-netflow` on log01, mounted
+      read-only and passed as `-mapping=/mapping.yaml` in `docker-compose.yml`.
+      Note: `formatter.fields` is a whitelist, so the always-empty keys (MACs,
+      VLANs, MPLS, AS path, …) are now dropped from the JSON.
+- [ ] Confirm in Wazuh Discover that netflow events show non-zero bytes.
+- [ ] Optional: report upstream. goflow2 shouldn't let `OUT_*` clobber `IN_*`
+      when a template carries both.
 
 ### 1c. Related
 
