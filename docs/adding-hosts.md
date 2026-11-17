@@ -476,7 +476,7 @@ sudo nixos-rebuild switch --flake .#thinkpad
 
 - [NixOS Manual - Configuration Syntax](https://nixos.org/manual/nixos/stable/index.html#sec-configuration-syntax)
 - [NixOS Hardware Modules](https://github.com/NixOS/nixos-hardware)
-- [Flakes Documentation](https://nixos.wiki/wiki/Flakes)
+- [Flakes Documentation](https://wiki.nixos.org/wiki/Flakes)
 - Repository docs:
   - [docs/bitwarden.md](bitwarden.md) - Secrets management setup
   - [docs/borg-backup.md](borg-backup.md) - Backup configuration

@@ -100,21 +100,16 @@ in
     system.activationScripts.kdeShortcuts = lib.stringAfter [ "users" ] ''
       SHORTCUTS_FILE="/home/scott/.config/kglobalshortcutsrc"
 
-      mkdir -p /home/scott/.config
+      # Runs as root: create ~/.config owned by scott on a fresh install,
+      # rather than `mkdir -p` leaving it root-owned.
+      [ -d /home/scott/.config ] || install -d -o scott -g users -m 700 /home/scott/.config
 
-      if [ ! -f "$SHORTCUTS_FILE" ]; then
-        touch "$SHORTCUTS_FILE"
-        chown scott:users "$SHORTCUTS_FILE"
-      fi
-
-      if command -v ${pkgs.kdePackages.kconfig}/bin/kwriteconfig6 &> /dev/null; then
-        ${pkgs.kdePackages.kconfig}/bin/kwriteconfig6 --file "$SHORTCUTS_FILE" \
-          --group "org.kde.spectacle.desktop" \
-          --key "RectangularRegionScreenShot" "Ctrl+F7,Meta+Shift+Print,Capture Rectangular Region"
-        ${pkgs.kdePackages.kconfig}/bin/kwriteconfig6 --file "$SHORTCUTS_FILE" \
-          --group "kwin" \
-          --key "ExposeClass" "none,Ctrl+F7\tMeta+F7,Toggle Present Windows (Window class)"
-      fi
+      ${pkgs.kdePackages.kconfig}/bin/kwriteconfig6 --file "$SHORTCUTS_FILE" \
+        --group "org.kde.spectacle.desktop" \
+        --key "RectangularRegionScreenShot" "Ctrl+F7,Meta+Shift+Print,Capture Rectangular Region"
+      ${pkgs.kdePackages.kconfig}/bin/kwriteconfig6 --file "$SHORTCUTS_FILE" \
+        --group "kwin" \
+        --key "ExposeClass" "none,Ctrl+F7\tMeta+F7,Toggle Present Windows (Window class)"
 
       chown scott:users "$SHORTCUTS_FILE"
     '';

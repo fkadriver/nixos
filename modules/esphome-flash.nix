@@ -27,7 +27,8 @@ let
 
     if [ ! -e /dev/esp32-flash ]; then
       echo "error: /dev/esp32-flash not found - is the board plugged in?" >&2
-      echo "       (expects a CH340 USB-serial chip, idVendor=1a86 idProduct=7523)" >&2
+      echo "       (expects an M5Stack FTDI adapter, 0403:6001 product \"M5stack\"," >&2
+      echo "        or an ESP32 native USB serial port, 303a:1001)" >&2
       exit 1
     fi
 

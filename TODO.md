@@ -164,19 +164,19 @@ it. Two separate faults mean Wazuh gets almost nothing useful.
 
 ## 5. Small bugs and hardening
 
-- [ ] `esphome-flash.nix`: the error message says it expects a CH340
+- [x] `esphome-flash.nix`: the error message says it expects a CH340
       (`1a86:7523`), but the udev rules match FTDI (`0403:6001`, M5Stack) and
       Espressif (`303a:1001`).
-- [ ] `forscan.nix`: the FTDI `0403:6001` rule also matches the M5Stack Atom,
+- [x] `forscan.nix`: the FTDI `0403:6001` rule also matches the M5Stack Atom,
       so it gets `/dev/obdlink-ex` too. Exclude `ATTRS{product}=="M5stack"`.
-- [ ] **nas01 exports:** `/home/scott/git/idrive360` is exported
+- [x] **nas01 exports:** `/home/scott/git/idrive360` is exported
       `rw,no_root_squash` to sands-bak01, so root there can write anything as
       root. sands-bak01 only reads it, so use `ro` (and `root_squash` if
       possible).
-- [ ] `distributed-builds.nix` and the latitude/vm01 `Host localhost` blocks
+- [x] `distributed-builds.nix` and the latitude/vm01 `Host localhost` blocks
       set `StrictHostKeyChecking no`. Pin host keys with
       `programs.ssh.knownHosts`, as `borg-backup.nix` already does for nas01.
-- [ ] `laptop-kde.nix` `kdeShortcuts`: the `command -v` check on a store path
+- [x] `laptop-kde.nix` `kdeShortcuts`: the `command -v` check on a store path
       is always true, and `mkdir -p /home/scott/.config` as root can leave it
       root-owned on a fresh install.
-- [ ] `docs/adding-hosts.md`: `nixos.wiki` → `wiki.nixos.org`.
+- [x] `docs/adding-hosts.md`: `nixos.wiki` → `wiki.nixos.org`.

@@ -241,8 +241,9 @@ timedatectl set-timezone America/Chicago
 
 echo "=== [10/17] NFS mounts to nas01 ==="
 # /pool and /mnt: read-only, this host only ever reads source data for
-# backup. ~/git/idrive360: read-write, it's a live shared checkout (this
-# repo's twin - see idrive360-agent-status.sh below).
+# backup. ~/git/idrive360: also read-only (nas01 exports it ro,root_squash
+# since 2026-11-17) - a live checkout edited on nas01, only read here (see
+# idrive360-agent-status.sh below).
 #
 # x-systemd.automount (+ idle-timeout=0 so it stays mounted once triggered,
 # not lazily unmounted): defense-in-depth, not the primary fix. The actual
@@ -257,15 +258,15 @@ echo "=== [10/17] NFS mounts to nas01 ==="
 # x-systemd.mount-timeout=10s - confirmed live (2026-09-25) that shutdown
 # hung for several minutes waiting on these to unmount cleanly. Safe to
 # cut aggressively since both are read-only: nothing to flush, a timed-out
-# unmount just means the next boot re-mounts cleanly. ~/git/idrive360 is
-# read-write, so it keeps the more conservative NFS/systemd defaults
-# (timeo=600,retrans=2 implicit, x-systemd.mount-timeout=30s).
+# unmount just means the next boot re-mounts cleanly. ~/git/idrive360 keeps
+# the more conservative NFS/systemd defaults (timeo=600,retrans=2 implicit,
+# x-systemd.mount-timeout=30s) from when it was read-write.
 mkdir -p /pool /mnt "$SCOTT_HOME/git/idrive360"
 chown scott:scott "$SCOTT_HOME/git/idrive360"
 for line in \
   "$NAS01_TS_IP:/pool    /pool    nfs    ro,_netdev,nofail,noatime,nconnect=8,timeo=30,retrans=1,x-systemd.automount,x-systemd.idle-timeout=0,x-systemd.mount-timeout=10s    0  0" \
   "$NAS01_TS_IP:/mnt     /mnt     nfs    ro,_netdev,nofail,noatime,nconnect=8,timeo=30,retrans=1,x-systemd.automount,x-systemd.idle-timeout=0,x-systemd.mount-timeout=10s    0  0" \
-  "$NAS01_TS_IP:$SCOTT_HOME/git/idrive360    $SCOTT_HOME/git/idrive360    nfs    rw,_netdev,nofail,noatime,x-systemd.automount,x-systemd.idle-timeout=0,x-systemd.mount-timeout=30s    0  0"
+  "$NAS01_TS_IP:$SCOTT_HOME/git/idrive360    $SCOTT_HOME/git/idrive360    nfs    ro,_netdev,nofail,noatime,x-systemd.automount,x-systemd.idle-timeout=0,x-systemd.mount-timeout=30s    0  0"
 do
   grep -qF "$line" /etc/fstab || echo "$line" >> /etc/fstab
 done

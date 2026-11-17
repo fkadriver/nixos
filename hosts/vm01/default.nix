@@ -69,7 +69,8 @@ let
       programs.ssh.extraConfig = ''
         Host localhost
           IdentityFile /root/.ssh/id_ed25519_build
-          StrictHostKeyChecking no
+          # Key pinned via programs.ssh.knownHosts.localhost (distributed-builds.nix)
+          StrictHostKeyChecking yes
       '';
 
       services.wazuh-agent = {

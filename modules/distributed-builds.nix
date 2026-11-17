@@ -49,6 +49,19 @@ let
     { configName = "OTworkstation"; sshHost = "otworkstation"; }
   ];
   otherPeers = builtins.filter (p: p.configName != hostname) peers;
+
+  # Pinned SSH host keys (ed25519) per peer, checked against what each host
+  # presents both via Tailscale SSH and its own sshd on 2026-11-17 — Tailscale
+  # SSH serves the host's /etc/ssh key, so one key covers both paths. A
+  # reinstalled host gets a new key: update it here, or builds/substitution
+  # to it fail with "Host key verification failed".
+  hostKeys = {
+    latitude      = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDTY8k385Vz7FaDpCM4M05OdubnKbtOUpbCdSf0f7bg3";
+    vm01          = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEWhod+9/tSF4V9CW2+qnbRyuVtoLy/2qL6W4PxFcyUM";
+    nas01         = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPIZPV9hUboOiTvvmg6KnrjxP1c9EfPMIKjwDJmEty3P";
+    log01         = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDKDdmgKpoK8Cc3ctJen+lDXVS9ja43h90bvuIKbo6K8";
+    OTworkstation = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAr1llFWqwi3IeqSWJ6iGDPdEbyba4HP2LorFdhcBm39";
+  };
 in {
   imports = [ inputs.sops-nix.nixosModules.sops ];
 
@@ -69,8 +82,24 @@ in {
   programs.ssh.extraConfig = lib.concatMapStrings (p: ''
     Host ${p.sshHost}
       IdentityFile /home/scott/.ssh/id_ed25519_legacy
-      StrictHostKeyChecking no
+      StrictHostKeyChecking yes
   '') otherPeers;
+
+  # System-wide /etc/ssh/ssh_known_hosts entries for every peer, plus this
+  # host's own key for the loopback `Host localhost` blocks on latitude/vm01
+  # (nixos-rebuild --build-host localhost). Attribute names match
+  # borg-backup.nix's nas01 entry so the two merge instead of duplicating.
+  programs.ssh.knownHosts =
+    lib.listToAttrs (map (p: lib.nameValuePair "${p.sshHost}.warthog-royal.ts.net" {
+      hostNames = [ p.sshHost "${p.sshHost}.warthog-royal.ts.net" ];
+      publicKey = hostKeys.${p.configName};
+    }) otherPeers)
+    // {
+      localhost = {
+        hostNames = [ "localhost" "127.0.0.1" "::1" ];
+        publicKey = hostKeys.${hostname};
+      };
+    };
 
   # Mutual binary-cache substitution across the whole fleet (piholes
   # excluded): whatever any host has already built — the aarch64 pihole

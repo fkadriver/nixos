@@ -110,8 +110,9 @@ in
     # Stable /dev/obdlink-ex symlink and dialout ownership regardless of
     # which chipset the adapter presents.
     services.udev.extraRules = ''
-      # OBDLink EX — FTDI FT232 variant
-      SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", GROUP="dialout", MODE="0660", SYMLINK+="obdlink-ex"
+      # OBDLink EX — FTDI FT232 variant. 0403:6001 is a generic FTDI ID that
+      # the M5Stack Atom (esphome-flash.nix) shares, so exclude it by product.
+      SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", ATTRS{product}!="M5stack", GROUP="dialout", MODE="0660", SYMLINK+="obdlink-ex"
       # OBDLink EX — STM32 CDC-ACM variant
       SUBSYSTEM=="tty", ATTRS{idVendor}=="0483", ATTRS{idProduct}=="5740", GROUP="dialout", MODE="0660", SYMLINK+="obdlink-ex"
     '';
