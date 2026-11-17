@@ -546,7 +546,7 @@ All declared in [hosts/nas01/default.nix](../hosts/nas01/default.nix):
 | Wazuh agent | `services.wazuh-agent` | manager: wazuh.warthog-royal.ts.net |
 | Local syslog → collector | `logging.forwardSyslog` (common.nix) | nas01's own syslog, on by default — unrelated to the next row |
 | Syslog collector (fleet-wide) | `systemd.services.syslog-docker` | docker compose, `~/git/syslog-tailscale` — see [Universal Syslog Collector](#universal-syslog-collector-fleet-wide) below |
-| IDrive360 | runs on `sands-bak01`, not nas01 (`virtualisation.libvirtd` stays enabled for the decommissioned VM's disk-backup use only) | see below |
+| IDrive360 | runs on `sands-bak01`, not nas01 (libvirt removed 2026-11-17; the old VM's disk image is still backed up) | see below |
 
 **NFS restart-in-place wedges the kernel nfsd state (2026-09-17):** any change
 to `services.nfs.server.exports` requires restarting `nfs-server`, and doing
@@ -593,11 +593,9 @@ confirmed-healthy backups on `sands-bak01`:
 - **Disk kept, not deleted**: `/var/lib/libvirt/images/nas01-backup.qcow2`
   (20 GB) stays on disk as a last-resort recovery artifact and is still
   backed up nightly (see [Borg Backup](#borg-backup-server-side) below) —
-  but relaunching the VM now needs real work, not a shortcut. The
-  `environment.etc` deployment that wired its `domain.xml`/setup/restore
-  scripts up is commented out in `hosts/nas01/default.nix`; the source
-  files themselves are kept in this directory and git history for
-  reference.
+  but relaunching the VM now needs real work, not a shortcut. libvirt was
+  removed from nas01 on 2026-11-17, and the VM's `domain.xml`/setup/restore
+  scripts were deleted then; they're in git history.
 - **`idrive-vm-*` aliases and `idrive-ip`/`idrive-ssh`/`idrive-console`
   are gone** — removed along with the VM definition. `idrive-start`/
   `idrive-stop`/`idrive-restart`/`idrive-status` still exist, but now act

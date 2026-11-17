@@ -82,28 +82,21 @@ in
         '';
       };
 
-      documentFonts =
-        (with pkgs; [
-          dejavu_fonts
-          noto-fonts
-          noto-fonts-cjk-sans
-          liberation_ttf
-          source-sans
-          source-serif
-          source-code-pro
-          inter
-        ])
-        ++ (if pkgs ? "noto-fonts-color-emoji" then [ pkgs."noto-fonts-color-emoji" ]
-            else if pkgs ? "noto-fonts-emoji" then [ pkgs."noto-fonts-emoji" ]
-            else []);
+      documentFonts = with pkgs; [
+        dejavu_fonts
+        noto-fonts
+        noto-fonts-cjk-sans
+        liberation_ttf
+        source-sans
+        source-serif
+        source-code-pro
+        inter
+        noto-fonts-color-emoji
+      ];
 
       craftFonts =
         [ great-vibes allura parisienne fleur-de-lis-font nymphette ]
-        ++ (if pkgs ? "eb-garamond" then [ pkgs."eb-garamond" ] else [])
-        ++ (if pkgs ? "libre-baskerville" then [ pkgs."libre-baskerville" ] else [])
-        ++ (if pkgs ? "oldstandard" then [ pkgs."oldstandard" ] else [])
-        ++ (if pkgs ? "junicode" then [ pkgs."junicode" ] else [])
-        ++ (if pkgs ? "symbola" then [ pkgs."symbola" ] else []);
+        ++ (with pkgs; [ eb-garamond libre-baskerville oldstandard junicode symbola ]);
 
       # Fonts optimized for 3D printing: bold strokes, simple contours, reliable extrusion
       printing3dFonts = with pkgs; [

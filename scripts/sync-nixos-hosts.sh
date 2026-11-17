@@ -57,7 +57,6 @@ SSH_OPTS=(-o ConnectTimeout=5 -o BatchMode=yes)
 
 # Flake config name per host (only needed where it differs from the hostname)
 declare -A FLAKE_CONFIG=(
-    [airbook]="airbook-darwin"
     [otworkstation]="OTworkstation"
 )
 
@@ -286,11 +285,9 @@ update_flake_lock() {
 
 # True if a host's booted kernel/initrd differ from what's actually built —
 # i.e. the last switch changed something that only takes effect on reboot.
-# Always false for darwin (no equivalent concept); false is also the safe
-# fallback if the check itself fails for any other reason.
+# False is also the safe fallback if the check itself fails.
 needs_reboot() {
     local host="$1"
-    [[ "$host" == "airbook" ]] && return 1
     local out
     out="$(run_on "$host" "[[ \$(readlink -f /run/booted-system/kernel) != \$(readlink -f /run/current-system/kernel) || \$(readlink -f /run/booted-system/initrd) != \$(readlink -f /run/current-system/initrd) ]] && echo yes || echo no" 2>/dev/null)" || return 1
     [[ "$out" == "yes" ]]
@@ -314,7 +311,7 @@ reboot_host() {
     run_on_tty "$host" "sudo reboot" || true
 }
 
-# Run nixos-rebuild switch (or darwin-rebuild) on a host.
+# Run nixos-rebuild switch on a host.
 apply_host() {
     local host="$1"
     local config="${FLAKE_CONFIG[$host]:-$host}"
@@ -336,12 +333,7 @@ apply_host() {
         fi
     fi
 
-    local rebuild_cmd
-    if [[ "$host" == "airbook" ]]; then
-        rebuild_cmd="cd ${REPO_PATH} && sudo darwin-rebuild switch --flake .#${config}"
-    else
-        rebuild_cmd="cd ${REPO_PATH} && sudo nixos-rebuild switch --flake .#${config}"
-    fi
+    local rebuild_cmd="cd ${REPO_PATH} && sudo nixos-rebuild switch --flake .#${config}"
 
     if ! confirm "Apply config on [$host]?"; then
         echo -e "${YELLOW}[$host] skipped${NC}"

@@ -20,6 +20,16 @@ iDrive e360 enterprise backup service module. Archived because:
 - This is an upstream issue in iDrive's proprietary binary
 - Replaced with Borg backup to local NAS
 
+#### desktop-minimal.nix
+Minimal KDE Plasma 6 for photo/AI workstations. Archived 2026-11-17: no host
+imported it.
+
+#### dnclient.nix & nebula.nix
+Managed (defined.net) and self-hosted Nebula overlay. Archived 2026-11-17:
+the Nebula migration is paused and staying on Tailscale. `nebula.nix`'s
+secrets paths were adjusted for its new location. Resume path in
+`docs/nebula.md`.
+
 ### hosts/latitude/
 
 #### hyprland.nix

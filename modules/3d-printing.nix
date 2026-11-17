@@ -4,14 +4,14 @@
 let
   cfg = config.my.printing;
 
-  # Some font package names can vary across nixpkgs revisions. Only include those that exist.
-  fontPkgs =
-    (if pkgs ? "eb-garamond" then [ pkgs."eb-garamond" ] else []) ++
-    (if pkgs ? "libre-baskerville" then [ pkgs."libre-baskerville" ] else []) ++
-    (if pkgs ? "oldstandard" then [ pkgs."oldstandard" ] else []) ++
-    (if pkgs ? "junicode" then [ pkgs."junicode" ] else []) ++
-    (if pkgs ? "inter" then [ pkgs."inter" ] else []) ++
-    (if pkgs ? "source-sans" then [ pkgs."source-sans" ] else []);
+  fontPkgs = with pkgs; [
+    eb-garamond
+    libre-baskerville
+    oldstandard
+    junicode
+    inter
+    source-sans
+  ];
 
   # Single directory of symlinks for FreeCAD Draft→ShapeString font browsing.
   freecadFontDir = pkgs.runCommand "freecad-print-fonts" {} ''
@@ -199,7 +199,6 @@ in
         orca-slicer
         blender
         meshlab
-        sweethome3d.application
         solvespace
         f3d
       ])

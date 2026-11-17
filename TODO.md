@@ -96,12 +96,12 @@ it. Two separate faults mean Wazuh gets almost nothing useful.
 
 ## 3. Dead and unused code
 
-- [ ] `modules/desktop-minimal.nix`: no host imports it. Archive or delete it,
-      and remove it from CLAUDE.md.
-- [ ] `modules/dnclient.nix` / `modules/nebula.nix`: unused while the Nebula
+- [x] `modules/desktop-minimal.nix`: no host imports it. Archived to
+      `archive/modules/` and removed from CLAUDE.md (2026-11-17).
+- [x] `modules/dnclient.nix` / `modules/nebula.nix`: unused while the Nebula
       migration is paused. Consider moving them to `archive/` (resume path is
-      in `docs/nebula.md`).
-- [ ] **nas01**, leftovers from the decommissioned nas01-backup VM:
+      in `docs/nebula.md`). Moved 2026-11-17.
+- [x] **nas01**, leftovers from the decommissioned nas01-backup VM:
   - `virtualisation.libvirtd`;
   - `cloud-utils`;
   - the borg job's `after`/`wants` on `libvirtd.service`;
@@ -110,21 +110,23 @@ it. Two separate faults mean Wazuh gets almost nothing useful.
     (`setup.sh` doesn't even parse under shellcheck);
   - the commented `environment.etc` lines.
 
-  Everything stays in git history.
-- [ ] **nas01:** the `immich` user still has a login shell and the `docker`
+  Everything stays in git history. All removed 2026-11-17; the VM disk image
+  stays on disk and in the borg job.
+- [x] **nas01:** the `immich` user still has a login shell and the `docker`
       group, which is root-equivalent. The containers moved to vm01, so it only
-      needs to own `/pool/photos` (uid 991, gid 989).
-- [ ] **vm01:** remove the one-time `wazuhFreshInstall` / `wazuhReEnroll`
+      needs to own `/pool/photos` (uid 991, gid 989). Shell and `docker`
+      removed, uid/gid now pinned (2026-11-17).
+- [x] **vm01:** remove the one-time `wazuhFreshInstall` / `wazuhReEnroll`
       activation scripts from the 4.14.5 migration (marker
       `/var/ossec/etc/.fresh-install-4145`).
-- [ ] `MIGRATION-STEPS.md`: that Bitwarden migration is finished. Delete it.
-- [ ] `scripts/sync-nixos-hosts.sh`: the `airbook` branches are dead, since
+- [x] `MIGRATION-STEPS.md`: that Bitwarden migration is finished. Delete it.
+- [x] `scripts/sync-nixos-hosts.sh`: the `airbook` branches are dead, since
       airbook isn't in `HOSTS`.
-- [ ] Sweet Home 3D is installed twice: `3d-printing.nix` (`pkgs`) and
+- [x] Sweet Home 3D is installed twice: `3d-printing.nix` (`pkgs`) and
       `home-design.nix` (`pkgsNixos`). Keep only the `home-design.nix` one.
-- [ ] `font.nix` / `3d-printing.nix`: the `if pkgs ? "x" then ...` guards are
+- [x] `font.nix` / `3d-printing.nix`: the `if pkgs ? "x" then ...` guards are
       all true on current nixpkgs. Simplify them to plain lists.
-- [ ] `printing.nix`: `extraConf` holds only a comment. `cups-pdf-to-pdf` is
+- [x] `printing.nix`: `extraConf` holds only a comment. `cups-pdf-to-pdf` is
       installed but never configured. `gutenprint`/`gutenprintBin` do nothing
       for the Canon LBP162 laser.
 

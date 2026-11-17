@@ -87,23 +87,13 @@ let
           # Temperature monitoring
           temps = ''echo '=== CPU Temps (°F) ===' && sensors -f 2>/dev/null | grep -E ':.*°F' || echo '(run: sudo sensors-detect)'; echo ""; echo '=== Drive Temps (°F) ==='; for d in /dev/sd?; do C=$(sudo smartctl -A "$d" 2>/dev/null | awk '/^[[:space:]]*19[04] /{print $10}' | head -1); if [ -n "$C" ]; then printf "%s: %d°F\n" "$d" "$((C * 9 / 5 + 32))"; else printf "%s: N/A\n" "$d"; fi; done; echo ""; echo '=== Server Closet Temp ==='; command -v closet-status >/dev/null 2>&1 && closet-status || echo '(closet-status not installed on this host)' '';
 
-          # IDrive360 — agent runs on sands-bak01 (dedicated hardware). The
-          # nas01-backup VM this replaced is decommissioned (undefined from
-          # libvirt 2026-09-26, after several days of confirmed-healthy
-          # backups on sands-bak01) — its disk deliberately kept on disk at
-          # /var/lib/libvirt/images/nas01-backup.qcow2 as a last-resort
-          # recovery artifact, but relaunching it needs real work (redefine
-          # from `nas01-backup-domain.xml` in git history, re-add the
-          # environment.etc deployment below, rebuild) rather than a
-          # shortcut — see MIGRATION.md in the idrive360 repo.
+          # IDrive360 — agent runs on sands-bak01 (dedicated hardware), which
+          # replaced the decommissioned nas01-backup VM (see docs/idrive360.md).
           idrive-start    = "ssh scott@sands-bak01.warthog-royal.ts.net sudo systemctl start idrive360cron";
           idrive-stop     = "ssh scott@sands-bak01.warthog-royal.ts.net sudo systemctl stop idrive360cron";
           idrive-restart  = "ssh scott@sands-bak01.warthog-royal.ts.net sudo systemctl restart idrive360cron";
         };
         programs.bash.initExtra = ''
-          # virsh defaults to qemu:///session; VMs live in qemu:///system
-          export LIBVIRT_DEFAULT_URI=qemu:///system
-
           # Borg server functions — take hostname as argument
           # Usage: borg-ls latitude | borg-check vm01 | borg-unlock airbook.local
           # unalias first: shell-aliases.nix defines client-side borg-check/borg-unlock
@@ -274,8 +264,6 @@ let
         settings.PasswordAuthentication = false;
       };
 
-      users.users.scott.extraGroups = [ "libvirtd" "kvm" ];
-
       # sands-bak01's borg backup (see MIGRATION.md in the idrive360 repo)
       # connects directly over the LAN instead of through Tailscale, so it
       # doesn't depend on Tailscale being up - confirmed live (2026-09-25)
@@ -370,14 +358,12 @@ let
       # immich user: owns /pool/photos (uid 991/gid 989), exported above for
       # vm01's immich-docker stack to mount over NFS. The docker compose stack
       # itself now runs on vm01, not here — see hosts/vm01/default.nix.
-      users.groups.immich = {};
+      users.groups.immich.gid = 989;
       users.users.immich = {
         isSystemUser = true;
+        uid = 991;   # pinned: vm01's container runs as PUID/PGID 991:989
         group = "immich";
         home = "/home/users/immich";
-        createHome = true;
-        shell = pkgs.bash;
-        extraGroups = [ "docker" ];
       };
 
       # Borg server side: clients invoke borg over SSH as scott
@@ -387,8 +373,6 @@ let
         zfs
         ethtool
         ipmitool
-        # QEMU/KVM: nas01-backup VM (IDrive360 backup agent)
-        cloud-utils      # cloud-localds for building cloud-init ISOs
       ];
       # Force eno2 down at every network start (belt-and-suspenders with
       # networkmanager.unmanaged above — doesn't survive a driver reload,
@@ -456,30 +440,11 @@ let
         };
       };
 
-      # IDrive360 cloud backup used to run in the nas01-backup QEMU/KVM VM
-      # (Ubuntu 24.04) — migrated to dedicated hardware (sands-bak01), see
-      # MIGRATION.md in the idrive360 repo. The VM was undefined from
-      # libvirt 2026-09-26 after several days of confirmed-healthy backups
-      # there. virtualisation.libvirtd stays enabled (nas01 remains a
-      # capable libvirt host for anything else), but the VM's own
-      # definition/setup/restore scripts are deliberately no longer
-      # deployed here — relaunching nas01-backup now needs real work
-      # (redefine from `nas01-backup-domain.xml`, still in this directory
-      # and git history, re-add the environment.etc block below, rebuild)
-      # rather than a one-command shortcut. The source files are kept for
-      # that reference, just not wired up.
-      virtualisation.libvirtd = {
-        enable = true;
-        qemu.vhostUserPackages = [ pkgs.virtiofsd ];
-      };
-      # environment.etc."nas01-backup/domain.xml".source = ./nas01-backup-domain.xml;
-      # environment.etc."nas01-backup/setup.sh".source = ./nas01-backup-setup.sh;
-      # environment.etc."nas01-backup/vm-restore.sh".source = ./nas01-backup-vm-restore.sh;
-
       # nas01's own OS-disk data that can't be rebuilt from this flake: /home
-      # and the nas01-backup VM disk (kept as a last-resort recovery
-      # artifact after decommissioning — its IDrive360 registration/config
-      # as of the last time the VM ran). Backed up locally to /pool
+      # and the decommissioned nas01-backup VM's disk image (kept as a
+      # last-resort recovery artifact — its IDrive360 registration/config as
+      # of the last time the VM ran; libvirt itself is no longer installed,
+      # the VM definition is in git history before the 2026-11-17 cleanup). Backed up locally to /pool
       # (redundant ZFS raidz1), so it survives a failure of nas01's OS SSD —
       # see docs/nas01.md.
       #
@@ -497,11 +462,6 @@ let
           "/var/lib/libvirt/images/nas01-backup-cidata.iso"
         ];
       };
-      systemd.services."borgbackup-job-system" = {
-        after = [ "libvirtd.service" ];
-        wants = [ "libvirtd.service" ];
-      };
-
       system = {
         stateVersion = "25.11";
         nixos.label = "nas01";

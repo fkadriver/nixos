@@ -14,7 +14,6 @@ This document provides a high-level overview of all available modules in this re
 
 | Module | Description |
 |--------|-------------|
-| `desktop-minimal.nix` | Minimal KDE Plasma 6 for photo/AI workstations with Python/OpenCV/dlib |
 | `laptop-xfce.nix` | Full XFCE desktop with development tools, gaming support, media tools |
 | `laptop-kde.nix` | Full KDE Plasma 6 with Windows 11-like taskbar, gaming, KDE Connect |
 | `laptop-minimal.nix` | Minimal XFCE for testing (no WiFi auto-config, no Bitwarden) |
@@ -31,9 +30,7 @@ This document provides a high-level overview of all available modules in this re
 
 | Module | Description |
 |--------|-------------|
-| `dnclient.nix` | Managed Nebula client (defined.net) — migration PAUSED, not imported anywhere; findings + resume path in `docs/nebula.md` |
-| `nebula.nix` | Self-hosted nebula fallback (10.100.0.0/24, own CA in sops) — unused; see `docs/nebula.md` |
-| `tailscale.nix` | Tailscale VPN with firewall rules, DNS over TLS, DNSSEC (being replaced by nebula, runs in parallel during migration) |
+| `tailscale.nix` | Tailscale VPN with firewall rules, DNS over TLS, DNSSEC. The paused Nebula replacement (`dnclient.nix`, `nebula.nix`) is in `archive/modules/`; see `docs/nebula.md` |
 | `wireless.nix` | WiFi auto-connect for JEN_ACRES network (WPA-PSK) |
 
 ## Development Modules
@@ -74,7 +71,7 @@ This document provides a high-level overview of all available modules in this re
 
 | Module | Description |
 |--------|-------------|
-| `3d-printing.nix` | OrcaSlicer, FreeCAD, OpenSCAD, Blender, MeshLab, SolveSpace, f3d, Sweet Home 3D with optional font test generators |
+| `3d-printing.nix` | OrcaSlicer, FreeCAD, OpenSCAD, Blender, MeshLab, SolveSpace, f3d with optional font test generators |
 | `home-design.nix` | Sweet Home 3D for interior design and floor plans, with plugin installer helper |
 | `font.nix` | Modular font management (documents, craft, printing3d, nerd, viewer) |
 

@@ -23,14 +23,11 @@ migrated off the VM below on 2026-09-23/24, see the idrive360 repo's
 `sands-bak01`). Its disk is deliberately kept at
 `/var/lib/libvirt/images/nas01-backup.qcow2` as a last-resort recovery
 artifact and still gets backed up nightly (`services.borg-backup` on
-`nas01`), but relaunching it needs real work, not a shortcut — the
-`environment.etc` deployment that wired its definition up is commented
-out in [`hosts/nas01/default.nix`](../hosts/nas01/default.nix). The
-source files are kept for that reference:
-
-- [`hosts/nas01/nas01-backup-setup.sh`](../hosts/nas01/nas01-backup-setup.sh) — cloud-init VM setup script
-- [`hosts/nas01/nas01-backup-domain.xml`](../hosts/nas01/nas01-backup-domain.xml) — libvirt VM definition
-- [`hosts/nas01/nas01-backup-vm-restore.sh`](../hosts/nas01/nas01-backup-vm-restore.sh) — VM disk restore script
+`nas01`), but relaunching it needs real work, not a shortcut. As of 2026-11-17
+libvirt is no longer installed on nas01, and the VM's files
+(`hosts/nas01/nas01-backup-{domain.xml,setup.sh,vm-restore.sh}`, the
+libvirtd config) were deleted from the tree. Recover them from git history
+(`git log --diff-filter=D -- hosts/nas01/`) if the VM is ever needed again.
 
 See also [`nas01.md`](nas01.md) for the host `nas01` more broadly (ZFS pool,
 Borg backups, Syncthing, etc. — nas01-backup was just one VM it hosted).

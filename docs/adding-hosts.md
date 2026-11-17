@@ -71,7 +71,6 @@ let
       ./hardware.nix
       inputs.self.nixosModules.common
       # Add desktop module based on your needs:
-      # inputs.self.nixosModules.desktop-minimal
       # inputs.self.nixosModules.laptop-kde
       # inputs.self.nixosModules.laptop-xfce
       inputs.self.nixosModules.user-scott
@@ -248,7 +247,6 @@ sudo nixos-rebuild switch --flake .#hostname-kde
 - `user-scott.nix` - User account and shell configuration
 
 ### Desktop Modules (choose one)
-- `desktop-minimal.nix` - Minimal KDE for photo/AI workstations
 - `laptop-kde.nix` - Full-featured KDE Plasma 6 desktop
 - `laptop-xfce.nix` - Full-featured XFCE desktop
 
@@ -273,7 +271,7 @@ Boot menu labels help identify different configurations in the GRUB/systemd-boot
 system.nixos.label = "hostname-description";
 ```
 
-If a module (like `laptop-kde.nix` or `desktop-minimal.nix`) already sets a label, you can override it by setting it explicitly in your host configuration. The module labels use `lib.mkDefault`, allowing host-specific overrides to take precedence.
+If a module (like `laptop-kde.nix`) already sets a label, you can override it by setting it explicitly in your host configuration. The module labels use `lib.mkDefault`, allowing host-specific overrides to take precedence.
 
 ## Hardware Configuration Tips
 
@@ -313,7 +311,7 @@ imports = [
 
 ## Bitwarden Secrets Setup
 
-If your host uses the bitwarden module (included in `desktop-minimal` and laptop modules):
+If your host uses the bitwarden module (included in the laptop modules):
 
 1. After first boot, the AGE key is automatically generated at `/var/lib/sops-nix/key.txt`
 

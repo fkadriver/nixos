@@ -25,7 +25,7 @@ Review `modules/daily-driver.nix` and `modules/3d-printing.nix` for additions or
    - NixOS services: `services.*`, `programs.nix-ld`, `programs.firefox`, `hardware.*`
    - udev rules, systemd/logind config
    - Packages that only build on Linux (check if the nixpkgs package has `meta.platforms` restricted to linux, or if the name is a well-known Linux-only tool): `gparted`, `usbimager`, `brightnessctl`, `xdotool`, `xbindkeys`, `solvespace` (has a macOS cask so surface it), `inkscape` (already a cask — skip)
-   - Desktop environment modules: KDE, XFCE, plasma, anything in `laptop-kde.nix`, `laptop-xfce.nix`, `desktop-minimal.nix`
+   - Desktop environment modules: KDE, XFCE, plasma, anything in `laptop-kde.nix`, `laptop-xfce.nix`
    - Anything already present in the darwin config (exact match by package name or cask name)
    - Aliases and helpers whose command only works on Linux — ones that run `systemctl`, `virsh`, `journalctl`, `nixos-rebuild` etc. *locally*. Note the distinction: an alias that **SSHes to another host** and runs those there (like the `idrive-*` shortcuts) is portable and **should** be surfaced.
    - Aliases whose darwin counterpart is deliberately different rather than missing — `nix-rebuild` is `darwin-rebuild` on airbook, not `nixos-rebuild`. Never "sync" these into agreement.

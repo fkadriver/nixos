@@ -1,7 +1,7 @@
 # Nebula overlay network (mesh) — Tailscale replacement in progress
 #
 # Overlay subnet: 10.100.0.0/24, network name "mesh" (interface nebula.mesh).
-# Certs: public certs live in ../secrets/nebula/*.crt (committed plaintext);
+# Certs: public certs live in ../../secrets/nebula/*.crt (committed plaintext);
 # private keys are sops-encrypted in secrets.yaml under nebula/<host>_key.
 # The CA private key (nebula/ca_key) never leaves secrets.yaml — see
 # docs/nebula.md for how to sign certs for new hosts.
@@ -46,7 +46,7 @@ in
   config = {
     sops.age.keyFile = lib.mkDefault "/var/lib/sops-nix/key.txt";
     sops.secrets."nebula/${hostName}_key" = {
-      sopsFile = ../secrets/secrets.yaml;
+      sopsFile = ../../secrets/secrets.yaml;
       owner = "nebula-mesh";
       group = "nebula-mesh";
       mode = "0400";
@@ -55,8 +55,8 @@ in
 
     services.nebula.networks.mesh = {
       enable = true;
-      ca = ../secrets/nebula/ca.crt;
-      cert = ../secrets/nebula + "/${hostName}.crt";
+      ca = ../../secrets/nebula/ca.crt;
+      cert = ../../secrets/nebula + "/${hostName}.crt";
       key = config.sops.secrets."nebula/${hostName}_key".path;
 
       inherit isLighthouse staticHostMap;

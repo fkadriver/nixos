@@ -1,18 +1,11 @@
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }: {
   config = {
-    # Printing support with Canon drivers and autodiscovery
+    # Printing with autodiscovery. The LBP162 uses CUPS's built-in generic
+    # PostScript PPD below, so no vendor driver package is needed.
     services.printing = {
       enable = true;
-      drivers = with pkgs; [
-        gutenprint
-        gutenprintBin
-        cups-filters
-        cups-pdf-to-pdf
-      ];
-      extraConf = ''
-        # Enable cups-pdf for printing to PDF
-      '';
+      drivers = [ pkgs.cups-filters ];
     };
 
     # Enable Avahi for printer autodiscovery
@@ -23,8 +16,7 @@
     };
 
     # Configure printers (Canon LBP162)
-    # Note: Print-to-PDF functionality available via print dialog in most applications
-    # cups-pdf-to-pdf is installed but not configured as a printer queue
+    # Print-to-PDF comes from the applications' own print dialogs.
     hardware.printers = {
       ensurePrinters = [
         {

@@ -6,9 +6,9 @@
 > (Oracle free tier had no capacity) or an exterior→interior port-forward on
 > the ISP firewall, which was ruled out as a matter of policy. Tailscale's
 > hosted DERP/coordination infrastructure is exactly the piece nebula makes
-> you own. dnclient imports were removed from latitude and vm01;
-> `modules/dnclient.nix` and the self-hosted fallback are kept for a future
-> resume. Findings below.
+> you own. dnclient imports were removed from latitude and vm01, and on
+> 2026-11-17 both modules moved to `archive/modules/` (`dnclient.nix`,
+> `nebula.nix`). Findings below.
 
 ## Findings (2026-07)
 
@@ -45,7 +45,9 @@
 
 1. Pick the lighthouse: OPNsense port-forward to vm01 (if the policy changes)
    or a cloud free-tier VM.
-2. Re-add `inputs.self.nixosModules.dnclient` to hosts (latitude's enrollment
+2. `git mv archive/modules/dnclient.nix modules/` (and `nebula.nix` for the
+   self-hosted fallback, changing its `../../secrets` paths back to
+   `../secrets`), then re-add `inputs.self.nixosModules.dnclient` to hosts (latitude's enrollment
    state in `/var/lib/defined` likely still valid; others enroll fresh).
 3. Continue the checklist below.
 
@@ -129,7 +131,7 @@ target, so enroll it before repointing those services.
 Before adopting Managed Nebula, a fully self-hosted setup was built and still
 exists in the repo as a fallback if defined.net ever goes away:
 
-- `modules/nebula.nix` — self-managed mesh (10.100.0.0/24), hostname-based
+- `archive/modules/nebula.nix` — self-managed mesh (10.100.0.0/24), hostname-based
   enrollment, NOT imported by any host currently
 - `secrets/nebula/*.crt` — public certs for a 10-year CA ("jensen-mesh")
 - `secrets.yaml` `nebula/*` — CA + host private keys, sops-encrypted
