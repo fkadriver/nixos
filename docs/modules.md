@@ -17,7 +17,7 @@ This document provides a high-level overview of all available modules in this re
 | `laptop-xfce.nix` | Full XFCE desktop with development tools, gaming support, media tools |
 | `laptop-kde.nix` | Full KDE Plasma 6 with Windows 11-like taskbar, gaming, KDE Connect |
 | `laptop-minimal.nix` | Minimal XFCE for testing (no WiFi auto-config, no Bitwarden) |
-| `daily-driver.nix` | Shared configuration for Scott's daily-driver machines (applications, fonts, 3D printing). Also carries the `nix-sync`/`fw-check`/`host-status` fleet-management aliases and the IDrive360 client shortcuts (`idrive-app`, `idrive-start`/`stop`/`restart`, plus an `idrive-status` script and the `xpra` client they need — all point at `sands-bak01`, dedicated hardware, not a VM). Also the Home Assistant client side: `go-hass-agent` (community Linux companion agent — no official Linux client), its desktop entries, and a `systemd.user.services.go-hass-agent` unit that stays inactive until the agent is registered; airbook-darwin's counterpart is the `home-assistant` cask. Imported via `laptop-kde.nix`/`laptop-xfce.nix` → latitude; mirrored by hand in `hosts/airbook-darwin/home.nix` |
+| `daily-driver.nix` | Shared configuration for Scott's daily-driver machines (applications, fonts, 3D printing). Also carries the `nix-sync`/`fw-check`/`host-status` fleet-management aliases and the IDrive360 client shortcuts (`idrive-app`, `idrive-start`/`stop`/`restart`, plus an `idrive-status` script and the `xpra` client they need — all point at `sands-bak01`, dedicated hardware, not a VM). Installs `herdr` (nixpkgs) for the `<host>-h` aliases (`herdr --remote <host>`). Also the Home Assistant client side: `go-hass-agent` (community Linux companion agent — no official Linux client), its desktop entries, and a `systemd.user.services.go-hass-agent` unit that stays inactive until the agent is registered; airbook-darwin's counterpart is the `home-assistant` cask. Imported via `laptop-kde.nix`/`laptop-xfce.nix` → latitude; mirrored by hand in `hosts/airbook-darwin/home.nix` |
 
 ## Pi-hole Modules
 
@@ -39,7 +39,6 @@ This document provides a high-level overview of all available modules in this re
 |--------|-------------|
 | `vscode.nix` | VSCode with extensions (Nix, Python, Docker, Claude Code) and gnome-keyring |
 | `vscode-server.nix` | VS Code Server for Remote SSH with Claude Code CLI and nix-ld |
-| `herdr.nix` | [Herdr](https://herdr.dev) terminal workspace manager for AI coding agents — prebuilt static binary, not in nixpkgs. Imported by `daily-driver.nix`; pairs with the `<host>-h` aliases there (`herdr --remote <host>`, the tmux-attach equivalent for a remote session). macOS counterpart is inline in `hosts/airbook-darwin/default.nix` (same pattern as that host's Kali packaging) |
 
 ## Secrets & Security
 

@@ -22,7 +22,9 @@ in
 
   config = lib.mkIf cfg.enable (
     let
-      # Dafont / Font Squirrel fonts not in nixpkgs — fetched as zip, extracted in derivation
+      # Dafont / Font Squirrel fonts not in nixpkgs — fetched as zip, extracted in derivation.
+      # dafont has no versioned URLs; if one changes upstream the hash fails
+      # loudly at build time rather than silently installing a different font.
       fleur-de-lis-font = pkgs.stdenvNoCC.mkDerivation {
         name = "fleur-de-lis-font";
         src = pkgs.fetchurl {
@@ -45,11 +47,14 @@ in
         installPhase = ''install -Dm644 "Nymphette.ttf" "$out/share/fonts/truetype/Nymphette.ttf"'';
       };
 
-      # Script fonts not yet packaged in nixpkgs — fetch individually from Google Fonts
+      # Script fonts from the google/fonts repo, pinned to a commit (the same one
+      # nixpkgs' google-fonts uses) so the fixed hashes can't break when files
+      # change on `main`. google-fonts.override would fetch the whole ~1 GB repo.
+      googleFontsRev = "5174b3333331c966c38f4355d50b03ca1c1df2f9";
       great-vibes = pkgs.stdenvNoCC.mkDerivation {
         name = "great-vibes";
         src = pkgs.fetchurl {
-          url = "https://github.com/google/fonts/raw/main/ofl/greatvibes/GreatVibes-Regular.ttf";
+          url = "https://raw.githubusercontent.com/google/fonts/${googleFontsRev}/ofl/greatvibes/GreatVibes-Regular.ttf";
           sha256 = "059dk3wnfi5kr7q97jpszmdrm3q9x09z7v1i4mbm26vg3019hl4d";
         };
         dontUnpack = true;
@@ -61,7 +66,7 @@ in
       allura = pkgs.stdenvNoCC.mkDerivation {
         name = "allura";
         src = pkgs.fetchurl {
-          url = "https://github.com/google/fonts/raw/main/ofl/allura/Allura-Regular.ttf";
+          url = "https://raw.githubusercontent.com/google/fonts/${googleFontsRev}/ofl/allura/Allura-Regular.ttf";
           sha256 = "1ijcq6x62iiwnbi74ywkpx1ljca0iyhqx2zzqkgw0cjqa4p2n54w";
         };
         dontUnpack = true;
@@ -73,7 +78,7 @@ in
       parisienne = pkgs.stdenvNoCC.mkDerivation {
         name = "parisienne";
         src = pkgs.fetchurl {
-          url = "https://github.com/google/fonts/raw/main/ofl/parisienne/Parisienne-Regular.ttf";
+          url = "https://raw.githubusercontent.com/google/fonts/${googleFontsRev}/ofl/parisienne/Parisienne-Regular.ttf";
           sha256 = "0mydmb3lxjn1qp4ydncq1jpl7yjbs5bzbrcp0xqbq81f09zy37mw";
         };
         dontUnpack = true;
@@ -151,10 +156,7 @@ in
       };
 
       environment.systemPackages = lib.optionals cfg.viewer (with pkgs; [
-        # font-manager: temporarily dropped — fails to build against nixpkgs
-        # as of the 2026-09-02 update (Vala error: Gtk.DragIcon.get_for_drag
-        # needs `new`, a GTK4 vapi binding change font-manager 0.9.4 hasn't
-        # caught up to). Re-add once upstream fixes it.
+        font-manager
         gnome-font-viewer
         fontpreview
         fontforge

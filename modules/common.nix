@@ -3,19 +3,19 @@
 let
   # LAN Orangutan — network scanner with persistent device labeling,
   # multi-network support, and Tailscale integration (https://github.com/291-Group/LAN-Orangutan).
-  # Not in nixpkgs; shipped upstream only as prebuilt glibc-dynamic binaries, so
-  # fetch the release tarball and autoPatchelf it for NixOS.
-  orangutanVersion = "3.3.8";
+  # Not in nixpkgs. Since 3.4 upstream ships the prebuilt glibc-dynamic binary
+  # only inside distro packages (no bare tarballs), so unpack the .deb and
+  # autoPatchelf the binary. The .deb's systemd unit and /etc config are not
+  # used; only the CLI.
+  orangutanVersion = "3.4.2";
   orangutanSources = {
     x86_64-linux = {
-      url = "https://github.com/291-Group/LAN-Orangutan/releases/download/v${orangutanVersion}/orangutan-linux-amd64.tar.gz";
-      hash = "sha256-l7ii77XUAiYKoK6OFLLHdH57vDDI22rd1Puw4j12RPY=";
-      bin = "orangutan-linux-amd64";
+      url = "https://github.com/291-Group/LAN-Orangutan/releases/download/v${orangutanVersion}/lan-orangutan_${orangutanVersion}_amd64.deb";
+      hash = "sha256-QQMgRtZw5DTNrEhgbv4n0q8qMLBjp/3XBG2JttC2uZU=";
     };
     aarch64-linux = {
-      url = "https://github.com/291-Group/LAN-Orangutan/releases/download/v${orangutanVersion}/orangutan-linux-arm64.tar.gz";
-      hash = "sha256-If9SJhFyBnnWn00Ti2LniTnzK82bFwRd1KDljSC9pq0=";
-      bin = "orangutan-linux-arm64";
+      url = "https://github.com/291-Group/LAN-Orangutan/releases/download/v${orangutanVersion}/lan-orangutan_${orangutanVersion}_arm64.deb";
+      hash = "sha256-ifhzOUIPjkltwASuhRONq2W2M83tlda6uRIH37r9mko=";
     };
   };
   orangutan = pkgs.stdenv.mkDerivation {
@@ -24,14 +24,14 @@ let
     src = pkgs.fetchurl {
       inherit (orangutanSources.${pkgs.stdenv.hostPlatform.system}) url hash;
     };
-    nativeBuildInputs = [ pkgs.autoPatchelfHook ];
+    nativeBuildInputs = [ pkgs.dpkg pkgs.autoPatchelfHook ];
     buildInputs = [ pkgs.glibc ];
-    # Tarball has no top-level directory — just the bare binary
+    # dpkg's setup hook unpacks the .deb data into ./root
     sourceRoot = ".";
     dontConfigure = true;
     dontBuild = true;
     installPhase = ''
-      install -Dm755 ${orangutanSources.${pkgs.stdenv.hostPlatform.system}.bin} $out/bin/orangutan
+      install -Dm755 root/usr/local/bin/orangutan $out/bin/orangutan
     '';
     meta = {
       description = "Network scanner with persistent device labeling, multi-network support, and Tailscale integration";
@@ -56,6 +56,10 @@ in {
   };
 
   config = {
+    # Kernel hwmon driver for SATA drive temperatures (shows up in `sensors`
+    # and btop). Replaces the unmaintained hddtemp; `smartctl -A` also works.
+    boot.kernelModules = [ "drivetemp" ];
+
     # Install terminfo for Ghostty (and other modern terminal emulators) so
     # tmux doesn't reject the TERM it gets forwarded over SSH from them.
     environment.enableAllTerminfo = true;
@@ -105,8 +109,7 @@ in {
         # System Monitoring
         htop
         btop
-        lm_sensors    # CPU/board temp (sensors command)
-        hddtemp       # Hard drive temperature
+        lm_sensors    # CPU/board temp, plus SATA drive temps via drivetemp below
         smartmontools # Drive SMART data (smartctl)
         dmidecode     # DMI/SMBIOS data (service tags, BIOS info, etc.)
 

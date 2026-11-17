@@ -237,7 +237,7 @@ in
       fi
     '';
    in
-   lib.recursiveUpdate {
+   mkMerge [ {
     environment.systemPackages = with pkgs; [ borgbackup ];
 
     environment.shellAliases =
@@ -478,13 +478,12 @@ in
     # Guarded on the option existing — hosts without wazuh-agent imported (e.g.
     # OTworkstation) can still use borg-backup, they just skip Wazuh shipping.
   } (optionalAttrs (options.services ? wazuh-agent) {
-    # `//` here would shallow-clobber the whole `services` key from the
-    # attrset above (wiping services.borgbackup.jobs."system" on every host
-    # with wazuh-agent imported — confirmed broke nightly backups fleet-wide
-    # for two days, 2026-08-23/24). lib.recursiveUpdate merges nested keys
-    # instead of replacing the top-level attribute wholesale.
+    # Merged with mkMerge, not `//`: `//` shallow-clobbers the whole
+    # `services` key from the attrset above (wiped services.borgbackup.jobs
+    # on every host with wazuh-agent imported — broke nightly backups
+    # fleet-wide 2026-08-23/24).
     services.wazuh-agent.extraLocalFiles = mkIf cfg.restoreTest.enable [
       { location = logFile; logFormat = "syslog"; }
     ];
-   }));
+   }) ]);
 }

@@ -7,13 +7,13 @@ let
       # connection (https://github.com/kanywst/wtfi2). Not in nixpkgs; shipped
       # upstream only as a prebuilt glibc-dynamic binary, so fetch the release
       # tarball and autoPatchelf it.
-      wtfi2Version = "0.6.0";
+      wtfi2Version = "0.10.0";
       wtfi2 = pkgs.stdenv.mkDerivation {
         pname = "wtfi2";
         version = wtfi2Version;
         src = pkgs.fetchurl {
           url = "https://github.com/kanywst/wtfi2/releases/download/v${wtfi2Version}/wtfi2-x86_64-unknown-linux-gnu.tar.xz";
-          hash = "sha256-zDhVnZ13GMWfD7V1lF27JFsEqxZLOcPCnreoWElOPSs=";
+          hash = "sha256-eDySR+Y+330AnxIaAYD9lUqTEpje2gxrMlb1YbNTozI=";
         };
         nativeBuildInputs = [ pkgs.autoPatchelfHook ];
         buildInputs = [ pkgs.stdenv.cc.cc.lib ];

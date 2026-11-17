@@ -16,7 +16,6 @@
     inputs.self.nixosModules.vscode
     inputs.self.nixosModules.pdf
     inputs.self.nixosModules."kali-docker"
-    inputs.self.nixosModules.herdr
     inputs.home-manager.nixosModules.home-manager
     (inputs.self.homeConfigurations.scott).nixosModule
   ];
@@ -58,7 +57,7 @@
       idrive-restart = "ssh scott@sands-bak01.warthog-royal.ts.net sudo systemctl restart idrive360cron";
 
       # Herdr -h shortcuts — same targets as the "Tailscale SSH shortcuts" in
-      # shell-aliases.nix, but through `herdr --remote` (modules/herdr.nix)
+      # shell-aliases.nix, but through `herdr --remote` (pkgs.herdr below)
       # instead of a plain `tailscale ssh`. Herdr attaches to a persistent
       # remote session the way `tmux attach` attaches to a local one. Kept
       # here rather than shell-aliases.nix because the herdr binary is only
@@ -146,6 +145,7 @@
     environment.systemPackages = with pkgs; [
       python3Minimal
       claude-code
+      herdr  # terminal workspace manager for AI coding agents; see the -h aliases
       # Claude desktop app is macOS/Windows only — no official Linux build or
       # nixpkgs package, so it lives on airbook-darwin (brew cask "claude") only.
 

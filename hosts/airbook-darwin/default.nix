@@ -43,8 +43,9 @@ let
   };
 
   # Herdr — terminal workspace manager for AI coding agents (herdr.dev), the
-  # macOS counterpart to modules/herdr.nix on NixOS daily drivers. Not in
-  # nixpkgs/Homebrew; ships only as a prebuilt binary, so fetch the release
+  # macOS counterpart to pkgs.herdr in daily-driver.nix on NixOS. nixpkgs has
+  # it, but not for x86_64-darwin on our 26.05 darwin branch, and it's not in
+  # Homebrew; upstream ships a prebuilt binary, so fetch the release
   # asset directly (same reasoning as wtfi2 above). No account/login
   # required. dontFixup: same reasoning as wtfi2 — don't risk invalidating an
   # embedded macOS code signature by stripping.

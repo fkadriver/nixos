@@ -132,24 +132,35 @@ it. Two separate faults mean Wazuh gets almost nothing useful.
 
 ## 4. Replacements and version bumps
 
-- [ ] `modules/herdr.nix`: `pkgs.herdr` is now in nixpkgs (same 0.9.5, cached).
-      Drop the hand-rolled fetch.
-- [ ] `hddtemp` in `common.nix`: unmaintained since 2008. Use the `drivetemp`
-      kernel module with `sensors`, or `smartctl -A`.
-- [ ] LAN-Orangutan 3.3.8 → 3.4.2 (`common.nix`). Update both hashes.
-- [ ] wtfi2 0.6.0 → 0.10.0 (`hosts/latitude/default.nix`).
-- [ ] `font.nix`: Great Vibes, Allura and Parisienne are fetched from a moving
+- [x] `modules/herdr.nix`: `pkgs.herdr` is now in nixpkgs (same 0.9.5, cached).
+      Drop the hand-rolled fetch. Done 2026-11-17: `modules/herdr.nix` removed,
+      `pkgs.herdr` in daily-driver (airbook keeps its fetch: no x86_64-darwin).
+- [x] `hddtemp` in `common.nix`: unmaintained since 2008. Use the `drivetemp`
+      kernel module with `sensors`, or `smartctl -A`. Done: `drivetemp` loaded
+      in common.nix.
+- [x] LAN-Orangutan 3.3.8 → 3.4.2 (`common.nix`). Update both hashes.
+      3.4 dropped the bare binary tarballs; now unpacked from the `.deb`.
+- [x] wtfi2 0.6.0 → 0.10.0 (`hosts/latitude/default.nix`).
+- [x] `font.nix`: Great Vibes, Allura and Parisienne are fetched from a moving
       `github.com/google/fonts/raw/main` URL with a fixed hash, so they'll
       break when those files change. Use
       `google-fonts.override { fonts = [ ... ]; }`. The dafont downloads have
-      the same moving-URL risk.
-- [ ] `font.nix`: re-check `font-manager`. Still not in the binary cache on
-      2026-11-16, so presumably still failing to build.
-- [ ] `printing.nix`: try `model = "everywhere"` (IPP Everywhere) for the
+      the same moving-URL risk. Done differently: the override pulls the whole
+      ~1 GB repo, so the URLs are pinned to a google/fonts commit instead
+      (hashes unchanged). dafont has no versioned URLs; left as is.
+- [x] `font.nix`: re-check `font-manager`. Still not in the binary cache on
+      2026-11-16, so presumably still failing to build. Builds again
+      (2026-11-17, built locally, not cached); re-added to the viewer list.
+- [x] `printing.nix`: try `model = "everywhere"` (IPP Everywhere) for the
       LBP162 instead of the generic PostScript driver
-      (`drv:///sample.drv/generic.ppd`), if it supports AirPrint.
-- [ ] `borg-backup.nix`: replace the `lib.recursiveUpdate { ... } (optionalAttrs ...)`
+      (`drv:///sample.drv/generic.ppd`), if it supports AirPrint. It does
+      (AirPrint 1.7, pwg-raster/URF, no PostScript); switched 2026-11-17.
+      Uses a committed driverless PPD (`model = "everywhere"` restart-looped
+      CUPS: the printer was unreachable at `ipp://LBP162`, now `LBP162.local`),
+      and cups-browsed is off (it made a duplicate queue). Test print OK.
+- [x] `borg-backup.nix`: replace the `lib.recursiveUpdate { ... } (optionalAttrs ...)`
       merge with `mkMerge [ ... ]`, the standard way to combine module config.
+      Done; borg config evaluates identically on vm01 and OTworkstation.
 
 ## 5. Small bugs and hardening
 
