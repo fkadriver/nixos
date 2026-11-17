@@ -29,10 +29,10 @@ it. Two separate faults mean Wazuh gets almost nothing useful.
 - **Evidence (2026-11-16):** `docker exec goflow2 ls -l /proc/1/fd` showed
   `3 -> /out/netflow.log-20261116 (deleted)`, 710 MB and growing about
   1.1 GB/day. That space stays used until the container restarts.
-- [ ] Add `copytruncate = true;` to `services.logrotate.settings.remote-logs`.
+- [x] Add `copytruncate = true;` to `services.logrotate.settings.remote-logs`.
       This is safe: goflow2 opens the file with `O_APPEND` (`fdinfo` flags
       `02102001`), and so does rsyslog.
-- [ ] Then run `docker restart goflow2` once on log01, to get a live
+- [x] Then run `docker restart goflow2` once on log01, to get a live
       `netflow.log` back and free the deleted file's space.
 - [ ] Afterwards, confirm netflow events show up in Wazuh (rule 100500 in
       `wazuh-tailscale`'s `netflow-rules.xml`).

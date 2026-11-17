@@ -287,6 +287,11 @@ let
         missingok = true;
         notifempty = true;
         sharedscripts = true;
+        # copytruncate: goflow2 (OPNsense.internal/netflow.log) never reopens
+        # its output, so rename-rotation left it writing to a deleted file
+        # and Wazuh lost netflow every night. Safe for both writers — goflow2
+        # and rsyslog open with O_APPEND, so writes land at the new EOF.
+        copytruncate = true;
         postrotate = "systemctl kill -s HUP syslog.service 2>/dev/null || true";
       };
 
