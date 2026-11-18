@@ -50,10 +50,11 @@ trap cleanup EXIT
 sudo mount "$ROOTPART" "$MNT"
 
 echo "Copying identity from ${HOST} -> ${ROOTPART}..."
-# The glob expands on the Pi. --numeric-owner keeps uid/gid as on the Pi
-# (all of these are root-owned there) instead of remapping by local names.
+# The glob expands in the Pi's shell before tar runs, so cd / first (tar's
+# -C doesn't affect it). --numeric-owner keeps uid/gid as on the Pi (all of
+# these are root-owned there) instead of remapping by local names.
 ssh "$SSH_TARGET" \
-    'sudo tar -C / --numeric-owner -cpf - var/lib/sops-nix/key.txt etc/ssh/ssh_host_* var/lib/tailscale' \
+    'cd / && sudo tar --numeric-owner -cpf - var/lib/sops-nix/key.txt etc/ssh/ssh_host_* var/lib/tailscale' \
     | sudo tar -C "$MNT" --numeric-owner -xpf -
 
 sudo chmod 0700 "$MNT/var/lib/sops-nix" "$MNT/var/lib/tailscale"
