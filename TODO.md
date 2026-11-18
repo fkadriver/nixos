@@ -101,18 +101,32 @@ it. Two separate faults mean Wazuh gets almost nothing useful.
         (this also deploys the pihole-ftl-setup fix; pihole02's closure
         changes too, so it gets it on the same run).
   - [ ] Optional: add the cache to nas01's pull-through proxy.
-  - [ ] **Replace pihole02 (Pi 3B) with a Pi 4.** Its micro-USB power
-        connector is damaged (frequent undervoltage, died 2026-10-31 and
-        2026-11-18), which is why it's only the backup. Moving it to a Pi 4
-        puts both Pis on the same nixos-raspberrypi config, kernel and boot
-        path, so pihole02 becomes a real canary for pihole01, and drops the
-        nixos-hardware/U-Boot Pi 3 path and its kernel lock. Steps:
-        `hosts/pihole02` → raspberry-pi-4.base (shared Pi 4 bits into one
-        module), build the image, seed the new card from the old one (add a
-        mode to `seed-pihole-card.sh` that reads a card in latitude's reader,
-        in case the old Pi won't stay up), swap, verify. Do it after
-        pihole01's test deploy. Until then pihole02 only gets hosts-file
-        updates (see below).
+  - [ ] **Replace pihole02 (Pi 3B): Pi 4 or a used x86 thin client.** Its
+        micro-USB power connector is damaged (frequent undervoltage, died
+        2026-10-31 and 2026-11-18), which is why it's only the backup. Until
+        it's replaced, `deploy-piholes.sh` only pushes its /etc/hosts
+        (`HOSTS_ONLY[pihole02]`); remove that entry after the swap.
+    - **Pi 4 (1 GB is enough):** pihole01 uses 273 MB with zram untouched.
+      Same nixos-raspberrypi config, cached kernel and boot path as pihole01,
+      so pihole02 becomes a real canary again and the nixos-hardware/U-Boot
+      Pi 3 path and its kernel lock go away. Steps: `hosts/pihole02` →
+      raspberry-pi-4.base (shared Pi 4 bits into one module), build the
+      image, seed the new card from the old one (add a mode to
+      `seed-pihole-card.sh` that reads a card in latitude's reader, in case
+      the old Pi won't stay up), swap, verify.
+    - **x86 thin client / 1-liter PC** (used Dell Wyse 5070, HP t630/t640,
+      Lenovo ThinkCentre Tiny M710q/M720q, Fujitsu Futro), often cheaper
+      than a Pi 4. Plain x86_64 NixOS like log01: cache.nixos.org kernel, no
+      cross-compile or kernel lock, disko + installer ISO, native builds on
+      vm01; barrel-jack power; eMMC/SSD instead of SD. Costs: ~5–10 W idle
+      vs ~3–5 W, and it's not pihole01's twin (the canary benefit is lost
+      unless pihole01 later moves to the same model, which would retire
+      all the Pi-specific code). Avoid tiny-eMMC models (Wyse 3040's
+      8–16 GB is tight for /nix). Needs `modules/pihole.nix` split: the
+      forced initrd module list, cross-compile overlays and zram sizing
+      move to a Pi-only module. Identity carry-over: copy age key, SSH host
+      keys and /var/lib/tailscale from the old card before installing.
+    - Either way: do it after pihole01's test deploy.
 - [ ] **Tether:** upstream `nix/module.nix:109` still sets
       `services.avahi.publish.{enable,userServices}`. That's the one eval
       warning left on latitude. Open an issue or PR on zackb/tether.
