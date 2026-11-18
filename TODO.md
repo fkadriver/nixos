@@ -99,11 +99,12 @@ it. Two separate faults mean Wazuh gets almost nothing useful.
         Done 2026-11-18 08:58: pihole01 booted the new generation (deploy
         check passed), FIRMWARE holds nixos/{default,1-default,2-default},
         and the pihole-ftl-setup fix is deployed. pihole02 got hosts only.
-  - [ ] After merging to main: rebuild vm01 so its nix daemon trusts
+  - [x] After merging to main: rebuild vm01 so its nix daemon trusts
         `nixos-raspberrypi.cachix.org` (`pi-builder.nix`). Until then the
         Pi kernel on vm01 is only there because it was copied from latitude,
         and it is NOT GC-rooted there (the deploy's GC root is on latitude):
         vm01's next nix-gc (Mon 2026-11-23) deletes it. Do it before then.
+        Done 2026-11-18: vm01 at e8123df trusts the cache.
   - [ ] Optional: add the cache to nas01's pull-through proxy.
   - [ ] **Replace pihole02 (Pi 3B): Pi 4 or a used x86 thin client.** Its
         micro-USB power connector is damaged (frequent undervoltage, died
