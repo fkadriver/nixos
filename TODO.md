@@ -95,11 +95,15 @@ it. Two separate faults mean Wazuh gets almost nothing useful.
         Bitwarden re-sync (no RTC, see docs) and exposed a fresh-card
         `pihole-ftl-setup` abort (fixed in pihole.nix, not yet deployed).
         Old card is the fallback.
-  - [ ] Rebuild vm01 and latitude so their nix daemons trust
-        `nixos-raspberrypi.cachix.org` (`pi-builder.nix`), then do one
-        `deploy-piholes.sh pihole01` to prove `nixos-rebuild boot` + reboot
-        (this also deploys the pihole-ftl-setup fix; pihole02's closure
-        changes too, so it gets it on the same run).
+  - [x] One `deploy-piholes.sh` run to prove `nixos-rebuild boot` + reboot.
+        Done 2026-11-18 08:58: pihole01 booted the new generation (deploy
+        check passed), FIRMWARE holds nixos/{default,1-default,2-default},
+        and the pihole-ftl-setup fix is deployed. pihole02 got hosts only.
+  - [ ] After merging to main: rebuild vm01 so its nix daemon trusts
+        `nixos-raspberrypi.cachix.org` (`pi-builder.nix`). Until then the
+        Pi kernel on vm01 is only there because it was copied from latitude,
+        and it is NOT GC-rooted there (the deploy's GC root is on latitude):
+        vm01's next nix-gc (Mon 2026-11-23) deletes it. Do it before then.
   - [ ] Optional: add the cache to nas01's pull-through proxy.
   - [ ] **Replace pihole02 (Pi 3B): Pi 4 or a used x86 thin client.** Its
         micro-USB power connector is damaged (frequent undervoltage, died
