@@ -221,6 +221,15 @@ The script:
 - **Checks the kernel version** before building — warns and prompts if the kernel
   has changed from the locked version (a full kernel recompile takes ~2 hours)
 - Deploys pihole02 then pihole01 sequentially — pihole02 is the canary, so a bad build stops there and pihole01 (primary DNS) is never touched
+- **pihole02 is hosts-only for now** (`HOSTS_ONLY[pihole02]=true`): its
+  micro-USB power connector is damaged, so instead of a rebuild + reboot it only
+  gets `/etc/hosts` (the `networking.extraHosts` local DNS records) pushed live,
+  then FTL is sent SIGHUP and every record is checked with `dig`. The push lasts
+  until pihole02's next reboot, which falls back to the hosts of its last full
+  deploy; each run re-pushes it. `--full` forces a real deploy. Remove the
+  `HOSTS_ONLY` entry once it's replaced with a Pi 4 (TODO.md §2). Note: `pihole
+  reloaddns` is a silent no-op on NixOS (no `/run/pihole-FTL.pid`), so signal
+  FTL's systemd MainPID instead.
 - Creates a GC root after each deploy so the compiled kernel is not garbage collected
 
 ### pihole01 boot layout (nixos-raspberrypi, `kernel` bootloader)

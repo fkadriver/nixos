@@ -2,6 +2,12 @@
 # Deploy NixOS updates to pihole02 and pihole01 sequentially (pihole02 first).
 # Verifies each Pi is healthy before moving to the next.
 #
+# pihole02 is HOSTS-ONLY for now (see HOSTS_ONLY below): its micro-USB power
+# connector is damaged, so it only gets /etc/hosts (local DNS records) pushed
+# live — no rebuild, no reboot — until it's replaced with a Pi 4 (TODO.md §2).
+# A pushed hosts file lasts until pihole02's next reboot, which falls back to
+# the hosts of its last full deploy; every run of this script re-pushes it.
+#
 # Build host selection (in order of preference):
 #   1. vm01   — always-on server, preferred when available
 #   2. localhost — latitude loopback sshd (requires latitude rebuild)
@@ -15,6 +21,7 @@
 #   ./scripts/deploy-piholes.sh --verbose              # also show full nix build logs on screen
 #   ./scripts/deploy-piholes.sh --quiet                # no log file, minimal screen output
 #   ./scripts/deploy-piholes.sh --check-version        # check if a newer version exists on GitHub
+#   ./scripts/deploy-piholes.sh pihole02 --full        # full rebuild+reboot even for a HOSTS_ONLY Pi
 #
 #   ./scripts/deploy-piholes.sh --build-image                  # build SD images for both Pis
 #   ./scripts/deploy-piholes.sh pihole01 --build-image          # build SD image for pihole01 only
@@ -24,7 +31,7 @@
 
 set -euo pipefail
 
-SCRIPT_VERSION="1.5.0"
+SCRIPT_VERSION="1.6.0"
 SCRIPT_URL="https://raw.githubusercontent.com/fkadriver/nixos/main/scripts/deploy-piholes.sh"
 
 RED='\033[0;31m'
@@ -36,6 +43,7 @@ NC='\033[0m'
 FLAKE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VERBOSE=false
 QUIET=false
+FULL=false
 
 # Must match pihole.lockedKernelVersion in each host's default.nix.
 # Update both together when intentionally upgrading the kernel.
@@ -58,7 +66,13 @@ declare -A PI_DNS_RETRIES
 PI_DNS_RETRIES[pihole01]=5
 PI_DNS_RETRIES[pihole02]=15
 
-# pihole02 goes first: it is the canary. If a change breaks boot (e.g. the
+# Pis that only get their /etc/hosts pushed (no rebuild/reboot) unless --full.
+# pihole02: damaged power connector, browns out under load — 2026-11-18 it
+# died mid-deploy. Remove once it's replaced (TODO.md §2).
+declare -A HOSTS_ONLY
+HOSTS_ONLY[pihole02]=true
+
+# pihole02 goes first: it is the canary (only while it gets full deploys). If a change breaks boot (e.g. the
 # systemd stage-1 initrd switch in aaf668a), the deploy stops there and
 # pihole01 — the primary DNS server — keeps serving untouched.
 PIHOLES=("pihole02" "pihole01")
@@ -95,7 +109,8 @@ while [[ $# -gt 0 ]]; do
         --verbose|-v) VERBOSE=true; shift ;;
         --quiet|-q) QUIET=true; shift ;;
         --check-version) check_new_version; exit 0 ;;
-        -h|--help) sed -n '2,23p' "$0" | sed 's/^# \?//'; exit 0 ;;
+        --full) FULL=true; shift ;;
+        -h|--help) sed -n '2,/^$/p' "$0" | sed 's/^# \?//'; exit 0 ;;
         pihole01|pihole02) TARGET+=("$1"); shift ;;
         *) echo "Unknown argument: $1"; exit 1 ;;
     esac
@@ -279,6 +294,62 @@ verify_pi() {
     return 0
 }
 
+# Push only /etc/hosts (networking.extraHosts → local DNS records) to a Pi
+# and make FTL re-read it. The file is built from the Pi's own config; it's a
+# plain text derivation, so this needs no Pi build at all.
+push_hosts() {
+    local name=$1
+    local ssh_target="scott@${name}"
+    local dns_ip=${PI_DNS[$name]}
+
+    echo ""
+    log "━━━ ${name}: hosts-only update (no rebuild, no reboot) ━━━"
+
+    local hosts
+    hosts=$(nix build --no-link --print-out-paths --option builders '' \
+        "${FLAKE_DIR}#nixosConfigurations.${name}.config.environment.etc.hosts.source") \
+        || { fail "Could not build the hosts file for ${name}"; return 1; }
+
+    if ! ssh -o ConnectTimeout=5 -o BatchMode=yes "$ssh_target" true 2>/dev/null; then
+        fail "${name} is not reachable"
+        return 1
+    fi
+
+    if ssh "$ssh_target" "cat /etc/hosts" 2>/dev/null | cmp -s - "$hosts"; then
+        ok "/etc/hosts already current"
+    else
+        # Write next to it, then rename over the symlink (atomic). FTL answers
+        # from /etc/hosts and re-reads it on SIGHUP. Signal its main PID from
+        # systemd, not `pihole reloaddns`: that looks for /run/pihole-FTL.pid,
+        # which NixOS's FTL doesn't write, and then silently does nothing
+        # (still exit 0) — tested 2026-11-18.
+        if ssh "$ssh_target" 'sudo tee /etc/hosts.new >/dev/null && sudo chmod 0644 /etc/hosts.new && sudo mv -f /etc/hosts.new /etc/hosts && pid=$(systemctl show -p MainPID --value pihole-ftl) && [ "$pid" -gt 0 ] && sudo kill -HUP "$pid"' < "$hosts"; then
+            ok "/etc/hosts pushed and DNS reloaded"
+        else
+            fail "Could not push /etc/hosts to ${name}"
+            return 1
+        fi
+        ssh "$ssh_target" "cat /etc/hosts" | cmp -s - "$hosts" \
+            || { fail "/etc/hosts on ${name} doesn't match after the push"; return 1; }
+        warn "Lasts until ${name}'s next reboot (falls back to its last full deploy's hosts)"
+    fi
+
+    # Spot-check: every name/IP pair from the file must resolve on the Pi.
+    local bad=0 ip host answer
+    while read -r ip host _; do
+        answer=$(dig "@${dns_ip}" "$host" A +short +time=3 +tries=2 2>/dev/null | tail -1)
+        if [[ "$answer" != "$ip" ]]; then
+            fail "${host}: expected ${ip}, got '${answer:-nothing}'"
+            bad=1
+        fi
+    done < <(grep -vE '^\s*(#|$)' "$hosts" | grep -vE '^(127\.|::1)' | grep -E '^[0-9]+\.' )
+    if [[ $bad -eq 0 ]]; then
+        ok "All local DNS records resolve on ${dns_ip}"
+    else
+        return 1
+    fi
+}
+
 deploy_pi() {
     local name=$1
     local ssh_target="scott@${name}"
@@ -395,6 +466,14 @@ fi
 verify_build_host
 
 for pi in "${TARGET[@]}"; do
+    if [[ "${HOSTS_ONLY[$pi]:-false}" == true ]] && ! $FULL; then
+        push_hosts "$pi" || {
+            echo ""
+            echo -e "${RED}Hosts update failed on ${pi} — stopping.${NC}"
+            exit 1
+        }
+        continue
+    fi
     deploy_pi "$pi" || {
         echo ""
         echo -e "${RED}Deployment failed on ${pi} — stopping.${NC}"

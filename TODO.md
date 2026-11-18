@@ -101,7 +101,18 @@ it. Two separate faults mean Wazuh gets almost nothing useful.
         (this also deploys the pihole-ftl-setup fix; pihole02's closure
         changes too, so it gets it on the same run).
   - [ ] Optional: add the cache to nas01's pull-through proxy.
-  - [ ] Later: move pihole02 too, once pihole01 has run well for a while.
+  - [ ] **Replace pihole02 (Pi 3B) with a Pi 4.** Its micro-USB power
+        connector is damaged (frequent undervoltage, died 2026-10-31 and
+        2026-11-18), which is why it's only the backup. Moving it to a Pi 4
+        puts both Pis on the same nixos-raspberrypi config, kernel and boot
+        path, so pihole02 becomes a real canary for pihole01, and drops the
+        nixos-hardware/U-Boot Pi 3 path and its kernel lock. Steps:
+        `hosts/pihole02` → raspberry-pi-4.base (shared Pi 4 bits into one
+        module), build the image, seed the new card from the old one (add a
+        mode to `seed-pihole-card.sh` that reads a card in latitude's reader,
+        in case the old Pi won't stay up), swap, verify. Do it after
+        pihole01's test deploy. Until then pihole02 only gets hosts-file
+        updates (see below).
 - [ ] **Tether:** upstream `nix/module.nix:109` still sets
       `services.avahi.publish.{enable,userServices}`. That's the one eval
       warning left on latitude. Open an issue or PR on zackb/tether.
