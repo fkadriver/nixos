@@ -604,7 +604,7 @@ let
         # macOS >= 13 required, airbook is on 15.8.1). latitude runs the
         # community Linux equivalent, go-hass-agent (daily-driver.nix), since
         # there is no official Linux client. Sign in with HA's advertised
-        # internal URL http://192.168.21.138 — HA listens on port 80, not 8123
+        # internal URL http://192.168.21.21 — HA listens on port 80, not 8123
         # — and the companion app picks up the external
         # https://homeassistant.warthog-royal.ts.net URL from HA after sign-in.
         # Registers this Mac as an HA device, the same way the work Mac is

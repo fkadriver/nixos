@@ -300,7 +300,7 @@ sops updatekeys secrets/secrets.yaml
     25. Defined inline in `hosts/airbook-darwin/default.nix`, not a module. See
     `docs/kali-docker.md`.
   - Home Assistant: official companion app (`home-assistant` cask). Sign in with
-    HA's advertised internal URL `http://192.168.21.138` — HA listens on **port
+    HA's advertised internal URL `http://192.168.21.21` — HA listens on **port
     80, not 8123** — and it picks up the external
     `https://homeassistant.warthog-royal.ts.net` from HA afterwards. Registers
     the Mac as an HA device (same as the work Mac's `Work_MAC`). HA's own config

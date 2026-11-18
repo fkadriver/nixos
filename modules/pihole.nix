@@ -378,6 +378,10 @@
       192.168.11.50 LBP162  # Canon LBP
       192.168.11.51 Ender3V3KE   # Creality Ender-3 KEv3
       192.168.10.19 idrac-nas01  # iDRAC8 - nas01's T330 remote management (see docs/nas01.md)
+      # Home Assistant Green (homeassist repo): DHCP reservation in OPNsense
+      # Dnsmasq Hosts. LAN name for clients without Tailscale (e.g. the work Mac).
+      # .internal, not .local: macOS sends .local to mDNS and never asks Pi-hole.
+      192.168.21.21 homeassistant.internal
     '';
 
     # Pi-hole FTL daemon
@@ -495,9 +499,9 @@
           # the cync_lan listener (TCP 23779) instead of Cync's cloud. Network-wide,
           # so the Cync phone app's cloud control channel also can't reach the real
           # cloud while on the home network. Power-cycle the lights after rebuilding.
-          "address=/cm.gelighting.com/192.168.21.138"
-          "address=/cm-sec.gelighting.com/192.168.21.138"
-          "address=/cm-ge.xlink.cn/192.168.21.138"
+          "address=/cm.gelighting.com/192.168.21.21"
+          "address=/cm-sec.gelighting.com/192.168.21.21"
+          "address=/cm-ge.xlink.cn/192.168.21.21"
         ];
         webserver = {
           interface.theme = "default-dark";
