@@ -89,11 +89,17 @@ it. Two separate faults mean Wazuh gets almost nothing useful.
       generational `kernel` bootloader on a 1 GiB FIRMWARE (fixes the
       firmware-copy deadlock), new card seeded with the old identity via
       `scripts/seed-pihole-card.sh`. Remaining:
-  - [ ] Flash + seed the new card, swap it in, verify DNS/FTL/Tailscale. Old
-        card is the fallback.
+  - [x] Flash + seed the new card, swap it in, verify DNS/FTL/Tailscale.
+        Done 2026-11-18: booted 6.18.59 on the new generation, same age key
+        and Tailscale node, 188k gravity domains. First boot needed a manual
+        Bitwarden re-sync (no RTC, see docs) and exposed a fresh-card
+        `pihole-ftl-setup` abort (fixed in pihole.nix, not yet deployed).
+        Old card is the fallback.
   - [ ] Rebuild vm01 and latitude so their nix daemons trust
         `nixos-raspberrypi.cachix.org` (`pi-builder.nix`), then do one
-        `deploy-piholes.sh pihole01` to prove `nixos-rebuild boot` + reboot.
+        `deploy-piholes.sh pihole01` to prove `nixos-rebuild boot` + reboot
+        (this also deploys the pihole-ftl-setup fix; pihole02's closure
+        changes too, so it gets it on the same run).
   - [ ] Optional: add the cache to nas01's pull-through proxy.
   - [ ] Later: move pihole02 too, once pihole01 has run well for a while.
 - [ ] **Tether:** upstream `nix/module.nix:109` still sets

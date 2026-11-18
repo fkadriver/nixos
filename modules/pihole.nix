@@ -598,8 +598,19 @@
         # SIGRTMIN (only external kill binaries do, and even those want "RTMIN"
         # without the SIG prefix) — it errors "invalid signal specification" and,
         # combined with `set -e`, aborts this script before lists ever get added.
-        # Go through systemctl instead, which resolves RTMIN correctly.
-        systemctl kill --signal=RTMIN --kill-whom=main pihole-ftl.service
+        # Signal FTL's main PID directly with util-linux kill. It needs the
+        # "RTMIN+0" spelling: plain "RTMIN" and "SIGRTMIN" are rejected
+        # (tested, util-linux 2.42.4). Not `systemctl kill`: this unit runs as User=pihole, and
+        # without polkit that's "Access denied", which under `set -e` aborted
+        # the script before any list was added. That only happens on a fresh
+        # card (no gravity.db yet) — pihole01's new card, 2026-11-18. FTL also
+        # runs as pihole, so a plain kill is allowed. Non-fatal: the
+        # `pihole -g` at the end reloads FTL anyway.
+        ftl_pid=$(systemctl show --property=MainPID --value pihole-ftl.service)
+        if [ -n "$ftl_pid" ] && [ "$ftl_pid" != 0 ]; then
+          ${pkgs.util-linux}/bin/kill --signal RTMIN+0 "$ftl_pid" \
+            || echo "Could not signal pihole-FTL (pid $ftl_pid); continuing"
+        fi
       fi
 
       source ${pihole}/share/pihole/advanced/Scripts/api.sh

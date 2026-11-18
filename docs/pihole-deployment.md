@@ -254,6 +254,25 @@ ssh scott@pihole01 sudo poweroff      # then swap cards and power on
 Keep the old card: it's a complete fallback. Never run both cards at once
 (shared Tailscale identity).
 
+**After the first boot of a fresh card**, `bitwarden-secrets-sync` usually
+fails ("You are not logged in"). The Pi has no RTC, and on a fresh card the
+clock is wrong until timesyncd's first sync, which lands just *after*
+Bitwarden's TLS login (40 s vs 41 s on pihole01, 2026-11-18). Normal reboots
+restore the saved clock, so they're unaffected. Re-run it once:
+
+```bash
+ssh scott@pihole01 'sudo systemctl restart bitwarden-secrets-sync pihole-set-password'
+```
+
+Then check blocking (on a fresh card `pihole-ftl-setup` builds gravity from
+scratch, and used to abort there before any list was added — fixed
+2026-11-18):
+
+```bash
+dig @192.168.10.10 pagead2.googlesyndication.com +short   # → 192.168.10.10
+ssh scott@pihole01 'journalctl -u pihole-ftl-setup -b -o cat | grep "gravity domains"'
+```
+
 ### Kernel version locking
 
 Each Pi uses a different kernel: pihole01 (Pi 4B) the vendor kernel from
