@@ -28,17 +28,10 @@ let
       # unattended — no human in the loop to type a sudo password.
       security.sudo.wheelNeedsPassword = false;
 
-      # Kernel version lock — Pi 4B (raspberry-pi-nix kernel)
+      # Kernel version lock — Pi 4B (nixos-raspberrypi vendor kernel, served
+      # prebuilt by nixos-raspberrypi.cachix.org; see the flake input comment)
       # Update alongside LOCKED_KERNEL_VERSIONS in scripts/deploy-piholes.sh
-      pihole.lockedKernelVersion = "6.6.78";
-
-      # 6.6.78's bundled libbpf fails under glibc 2.43 / gcc 16 (-Werror
-      # -Wdiscarded-qualifiers on a strchr() result in resolve_btfids).
-      # Drop this once the kernel lock moves past a libbpf with the fix.
-      boot.kernelPatches = [{
-        name = "libbpf-strchr-const";
-        patch = ./libbpf-strchr-const.patch;
-      }];
+      pihole.lockedKernelVersion = "6.18.59-unstable_20261026";
 
       system = {
         stateVersion = "25.11";
@@ -48,13 +41,20 @@ let
   };
 in
 inputs.nixpkgs.lib.nixosSystem {
+  # nixos-raspberrypi's modules take the flake itself as a module argument.
+  specialArgs = { nixos-raspberrypi = inputs.nixos-raspberrypi; };
   modules = [
     nixosModule
-    # raspberry-pi-nix modules imported here where inputs is accessible
-    inputs.raspberry-pi-nix.nixosModules.raspberry-pi
-    inputs.raspberry-pi-nix.nixosModules.sd-image
+    # Pi 4B support: vendor kernel + firmware from nixos-raspberrypi's own
+    # (cached) package set, bootloader, config.txt generation. Its
+    # trusted-nix-caches module is not imported: it would replace the Pi's
+    # default substituters, and the Pi never builds anything itself — the
+    # cache matters on the build hosts (see modules/pi-builder.nix).
+    inputs.nixos-raspberrypi.nixosModules.raspberry-pi-4.base
+    inputs.nixos-raspberrypi.nixosModules.sd-image
     {
-      # Cross-compile from x86_64 build host to aarch64 Pi
+      # Cross-compile from x86_64 build host to aarch64 Pi. The kernel is
+      # unaffected: it comes from nixos-raspberrypi.packages.aarch64-linux.
       nixpkgs.hostPlatform.system = "aarch64-linux";
       nixpkgs.buildPlatform.system = "x86_64-linux";
     }

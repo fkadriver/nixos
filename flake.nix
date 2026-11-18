@@ -31,10 +31,12 @@
     # No nixpkgs follows: this flake has no nixpkgs input of its own (only
     # flake-parts), so a follows here just produces an eval warning.
     vscode-server.url = "github:nix-community/nixos-vscode-server";
-    raspberry-pi-nix = {
-      url = "github:nix-community/raspberry-pi-nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    # pihole01 (Pi 4B) kernel, firmware and bootloader. Deliberately NO
+    # nixpkgs follows: the vendor kernel is built from this flake's own pinned
+    # nixpkgs, and that exact build is what nixos-raspberrypi.cachix.org
+    # serves. Following our nixpkgs changes the kernel hash, which means a
+    # 1-2 day qemu-emulated kernel build again (what raspberry-pi-nix did).
+    nixos-raspberrypi.url = "github:nvmd/nixos-raspberrypi/develop";
     tether = {
       url = "github:zackb/tether";
       inputs.nixpkgs.follows = "nixpkgs";

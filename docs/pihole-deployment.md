@@ -223,16 +223,54 @@ The script:
 - Deploys pihole02 then pihole01 sequentially — pihole02 is the canary, so a bad build stops there and pihole01 (primary DNS) is never touched
 - Creates a GC root after each deploy so the compiled kernel is not garbage collected
 
+### pihole01 boot layout (nixos-raspberrypi, `kernel` bootloader)
+
+The Pi firmware boots straight from the FIRMWARE partition (1 GiB, no U-Boot).
+`nixos-rebuild boot` writes the new generation's kernel, initrd, cmdline and
+DTBs to `FIRMWARE/nixos/default/` **before** the reboot, and keeps the last 4
+generations as `FIRMWARE/nixos/<N>-default/`. (The old raspberry-pi-nix setup
+only copied them from a service in the *new* system, so a kernel change
+deadlocked the boot — 2026-11-17.) `deploy-piholes.sh` fails the deploy if the
+Pi comes back on anything other than the generation it just installed.
+
+**Rollback** (no boot menu): put the card in latitude, and in the FIRMWARE
+partition's `config.txt` add `os_prefix=nixos/<N>-default/` under `[all]`.
+Remove it again after the next good deploy (it's regenerated on every
+`nixos-rebuild boot` anyway).
+
+### Replacing a Pi's SD card (keeping its identity)
+
+A freshly flashed card would generate a new age key, SSH host keys and
+Tailscale node. To keep the old ones, seed the new card from the still-running
+Pi before its first boot:
+
+```bash
+./scripts/deploy-piholes.sh pihole01 --build-image
+sudo dd if=result-pihole01-sdimage/sd-image/<image>.img of=/dev/mmcblk0 bs=4M status=progress conv=fsync
+./scripts/seed-pihole-card.sh pihole01 /dev/mmcblk0
+ssh scott@pihole01 sudo poweroff      # then swap cards and power on
+```
+
+Keep the old card: it's a complete fallback. Never run both cards at once
+(shared Tailscale identity).
+
 ### Kernel version locking
 
-Each Pi uses a different kernel (Pi 4B via raspberry-pi-nix, Pi 3B via nixos-hardware).
-The locked versions are declared in two places that must be kept in sync:
+Each Pi uses a different kernel: pihole01 (Pi 4B) the vendor kernel from
+`nvmd/nixos-raspberrypi`, prebuilt in `nixos-raspberrypi.cachix.org` (the
+`pi-builder.nix` build hosts trust that cache); pihole02 (Pi 3B) the
+nixos-hardware kernel. The locked versions are declared in two places that
+must be kept in sync:
 
 | Location | pihole01 | pihole02 |
 |---|---|---|
-| `hosts/pihole01/default.nix` | `pihole.lockedKernelVersion = "6.6.51"` | — |
-| `hosts/pihole02/default.nix` | — | `pihole.lockedKernelVersion = "6.12.47-stable_20250916"` |
+| `hosts/pihole01/default.nix` | `pihole.lockedKernelVersion = "6.18.59-unstable_20261026"` | — |
+| `hosts/pihole02/default.nix` | — | `pihole.lockedKernelVersion = "6.18.50-stable_20260911"` |
 | `scripts/deploy-piholes.sh` | `LOCKED_KERNEL_VERSIONS[pihole01]` | `LOCKED_KERNEL_VERSIONS[pihole02]` |
+
+pihole01's kernel is only a cache hit while the `nixos-raspberrypi` flake input
+does **not** follow our nixpkgs and no `boot.kernelPatches` are applied — either
+changes the kernel hash and brings back the 1–2 day emulated build.
 
 The NixOS build will **fail with a clear message** if the actual kernel drifts from the
 locked value (e.g. after `nix flake update`). To intentionally upgrade:

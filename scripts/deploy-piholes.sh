@@ -24,7 +24,7 @@
 
 set -euo pipefail
 
-SCRIPT_VERSION="1.4.0"
+SCRIPT_VERSION="1.5.0"
 SCRIPT_URL="https://raw.githubusercontent.com/fkadriver/nixos/main/scripts/deploy-piholes.sh"
 
 RED='\033[0;31m'
@@ -39,10 +39,10 @@ QUIET=false
 
 # Must match pihole.lockedKernelVersion in each host's default.nix.
 # Update both together when intentionally upgrading the kernel.
-# pihole01 = Pi 4B (raspberry-pi-nix kernel)
+# pihole01 = Pi 4B (nixos-raspberrypi kernel, prebuilt in its cachix)
 # pihole02 = Pi 3B (nixos-hardware kernel)
 declare -A LOCKED_KERNEL_VERSIONS
-LOCKED_KERNEL_VERSIONS[pihole01]="6.6.78"
+LOCKED_KERNEL_VERSIONS[pihole01]="6.18.59-unstable_20261026"
 LOCKED_KERNEL_VERSIONS[pihole02]="6.18.50-stable_20260911"
 
 # Machines that should each have a local copy of built SD images.
@@ -341,6 +341,20 @@ deploy_pi() {
         waited=$((waited + 5))
     done
     ok "${name} is back online"
+
+    # Catch "rebooted into the old system": with the old raspberry-pi-nix
+    # setup, a kernel change left the old kernel on FIRMWARE and the new
+    # system failed to boot (2026-11-17). SSH can still come back on the
+    # old generation, so compare what booted with what was just installed.
+    local booted installed
+    booted=$(ssh "$ssh_target" "readlink -f /run/booted-system" 2>/dev/null || true)
+    installed=$(ssh "$ssh_target" "readlink -f /nix/var/nix/profiles/system" 2>/dev/null || true)
+    if [[ -n "$booted" && "$booted" == "$installed" ]]; then
+        ok "Booted the new generation"
+    else
+        fail "${name} booted ${booted:-?} but the system profile is ${installed:-?}"
+        return 1
+    fi
 
     verify_pi "$name"
 }

@@ -15,5 +15,12 @@
 
     # Tell nix this machine can build aarch64 derivations via QEMU binfmt emulation
     nix.settings.extra-platforms = [ "aarch64-linux" ];
+
+    # pihole01's vendor kernel + firmware (nixos-raspberrypi flake input) are
+    # prebuilt here. Without it this host compiles the kernel under qemu.
+    nix.settings.extra-substituters = [ "https://nixos-raspberrypi.cachix.org" ];
+    nix.settings.extra-trusted-public-keys = [
+      "nixos-raspberrypi.cachix.org-1:4iMO9LXa8BqhU+Rpg6LQKiGa2lsNh/j2oiYLNOQ5sPI="
+    ];
   };
 }

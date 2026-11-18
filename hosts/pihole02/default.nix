@@ -43,7 +43,7 @@ inputs.nixpkgs.lib.nixosSystem {
   modules = [
     nixosModule
     # nixos-hardware Pi 3B support (handles kernel, bootloader, kernel modules)
-    # raspberry-pi-nix does not support BCM2837 (Pi 3)
+    # (pihole01 moved to nixos-raspberrypi in 2026-11; pihole02 stays here for now)
     inputs.nixos-hardware.nixosModules.raspberry-pi-3
     {
       # Target platform is aarch64 (Raspberry Pi 3B).

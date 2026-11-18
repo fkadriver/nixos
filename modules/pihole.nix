@@ -268,8 +268,9 @@
 
     # The default NixOS module list includes x86-only modules (tpm-crb, tpm-tis,
     # SATA controllers, AHCI, NVMe, etc.) that don't exist in the RPi kernel.
-    # raspberry-pi-nix's modules-shrunk build runs modprobe against the RPi kernel
-    # and fails fatally on any listed module that isn't present.
+    # The modules-shrunk initrd build runs modprobe against the RPi kernel and
+    # fails on any listed module that isn't present (pihole02; pihole01's
+    # nixos-raspberrypi sets allowMissing).
     # lib.mkForce replaces all lower-priority definitions with this RPi-correct list.
     boot.initrd.availableKernelModules = lib.mkForce [
       "autofs"

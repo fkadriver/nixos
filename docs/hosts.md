@@ -85,11 +85,11 @@ Then add to `.sops.yaml` and run `sops updatekeys secrets/secrets.yaml`.
 |---|---|
 | IP | 192.168.10.10 (static) |
 | Purpose | Network-wide ad blocking / DNS |
-| SoC | BCM2837 (ARM Cortex-A53, aarch64) |
+| SoC | BCM2711 (ARM Cortex-A72, aarch64) |
 | Key Features | Pi-hole FTL, Hagezi blocklists, Tailscale, sops secrets, rsyslog → log01 |
 | Build | `nix build .#nixosConfigurations.pihole01.config.system.build.sdImage` |
 
-**Note:** Cross-compiled from x86_64. Uses `raspberry-pi-nix` modules. No borg backup. DNS query logs forwarded to log01 via rsyslog (FTL syslog enabled).
+**Note:** Cross-compiled from x86_64. Uses `nvmd/nixos-raspberrypi` (vendor kernel from its cachix, generational `kernel` bootloader on a 1 GiB FIRMWARE partition; see docs/pihole-deployment.md). No borg backup. DNS query logs forwarded to log01 via rsyslog (FTL syslog enabled).
 
 ### pihole02
 **Raspberry Pi 3B** - Secondary Pi-hole DNS server

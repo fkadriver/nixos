@@ -83,13 +83,19 @@ it. Two separate faults mean Wazuh gets almost nothing useful.
 
 ## 2. Infrastructure
 
-- [ ] **pihole01:** `nix-community/raspberry-pi-nix` is archived upstream
-      (last push 2025-03). Plan a migration to `nvmd/nixos-raspberrypi`. It
-      has a binary cache, which should end the 1–2 day emulated kernel builds
-      and the libbpf patch. This involves the kernel lock
-      (`pihole.lockedKernelVersion`, plus `LOCKED_KERNEL_VERSIONS` in
-      `scripts/deploy-piholes.sh`), the deploy script, and on-device testing.
-      Do it as its own session.
+- [ ] **pihole01:** migrate from the archived `nix-community/raspberry-pi-nix`
+      to `nvmd/nixos-raspberrypi`. Config done 2026-11-17: vendor kernel
+      6.18.59 from its cachix (no more emulated builds, libbpf patch gone),
+      generational `kernel` bootloader on a 1 GiB FIRMWARE (fixes the
+      firmware-copy deadlock), new card seeded with the old identity via
+      `scripts/seed-pihole-card.sh`. Remaining:
+  - [ ] Flash + seed the new card, swap it in, verify DNS/FTL/Tailscale. Old
+        card is the fallback.
+  - [ ] Rebuild vm01 and latitude so their nix daemons trust
+        `nixos-raspberrypi.cachix.org` (`pi-builder.nix`), then do one
+        `deploy-piholes.sh pihole01` to prove `nixos-rebuild boot` + reboot.
+  - [ ] Optional: add the cache to nas01's pull-through proxy.
+  - [ ] Later: move pihole02 too, once pihole01 has run well for a while.
 - [ ] **Tether:** upstream `nix/module.nix:109` still sets
       `services.avahi.publish.{enable,userServices}`. That's the one eval
       warning left on latitude. Open an issue or PR on zackb/tether.
