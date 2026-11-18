@@ -382,6 +382,9 @@
       # Dnsmasq Hosts. LAN name for clients without Tailscale (e.g. the work Mac).
       # .internal, not .local: macOS sends .local to mDNS and never asks Pi-hole.
       192.168.21.21 homeassistant.internal
+      # Cync LAN names, duplicated from misc.dnsmasq_lines below: pihole02 is
+      # HOSTS_ONLY in deploy-piholes.sh, so only /etc/hosts reaches it.
+      192.168.21.21 cm.gelighting.com cm-sec.gelighting.com cm-ge.xlink.cn
     '';
 
     # Pi-hole FTL daemon
