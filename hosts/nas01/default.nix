@@ -202,10 +202,17 @@ let
       # used). The syslog-tailscale compose stack (below) bind-mounts the
       # same /pool/rsyslog directly too; both just point at the one
       # dataset, no conflict.
+      #
+      # x-systemd.requires=zfs-mount.service: systemd only orders this bind
+      # after pool-rsyslog.mount, but ZFS datasets are mounted by
+      # zfs-mount.service, not by mount units. So on boot the bind won the
+      # race and captured the empty /pool/rsyslog directory on the root fs
+      # (2026-11-17 reboot: bind 11:10:49, zfs-mount 11:11:02); wazuh-agent
+      # then read an empty dir, and the collector would have written to /.
       fileSystems."/var/log/remote" = {
         device = "/pool/rsyslog";
         fsType = "none";
-        options = [ "bind" ];
+        options = [ "bind" "x-systemd.requires=zfs-mount.service" ];
       };
 
       # Universal fleet syslog collector — rsyslog + Tailscale sidecar,
