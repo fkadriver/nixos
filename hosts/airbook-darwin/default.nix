@@ -415,6 +415,8 @@ let
 
     # System packages (CLI tools)
     environment.systemPackages = with pkgs; [
+      # git-sync: pull every repo under ~/git + report (scripts/git-sync.sh)
+      (writeShellScriptBin "git-sync" (builtins.readFile ../../scripts/git-sync.sh))
       # Essential CLI tools
       bat
       btop

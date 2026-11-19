@@ -291,6 +291,25 @@ alias log01='tailscale ssh log01'
 alias latitude='tailscale ssh latitude'
 alias vm01='tailscale ssh vm01'
 EOF
+su - scott -c 'grep -q "Grep shortcuts" ~/.bashrc' || su - scott -c "cat >> ~/.bashrc" <<'EOF'
+
+# Grep shortcuts (gp* reserved for grep; matches modules/shell-aliases.nix)
+alias gpc='grep -E --color=always'
+alias gpci='grep -Ei --color=always'
+alias gpcr='grep -Ern --color=always'
+alias zgpc='zgrep -E --color=always'
+alias zgpci='zgrep -Ei --color=always'
+EOF
+# git-sync: pull every repo under ~/git + report. Source is
+# scripts/git-sync.sh in the nixos repo - use the checkout this script
+# sits in if there is one, else fetch it from GitHub.
+GIT_SYNC_SRC="$(dirname "$(readlink -f "$0")")/../../scripts/git-sync.sh"
+if [ -f "$GIT_SYNC_SRC" ]; then
+  install -m 0755 "$GIT_SYNC_SRC" /usr/local/bin/git-sync
+else
+  curl -fsSL https://raw.githubusercontent.com/fkadriver/nixos/main/scripts/git-sync.sh \
+    -o /usr/local/bin/git-sync && chmod 0755 /usr/local/bin/git-sync
+fi
 # idrive360-agent-status.sh is tracked in the idrive360 repo, NFS-shared
 # above at ~/git/idrive360 - copy it in rather than re-embedding it here.
 if [ -f "$SCOTT_HOME/git/idrive360/idrive360-agent-status.sh" ]; then

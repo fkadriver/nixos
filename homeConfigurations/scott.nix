@@ -105,7 +105,12 @@ let
             ts-info = ''f(){ if [ -z "$1" ]; then tailscale status --json | jq '.Self | {Host: .HostName, OS, Tags, ExitNodeOption, Routes: .PrimaryRoutes, Relay, Online, KeyExpiry, SSH: ((.Capabilities // []) | any(. == "https://tailscale.com/cap/ssh"))}'; else out=$(tailscale status --json | jq --arg h "$1" '.Peer[] | select((.HostName|ascii_downcase) == ($h|ascii_downcase)) | {Host: .HostName, OS, Tags, ExitNodeOption, Routes: .PrimaryRoutes, Relay, Online, KeyExpiry}'); if [ -z "$out" ]; then echo "ts-info: no peer matching '$1'" >&2; else echo "$out"; fi; fi; }; f'';
 
             # Grep with color
-            gpc = "grep --color=always";
+            # gp* is reserved for grep. grep -E, not egrep (obsolete; GNU grep warns).
+            gpc   = "grep -E --color=always";
+            gpci  = "grep -Ei --color=always";
+            gpcr  = "grep -Ern --color=always";   # recursive, with line numbers
+            zgpc  = "zgrep -E --color=always";   # gzipped files (rotated logs)
+            zgpci = "zgrep -Ei --color=always";
 
             # Git shortcuts
             g   = "git";
