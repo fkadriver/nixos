@@ -106,7 +106,7 @@ it. Two separate faults mean Wazuh gets almost nothing useful.
         vm01's next nix-gc (Mon 2026-11-23) deletes it. Do it before then.
         Done 2026-11-18: vm01 at e8123df trusts the cache.
   - [ ] Optional: add the cache to nas01's pull-through proxy.
-  - [ ] **Replace pihole02 (Pi 3B): Pi 4 or a used x86 thin client.** Its
+  - [ ] <!-- now: Replace Pi 3B (pihole02) --> **Replace pihole02 (Pi 3B): Pi 4 or a used x86 thin client.** Its
         micro-USB power connector is damaged (frequent undervoltage, died
         2026-10-31 and 2026-11-18), which is why it's only the backup. Until
         it's replaced, `deploy-piholes.sh` only pushes its /etc/hosts
