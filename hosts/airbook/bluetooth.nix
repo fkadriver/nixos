@@ -155,9 +155,9 @@ EOF
     LID_STATE=$(cat /proc/acpi/button/lid/LID*/state 2>/dev/null | awk '{print $2}')
     if [ "$LID_STATE" = "closed" ]; then
       # Find and disable internal display (eDP)
-      INTERNAL=$(${pkgs.xorg.xrandr}/bin/xrandr | grep -E '^eDP' | awk '{print $1}')
+      INTERNAL=$(${pkgs.xrandr}/bin/xrandr | grep -E '^eDP' | awk '{print $1}')
       if [ -n "$INTERNAL" ]; then
-        ${pkgs.xorg.xrandr}/bin/xrandr --output "$INTERNAL" --off
+        ${pkgs.xrandr}/bin/xrandr --output "$INTERNAL" --off
       fi
     fi
   '';

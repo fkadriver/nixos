@@ -85,6 +85,7 @@
         OTworkstation = import ./hosts/OTworkstation flakeContext;
         latitude-minimal = import ./hosts/latitude/minimal.nix flakeContext;
         latitude-xfce = import ./hosts/latitude/xfce.nix flakeContext;
+        airbook = import ./hosts/airbook flakeContext;
         vm01 = import ./hosts/vm01 flakeContext;
         log01 = import ./hosts/log01 flakeContext;
         nas01 = import ./hosts/nas01 flakeContext;
@@ -120,6 +121,14 @@
         }).config;
         # nas01 OS SSD only (Micron, serial UGXVK01J7C9TJA) — pass the by-id
         # device explicitly at install time; ZFS pool and WD drives must not be touched
+        # MacBook Air 7,2 internal SSD (shows as /dev/sda — AHCI, not NVMe)
+        airbook = (inputs.nixpkgs.lib.nixosSystem {
+          system = "x86_64-linux";
+          modules = [
+            inputs.disko.nixosModules.disko
+            nixosModules.disko-config
+          ];
+        }).config;
         nas01 = (inputs.nixpkgs.lib.nixosSystem {
           system = "x86_64-linux";
           modules = [

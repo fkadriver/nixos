@@ -74,7 +74,7 @@ Then add to `.sops.yaml` and run `sops updatekeys secrets/secrets.yaml`.
 | Storage | 500GB SATA HDD (OS), 3x 4TB HGST ZFS RAIDZ1 (`/pool`, incl. borg repos + `pool/photos` Immich library), WD 18TB (confirmed healthy 2026-08-22, kept `nofail`; automount-at-boot fixed 2026-09-04) |
 | Storage controller | Dell HBA330 (true HBA passthrough, `mpt3sas`) — replaced the stock PERC H730 RAID-on-chip card |
 | Key Features | ZFS (autoScrub/TRIM), NFS, syncthing-declarative, hd-idle spindown, Wazuh agent, IDrive360 in Docker |
-| Borg Repos | `/pool/borg/{nas01,latitude,vm01,log01,airbook-darwin}` |
+| Borg Repos | `/pool/borg/{nas01,latitude,vm01,log01,airbook,airbook-darwin}` |
 
 **Note:** Headless server. ZFS pool and WD drive are not disko-managed — they survive OS reinstalls (`zpool import -f pool` once after install). IDrive360 runs in an `ubuntu:24.04` container because its installer self-updates at runtime. Borg's `BORG_RSH` uses `tailscale ssh` rather than pinned OpenSSH, so a future host-key rotation (e.g. another hardware swap) won't need manual re-pinning. See [nas01.md](nas01.md) for full reference, including the T330 migration history.
 
@@ -124,6 +124,24 @@ Then add to `.sops.yaml` and run `sops updatekeys secrets/secrets.yaml`.
 | Features | Disko integration, menu-driven installation, WiFi pre-configured |
 | Build | `nix build .#nixosConfigurations.installer.config.system.build.isoImage` |
 
+### airbook
+**Apple MacBook Air 7,2** - NixOS with XFCE (restored 2026-11-20 after a forced
+macOS Tahoe upgrade; `airbook-darwin` below is kept as a fallback)
+
+| | |
+|---|---|
+| Desktop | XFCE (`laptop-xfce`, which pulls in `daily-driver`) |
+| WiFi | Broadcom BCM4360 via unfree/insecure `broadcom-sta` (`wl`); open drivers blacklisted |
+| Disk | disko (`diskoConfigurations.airbook`): 1G EFI + LVM (8G swap + root). The SSD is AHCI, so it shows as `/dev/sda` |
+| Bluetooth | SEENDA keyboard/mouse pairings deployed at activation (`hosts/airbook/bluetooth.nix`) |
+| Syncthing | Reuses the `airbook-darwin` device identity: copy `cert.pem`/`key.pem` from macOS `~/Library/Application Support/Syncthing/` to `~/.config/syncthing/` before first start |
+| Backup | Borg to `nas01:/pool/borg/airbook` (new repo; `airbook-darwin`'s repo is left as is) |
+
+**Install:** boot the installer ISO, pick `airbook`, device `sda`. After first
+boot, add `sudo age-keygen -y /var/lib/sops-nix/key.txt` to `.sops.yaml` and run
+`sops updatekeys secrets/secrets.yaml`, then rebuild so Bitwarden secrets
+(SSH keys, borg passphrase) can decrypt.
+
 ## macOS Hosts (nix-darwin)
 
 ### airbook-darwin
@@ -155,7 +173,8 @@ Then add to `.sops.yaml` and run `sops updatekeys secrets/secrets.yaml`.
 | `pihole01` | RPi 3B | None | Primary Pi-hole DNS |
 | `pihole02` | RPi 3B | None | Secondary Pi-hole DNS |
 | `installer` | ISO | N/A | Installation media |
-| `airbook-darwin` | macOS | N/A | nix-darwin on Mac |
+| `airbook` | Laptop | XFCE | MacBook Air 7,2 (NixOS) |
+| `airbook-darwin` | macOS | N/A | nix-darwin on Mac (fallback) |
 
 ## Building Configurations
 
