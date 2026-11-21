@@ -34,6 +34,17 @@ let
         sshKeyFile = "/home/scott/.ssh/id_ed25519_legacy";
       };
 
+      # Same as latitude (the other laptop): sshd on loopback only, key auth.
+      # Remote access is via Tailscale SSH; nothing is exposed on whatever
+      # Wi-Fi the laptop is on. Running sshd also gives the host a stable
+      # /etc/ssh key, which Tailscale SSH then presents and
+      # distributed-builds.nix pins.
+      services.openssh = {
+        enable = true;
+        listenAddresses = [{ addr = "127.0.0.1"; port = 22; }];
+        settings.PasswordAuthentication = false;
+      };
+
       system.stateVersion = "26.11";
     };
   };
