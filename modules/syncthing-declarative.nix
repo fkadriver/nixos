@@ -205,37 +205,41 @@ in
       script = ''
         set -euo pipefail
 
-        API_KEY=""
-        for i in $(seq 1 30); do
-          API_KEY=$(${pkgs.libxml2}/bin/xmllint --xpath 'string(configuration/gui/apikey)' \
-            "${config.services.syncthing.configDir}/config.xml" 2>/dev/null || true)
-          [ -n "$API_KEY" ] && break
-          sleep 1
-        done
-        if [ -z "$API_KEY" ]; then
-          echo "syncthing-gui-auth: could not read API key from config.xml" >&2
-          exit 1
-        fi
-
-        # Retry while Syncthing is (re)starting: a rebuild that changes its
-        # settings restarts it right as this unit runs, and a single attempt
-        # got "Empty reply from server" (curl 52), failing the unit and making
-        # `nixos-rebuild switch` exit 4 (nas01, 2026-11-21). ~60s total.
-        CURL="${pkgs.curl}/bin/curl -sSf --retry 30 --retry-delay 2 --retry-all-errors --retry-connrefused"
-
+        CURL="${pkgs.curl}/bin/curl -sSf"
         PASSWORD=$(cat ${cfg.guiPasswordFile})
         BODY=$(${pkgs.jq}/bin/jq -n --arg user "${cfg.guiUser}" --arg password "$PASSWORD" \
           '{user: $user, password: $password}')
 
-        $CURL -X PUT -H "X-API-Key: $API_KEY" -H "Content-Type: application/json" \
-          -d "$BODY" "http://127.0.0.1:8384/rest/config/gui" >/dev/null
+        # Retry for ~60s while Syncthing is (re)starting, re-reading the API
+        # key from config.xml on every attempt. A rebuild that changes the
+        # Syncthing settings restarts it right as this unit runs. A single
+        # attempt got curl 52 (empty reply), and curl --retry with a key read
+        # once kept getting 403, because the key changed across the restart.
+        # Either way the unit failed and `nixos-rebuild switch` exited 4
+        # (nas01, 2026-11-21).
+        ok=false
+        for i in $(seq 1 30); do
+          API_KEY=$(${pkgs.libxml2}/bin/xmllint --xpath 'string(configuration/gui/apikey)' \
+            "${config.services.syncthing.configDir}/config.xml" 2>/dev/null || true)
+          if [ -n "$API_KEY" ] && $CURL -X PUT -H "X-API-Key: $API_KEY" \
+              -H "Content-Type: application/json" -d "$BODY" \
+              "http://127.0.0.1:8384/rest/config/gui" >/dev/null 2>&1; then
+            ok=true
+            break
+          fi
+          sleep 2
+        done
+        if ! $ok; then
+          echo "syncthing-gui-auth: could not set GUI credentials via the REST API after 30 attempts" >&2
+          exit 1
+        fi
 
         if $CURL -H "X-API-Key: $API_KEY" \
             "http://127.0.0.1:8384/rest/config/restart-required" \
             | ${pkgs.jq}/bin/jq -e .requiresRestart >/dev/null 2>&1; then
           # Single attempt: Syncthing may drop this connection as it restarts,
           # and a retry would restart it again.
-          ${pkgs.curl}/bin/curl -sSf -X POST -H "X-API-Key: $API_KEY" \
+          $CURL -X POST -H "X-API-Key: $API_KEY" \
             "http://127.0.0.1:8384/rest/system/restart" >/dev/null
         fi
       '';
