@@ -136,6 +136,7 @@ macOS Tahoe upgrade; `airbook-darwin` below is kept as a fallback)
 | Bluetooth | SEENDA keyboard/mouse pairings deployed at activation (`hosts/airbook/bluetooth.nix`) |
 | Syncthing | Uses the `airbook-darwin` device name with its own ID (`ADVWXJD-…`); a reinstall of either OS means updating `deviceIds.airbook-darwin` in `modules/syncthing-declarative.nix` |
 | Backup | Borg to `nas01:/pool/borg/airbook` (new repo; `airbook-darwin`'s repo is left as is) |
+| Builds | `distributed-builds` peer: fetches fleet-built paths from other hosts (e.g. orca-slicer from latitude) and offloads builds to latitude/vm01. sshd runs on loopback only, like latitude |
 
 **Install:** boot the installer ISO, pick `airbook`, device `nvme0n1`. After first
 boot, add `sudo age-keygen -y /var/lib/sops-nix/key.txt` to `.sops.yaml` and run

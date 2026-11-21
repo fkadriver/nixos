@@ -47,6 +47,7 @@ let
     { configName = "nas01"; sshHost = "nas01"; }
     { configName = "log01"; sshHost = "log01"; }
     { configName = "OTworkstation"; sshHost = "otworkstation"; }
+    { configName = "airbook"; sshHost = "airbook"; }
   ];
   otherPeers = builtins.filter (p: p.configName != hostname) peers;
 
@@ -61,6 +62,7 @@ let
     nas01         = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPIZPV9hUboOiTvvmg6KnrjxP1c9EfPMIKjwDJmEty3P";
     log01         = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDKDdmgKpoK8Cc3ctJen+lDXVS9ja43h90bvuIKbo6K8";
     OTworkstation = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAr1llFWqwi3IeqSWJ6iGDPdEbyba4HP2LorFdhcBm39";
+    airbook       = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIL/wu27/wIgrlmE3geLK2YRNoB1s8ZYdd0pc8a+hDb8d";
   };
 in {
   imports = [ inputs.sops-nix.nixosModules.sops ];
@@ -83,6 +85,9 @@ in {
     Host ${p.sshHost}
       IdentityFile /home/scott/.ssh/id_ed25519_legacy
       StrictHostKeyChecking yes
+      # Laptop peers (latitude, airbook) sleep; fail fast instead of
+      # stalling every substitution attempt on the TCP connect timeout.
+      ConnectTimeout 5
   '') otherPeers;
 
   # System-wide /etc/ssh/ssh_known_hosts entries for every peer, plus this

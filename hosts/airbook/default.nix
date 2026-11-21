@@ -14,6 +14,9 @@ let
       inputs.self.nixosModules.wireless
       inputs.self.nixosModules.user-scott
       inputs.self.nixosModules.fwupd
+      # Peer binary-cache substitution + build offload to latitude/vm01, so
+      # fleet-built paths (e.g. orca-slicer) are fetched, not rebuilt here.
+      inputs.self.nixosModules.distributed-builds
     ];
     config = {
       networking.hostName = "airbook";
