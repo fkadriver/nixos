@@ -217,16 +217,24 @@ in
           exit 1
         fi
 
+        # Retry while Syncthing is (re)starting: a rebuild that changes its
+        # settings restarts it right as this unit runs, and a single attempt
+        # got "Empty reply from server" (curl 52), failing the unit and making
+        # `nixos-rebuild switch` exit 4 (nas01, 2026-11-21). ~60s total.
+        CURL="${pkgs.curl}/bin/curl -sSf --retry 30 --retry-delay 2 --retry-all-errors --retry-connrefused"
+
         PASSWORD=$(cat ${cfg.guiPasswordFile})
         BODY=$(${pkgs.jq}/bin/jq -n --arg user "${cfg.guiUser}" --arg password "$PASSWORD" \
           '{user: $user, password: $password}')
 
-        ${pkgs.curl}/bin/curl -sSf -X PUT -H "X-API-Key: $API_KEY" -H "Content-Type: application/json" \
+        $CURL -X PUT -H "X-API-Key: $API_KEY" -H "Content-Type: application/json" \
           -d "$BODY" "http://127.0.0.1:8384/rest/config/gui" >/dev/null
 
-        if ${pkgs.curl}/bin/curl -sSf -H "X-API-Key: $API_KEY" \
+        if $CURL -H "X-API-Key: $API_KEY" \
             "http://127.0.0.1:8384/rest/config/restart-required" \
             | ${pkgs.jq}/bin/jq -e .requiresRestart >/dev/null 2>&1; then
+          # Single attempt: Syncthing may drop this connection as it restarts,
+          # and a retry would restart it again.
           ${pkgs.curl}/bin/curl -sSf -X POST -H "X-API-Key: $API_KEY" \
             "http://127.0.0.1:8384/rest/system/restart" >/dev/null
         fi
