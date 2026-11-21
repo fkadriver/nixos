@@ -132,12 +132,12 @@ macOS Tahoe upgrade; `airbook-darwin` below is kept as a fallback)
 |---|---|
 | Desktop | XFCE (`laptop-xfce`, which pulls in `daily-driver`) |
 | WiFi | Broadcom BCM4360 via unfree/insecure `broadcom-sta` (`wl`); open drivers blacklisted |
-| Disk | disko (`diskoConfigurations.airbook`): 1G EFI + LVM (8G swap + root). The SSD is AHCI, so it shows as `/dev/sda` |
+| Disk | disko (`diskoConfigurations.airbook`): 1G EFI + LVM (8G swap + root). The SSD is `/dev/nvme0n1` (`/dev/sda` is the empty SD card reader) |
 | Bluetooth | SEENDA keyboard/mouse pairings deployed at activation (`hosts/airbook/bluetooth.nix`) |
 | Syncthing | Reuses the `airbook-darwin` device identity: copy `cert.pem`/`key.pem` from macOS `~/Library/Application Support/Syncthing/` to `~/.config/syncthing/` before first start |
 | Backup | Borg to `nas01:/pool/borg/airbook` (new repo; `airbook-darwin`'s repo is left as is) |
 
-**Install:** boot the installer ISO, pick `airbook`, device `sda`. After first
+**Install:** boot the installer ISO, pick `airbook`, device `nvme0n1`. After first
 boot, add `sudo age-keygen -y /var/lib/sops-nix/key.txt` to `.sops.yaml` and run
 `sops updatekeys secrets/secrets.yaml`, then rebuild so Bitwarden secrets
 (SSH keys, borg passphrase) can decrypt.

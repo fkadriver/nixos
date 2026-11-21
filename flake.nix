@@ -121,12 +121,17 @@
         }).config;
         # nas01 OS SSD only (Micron, serial UGXVK01J7C9TJA) — pass the by-id
         # device explicitly at install time; ZFS pool and WD drives must not be touched
-        # MacBook Air 7,2 internal SSD (shows as /dev/sda — AHCI, not NVMe)
+        # MacBook Air 7,2 internal SSD: /dev/nvme0n1 (/dev/sda is the SD card reader).
+        # Hardcoded because disko ignores the installer's `--arg device` when
+        # run with --flake, so disko-config.nix's /dev/sda default would win.
         airbook = (inputs.nixpkgs.lib.nixosSystem {
           system = "x86_64-linux";
           modules = [
             inputs.disko.nixosModules.disko
             nixosModules.disko-config
+            ({ lib, ... }: {
+              disko.devices.disk.main.device = lib.mkForce "/dev/nvme0n1";
+            })
           ];
         }).config;
         nas01 = (inputs.nixpkgs.lib.nixosSystem {

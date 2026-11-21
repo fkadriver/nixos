@@ -7,8 +7,8 @@
     [ (modulesPath + "/installer/scan/not-detected.nix")
     ];
 
-  # The 7,2 SSD is AHCI (SATA-over-PCIe), not NVMe — keep both in the initrd
-  # so either reports correctly; dm-snapshot is needed for the LVM root.
+  # The SSD shows up as /dev/nvme0n1 (/dev/sda is the empty SD card reader);
+  # dm-snapshot is needed for the LVM root.
   boot.initrd.availableKernelModules = [ "xhci_pci" "ahci" "nvme" "usb_storage" "sd_mod" "sdhci_pci" ];
   boot.initrd.kernelModules = [ "dm-snapshot" ];
   boot.kernelModules = [ "kvm-intel" "wl" ];
