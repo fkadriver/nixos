@@ -87,6 +87,13 @@ This document provides a high-level overview of all available modules in this re
 |--------|-------------|
 | `forscan.nix` | FORScan (Ford/Lincoln/Mazda OBD-II tool) via Wine. Provides `forscan` command, udev rule for OBDLink EX (FTDI + STM32 variants), maps adapter to COM1 |
 
+## Video
+
+| Module | Description |
+|--------|-------------|
+| `video-tools.nix` | `programs.videoTools.enable`: native replacements for VideoProc Converter AI — ffmpeg-full, video2x, realesrgan-ncnn-vulkan, upscayl, losslesscut, shotcut, kdenlive, yt-dlp/parabolic, plus intel-media-driver (iHD) for VA-API encode. HandBrake stays in `daily-driver.nix` |
+| `videoproc-wine.nix` | `programs.videoprocWine.enable`: **experimental** `videoproc` wrapper running VideoProc Converter AI under Wine staging in its own prefix (`install`, `debug`, `winetricks`, `reset`). See `docs/videoproc-wine.md` |
+
 ## Module Architecture
 
 All modules use the **flakeContext** pattern:

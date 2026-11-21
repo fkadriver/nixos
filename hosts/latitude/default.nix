@@ -51,6 +51,8 @@ let
       inputs.self.nixosModules.deploy-pihole
       inputs.self.nixosModules.screen-recording
       inputs.self.nixosModules.forscan
+      inputs.self.nixosModules.video-tools
+      inputs.self.nixosModules.videoproc-wine
       inputs.self.nixosModules.esphome-flash
       inputs.self.nixosModules.mcp-nixos
       inputs.self.nixosModules.fwupd
@@ -82,6 +84,8 @@ let
       };
 
       services.forscan.enable = true;
+      programs.videoTools.enable = true;
+      programs.videoprocWine.enable = true;  # experimental, see docs/videoproc-wine.md
       services.esphomeFlash.enable = true;
       programs.mcp-nixos.enable = true;
 
