@@ -4,10 +4,12 @@
 let
   flake = builtins.getFlake flakeRef;
   lib = flake.inputs.nixpkgs.lib;
+  # `<host>-bootstrap` (staged install) partitions like `<host>`.
+  host = lib.removeSuffix "-bootstrap" config;
   evaluated =
-    if flake ? diskoConfigurations && flake.diskoConfigurations ? ${config}
-    then flake.diskoConfigurations.${config}.disko.devices
-    else flake.nixosConfigurations.${config}.config.disko.devices;
+    if flake ? diskoConfigurations && flake.diskoConfigurations ? ${host}
+    then flake.diskoConfigurations.${host}.disko.devices
+    else flake.nixosConfigurations.${host}.config.disko.devices;
   # The evaluated layout carries disko's generated internals (_create,
   # _mount, ...) and every nested `device` (content, partitions, LVs), all
   # derived from the old disk device. Drop them so disko re-derives them
@@ -22,7 +24,7 @@ let
   devices = strip evaluated;
 in
 assert lib.assertMsg (devices.disk ? main)
-  "disko layout for ${config} has no disk named 'main'";
+  "disko layout for ${host} has no disk named 'main'";
 {
   disko.devices = devices // {
     disk = lib.mapAttrs (n: d: d // {

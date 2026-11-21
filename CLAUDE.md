@@ -195,6 +195,14 @@ sops updatekeys secrets/secrets.yaml
 
 ## Disko and Installation
 
+### Staged Installation (preferred)
+Install `<host>-bootstrap` from the ISO (small, fully cached base system), run
+`bootstrap-join` on the host (joins Tailscale as tag:device), then run
+`scripts/enroll-host.sh <host>` on latitude (enrolls the sops age key, pins the
+SSH host key, builds the full config using the nas01 cache proxy and fleet
+peers). Full walkthrough: `docs/installing.md`. Bootstrap configs are generated
+in `flake.nix` from `bootstrapHardware` + `modules/bootstrap.nix`.
+
 ### Automated Installation with Installer ISO
 1. Boot from installer ISO (built with `nix build .#nixosConfigurations.installer.config.system.build.isoImage`)
 2. Run `/etc/nixos-install-helper.sh`

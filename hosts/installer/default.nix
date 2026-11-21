@@ -113,6 +113,10 @@ inputs.nixpkgs.lib.nixosSystem {
             jq -r '.nixosConfigurations | keys[]' 2>/dev/null | \
             grep -v "^installer$" | \
             sort)
+          # Staged install: offer the <host>-bootstrap configs first (small,
+          # fully cached base system; scripts/enroll-host.sh builds the full
+          # config afterwards from latitude). Full configs still work.
+          CONFIGS=$( { grep -- '-bootstrap$' <<< "$CONFIGS" || true; grep -v -- '-bootstrap$' <<< "$CONFIGS" || true; } )
 
           if [ -z "$CONFIGS" ]; then
             echo "ERROR: Could not fetch configurations from $GIT_REPO"
@@ -122,6 +126,8 @@ inputs.nixpkgs.lib.nixosSystem {
 
           echo ""
           echo "Available configurations:"
+          echo "  (<host>-bootstrap = staged install, recommended: small base system,"
+          echo "   then bootstrap-join on the host and scripts/enroll-host.sh on latitude)"
           i=1
           declare -a config_array
           while IFS= read -r config; do

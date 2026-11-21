@@ -52,6 +52,7 @@ This document provides a high-level overview of all available modules in this re
 
 | Module | Description |
 |--------|-------------|
+| `bootstrap.nix` | Stage-1 base system for staged installs (`<host>-bootstrap` in `flake.nix`): common, Tailscale, sops-nix + Bitwarden, distributed-builds, sshd on loopback, `bootstrap-join`. See `docs/installing.md` |
 | `borg-backup.nix` | Encrypted Borg backups to remote servers via SSH |
 | `syncthing.nix` | Basic Syncthing file sync service |
 | `syncthing-declarative.nix` | Declarative Syncthing with predefined folders/devices |

@@ -71,6 +71,35 @@
       # Import home-manager configuration for scott
       scottHome = import ./homeConfigurations/scott.nix flakeContext;
 
+      # Stage-1 bootstrap systems for the staged install (modules/bootstrap.nix,
+      # docs/installing.md): the host's own hardware.nix + bootstrap.nix, with
+      # the same hostName and stateVersion as its full config. Piholes are
+      # excluded (SD images via scripts/deploy-piholes.sh, not the installer).
+      bootstrapHardware = {
+        airbook = ./hosts/airbook/hardware.nix;
+        latitude = ./hosts/latitude/hardware.nix;
+        OTworkstation = ./hosts/OTworkstation/hardware.nix;
+        vm01 = ./hosts/vm01/hardware-configuration.nix;
+        nas01 = ./hosts/nas01/hardware.nix;
+        log01 = ./hosts/log01/hardware.nix;
+      };
+      mkBootstrap = name: hardware: inputs.nixpkgs.lib.nixosSystem {
+        system = "x86_64-linux";
+        specialArgs = { inherit inputs; };
+        modules = [
+          hardware
+          nixosModules.bootstrap
+          {
+            networking.hostName = name;
+            system.stateVersion =
+              inputs.self.nixosConfigurations.${name}.config.system.stateVersion;
+          }
+        ];
+      };
+      bootstrapConfigurations = inputs.nixpkgs.lib.mapAttrs'
+        (name: hw: inputs.nixpkgs.lib.nameValuePair "${name}-bootstrap" (mkBootstrap name hw))
+        bootstrapHardware;
+
     in
     {
       inherit nixosModules;
@@ -92,7 +121,7 @@
         pihole01 = import ./hosts/pihole01 flakeContext;
         pihole02 = import ./hosts/pihole02 flakeContext;
         installer = import ./hosts/installer flakeContext;
-      };
+      } // bootstrapConfigurations;
 
       # Disko-only configurations used by the installer for disk partitioning.
       # Kept separate from nixosConfigurations so low-RAM hosts (e.g. log01)
