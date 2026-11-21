@@ -162,10 +162,20 @@ inputs.nixpkgs.lib.nixosSystem {
 
           echo ""
           echo "Partitioning disk with disko..."
+          # Not `--flake "$GIT_REPO#$CONFIG" --arg device ...`: disko ignores
+          # --arg with --flake, which silently left disko-config.nix's
+          # /dev/sda default in place. The override file evaluates the
+          # flake's layout itself and swaps in the chosen device.
+          # destroy,format,mount is the current name for the deprecated
+          # `--mode disko`; --yes-wipe-all-disks because the user already
+          # confirmed above.
           sudo disko \
-            --mode disko \
-            --flake "$GIT_REPO#$CONFIG" \
-            --arg device "\"$DEVICE\""
+            --mode destroy,format,mount \
+            --yes-wipe-all-disks \
+            --argstr flakeRef "$GIT_REPO" \
+            --argstr config "$CONFIG" \
+            --argstr device "$DEVICE" \
+            /etc/disko-device-override.nix
 
           echo ""
           echo "Installing NixOS..."
@@ -207,6 +217,9 @@ inputs.nixpkgs.lib.nixosSystem {
         mode = "0755";
       };
 
+      # Disk-layout wrapper used by the helper's disko step (see comment there)
+      environment.etc."disko-device-override.nix".source = ./disko-device-override.nix;
+
       # Hardware burn-in test (CPU/RAM soak + SMART extended self-tests +
       # BMC hardware log check) — run before installing on new/used hardware.
       environment.etc."hw-burnin.sh" = {
@@ -230,7 +243,7 @@ inputs.nixpkgs.lib.nixosSystem {
           /etc/hw-burnin.sh [duration_minutes]
 
         Manual installation (using git flake directly):
-          1. Partition: nix run github:nix-community/disko -- --mode disko --flake <repo>#<config> --arg device '"/dev/sdX"'
+          1. Partition: disko --mode destroy,format,mount --argstr flakeRef <repo> --argstr config <config> --argstr device /dev/sdX /etc/disko-device-override.nix
           2. Install: nixos-install --flake <repo>#<config>
 
         The installer will dynamically discover available configurations from your flake.

@@ -351,9 +351,13 @@ disk), not just a failure.
 ls -la /dev/disk/by-id/
 
 # Partition ONLY the OS disk (ZFS/WD drives untouched):
-sudo nix run github:nix-community/disko -- --mode disko \
-  --flake github:fkadriver/nixos#nas01 \
-  --arg device '"/dev/disk/by-id/<os-disk-by-id-path>"'
+# (Not `--flake ...#nas01 --arg device ...`: disko ignores --arg with
+# --flake and would wipe /dev/sda, which may be a pool drive.)
+sudo nix run github:nix-community/disko -- --mode destroy,format,mount \
+  --argstr flakeRef github:fkadriver/nixos \
+  --argstr config nas01 \
+  --argstr device /dev/disk/by-id/<os-disk-by-id-path> \
+  /etc/disko-device-override.nix
 
 sudo nixos-install --flake github:fkadriver/nixos#nas01
 sudo reboot

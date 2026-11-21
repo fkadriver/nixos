@@ -13,7 +13,7 @@
     disk = {
       main = {
         type = "disk";
-        device = lib.mkDefault "/dev/sda";  # Override with --arg device when running disko
+        device = lib.mkDefault "/dev/sda";  # Installer overrides via hosts/installer/disko-device-override.nix (disko ignores --arg with --flake)
         content = {
           type = "gpt";
           partitions = {

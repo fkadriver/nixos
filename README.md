@@ -97,10 +97,16 @@ See [docs/modules.md](docs/modules.md) for a complete module reference.
 
 ```bash
 # Partition disk
+# Not `--flake ... --arg device`: disko ignores --arg with --flake, so the
+# layout's /dev/sda default would be wiped instead. The override file is on
+# the installer ISO; elsewhere use hosts/installer/disko-device-override.nix
+# from a clone.
 sudo nix run github:nix-community/disko -- \
-  --mode disko \
-  --flake github:fkadriver/nixos#<hostname> \
-  --arg device '"/dev/sdX"'
+  --mode destroy,format,mount \
+  --argstr flakeRef github:fkadriver/nixos \
+  --argstr config <hostname> \
+  --argstr device /dev/sdX \
+  /etc/disko-device-override.nix
 
 # Install NixOS
 sudo nixos-install --flake github:fkadriver/nixos#<hostname>
