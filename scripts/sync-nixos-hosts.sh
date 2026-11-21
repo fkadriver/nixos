@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Check ~/git/nixos on every host and optionally sync with origin/main,
-# then optionally apply the NixOS/darwin configuration on each host.
+# then optionally apply the NixOS configuration on each host.
 #
 # Prints a status table with working-tree cleanliness and ahead/behind
 # counts vs origin/main for each host. The current machine is checked
@@ -10,7 +10,7 @@
 # of local-ahead commits). Divergent branches prompt before rebasing.
 # Dirty working trees are always left untouched.
 #
-# With --apply, runs nixos-rebuild (or darwin-rebuild) sequentially on
+# With --apply, runs nixos-rebuild sequentially on
 # each reachable, clean host. Hosts that are behind origin prompt first.
 # Remote apply uses an interactive TTY so sudo prompts work.
 #
@@ -22,7 +22,7 @@
 # With --reboot (only meaningful alongside --apply), checks each host's
 # booted vs. built kernel/initrd after a successful rebuild and reboots it
 # if they differ — i.e. the rebuild changed something a running switch
-# alone can't pick up. Prompts first unless --yes. No-op on darwin hosts.
+# alone can't pick up. Prompts first unless --yes.
 #
 # --host <name> limits the run to one or more hosts (repeat the flag or
 # pass a comma-separated list); names must be in the HOSTS array.
@@ -139,7 +139,7 @@ run_on_tty() {
 # Emits: <reachable|unreachable>|<dirty|clean>|<behind>|<ahead>|<gen>|<built>
 # on stdout so the caller can parse it. All errors → unreachable.
 # <gen>/<built> come from the current `nixos-rebuild list-generations` entry
-# (generation number and its build date/time); darwin hosts report "-" for both.
+# (generation number and its build date/time); "-" if it can't be read.
 probe_host() {
     local host="$1"
     local out

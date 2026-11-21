@@ -6,7 +6,8 @@
 #   - Standalone home-manager: homeConfigurations/scott.nix
 #             (shares the tailscale/git/tmux/util aliases, not the nix-*/idrive/temps ones)
 # Rebuild aliases by host:
-#   nix-rebuild  → latitude, vm01 (nixos-rebuild), airbook (darwin-rebuild)
+#   nix-rebuild  → every NixOS host incl. airbook (nixos-rebuild); airbook-darwin's
+#                  darwin-rebuild variant lives in hosts/airbook-darwin/home.nix
 {
   config = {
     environment = {
