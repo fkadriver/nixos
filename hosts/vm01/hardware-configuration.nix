@@ -18,8 +18,11 @@
       fsType = "ext4";
     };
 
+  # By label, not UUID, so the config still boots after a disko reinstall
+  # (disko-config.nix labels the ESP NIXBOOT). The original ESP was labelled
+  # with `fatlabel /dev/sda1 NIXBOOT` on 2026-11-21 before this switch.
   fileSystems."/boot" =
-    { device = "/dev/disk/by-uuid/584E-7856";
+    { device = "/dev/disk/by-label/NIXBOOT";
       fsType = "vfat";
       options = [ "fmask=0077" "dmask=0077" ];
     };

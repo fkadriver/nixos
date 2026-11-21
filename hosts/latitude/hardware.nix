@@ -3,33 +3,56 @@
 # to /etc/nixos/configuration.nix instead.
 { config, lib, pkgs, modulesPath, ... }:
 
+let
+  # The current install predates disko: plain ext4 on sda2, ESP and swap
+  # mounted by UUID. No mount config can match both that and a disko
+  # reinstall (LVM main_vg-root + ESP labelled NIXBOOT), so this switch
+  # picks one. Leave it false while running the current install. Flip it to
+  # true in its own commit right before reinstalling latitude (staged
+  # install: docs/installing.md); scripts/enroll-host.sh refuses the full
+  # build until it is.
+  diskoLayout = false;
+in
+
 {
   imports =
     [ (modulesPath + "/installer/scan/not-detected.nix")
     ];
 
   boot.initrd.availableKernelModules = [ "xhci_pci" "ahci" "usb_storage" "sd_mod" "rtsx_pci_sdmmc" ];
-  boot.initrd.kernelModules = [ ];
+  # LVM root (diskoLayout) needs dm-snapshot in the initrd, as on the other disko hosts.
+  boot.initrd.kernelModules = lib.optionals diskoLayout [ "dm-snapshot" ];
   boot.kernelModules = [ "kvm-intel" ];
   boot.extraModulePackages = [ ];
   # boot.loader.grub.devices = [ "/dev/disk/by-uuid/55A2-5872" ];
   boot.loader.systemd-boot.enable = lib.mkDefault true;
   boot.loader.efi.canTouchEfiVariables = lib.mkDefault true;
 
-  # Filesystem configuration
+  # Filesystem configuration (see diskoLayout above). Shared by the
+  # latitude, latitude-xfce and latitude-minimal configs.
   fileSystems."/" =
-    { device = "/dev/disk/by-uuid/43055209-fe59-4393-a198-02aded5e5a48";
-      fsType = "ext4";
-    };
+    if diskoLayout then
+      { device = "/dev/mapper/main_vg-root";
+        fsType = "ext4";
+        options = [ "noatime" ];
+      }
+    else
+      { device = "/dev/disk/by-uuid/43055209-fe59-4393-a198-02aded5e5a48";
+        fsType = "ext4";
+      };
 
   fileSystems."/boot" =
-    { device = "/dev/disk/by-uuid/55A2-5872";
+    { device =
+        if diskoLayout then "/dev/disk/by-label/NIXBOOT"
+        else "/dev/disk/by-uuid/55A2-5872";
       fsType = "vfat";
       options = [ "fmask=0077" "dmask=0077" ];
     };
 
   swapDevices =
-    [ { device = "/dev/disk/by-uuid/ba0803d5-36af-4d07-98c2-7fc73adab9e9"; }
+    [ { device =
+          if diskoLayout then "/dev/mapper/main_vg-swap"
+          else "/dev/disk/by-uuid/ba0803d5-36af-4d07-98c2-7fc73adab9e9"; }
     ];
 
   # Enables DHCP on each ethernet and wireless interface. In case of scripted networking

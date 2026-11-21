@@ -59,10 +59,12 @@ rebuild (`nix-sync --apply`).
 
 `enroll-host.sh` refuses the full build if `<host>`'s config doesn't mount
 `/dev/mapper/main_vg-root` and `/dev/disk/by-label/NIXBOOT`, since that
-system wouldn't boot on the disko layout. As of 2026-11-21 that applies to
-**latitude** (whole disk by UUID, no LVM) and **vm01** and **OTworkstation**
-(`/boot` by UUID): fix their hardware config before reinstalling them, or use
-`--no-build` to enroll keys only.
+system wouldn't boot on the disko layout. Every host mounts it as of
+2026-11-21 (vm01 and OTworkstation switched `/boot` to `by-label/NIXBOOT`)
+except **latitude**: its current install predates disko (plain ext4 on
+`sda2`), so `hosts/latitude/hardware.nix` has a `diskoLayout` switch. Flip it
+to `true` in its own commit right before reinstalling latitude; until then the
+script refuses latitude's full build (use `--no-build` to enroll keys only).
 
 ## Other notes
 
