@@ -91,7 +91,7 @@ This document provides a high-level overview of all available modules in this re
 
 | Module | Description |
 |--------|-------------|
-| `video-tools.nix` | `programs.videoTools.enable`: native replacements for VideoProc Converter AI — ffmpeg-full, video2x, realesrgan-ncnn-vulkan, upscayl, losslesscut, shotcut, kdenlive, yt-dlp/parabolic, plus intel-media-driver (iHD) for VA-API encode. HandBrake stays in `daily-driver.nix` |
+| `video-tools.nix` | `programs.videoTools.enable`: native replacements for VideoProc Converter AI — ffmpeg-full, video2x, realesrgan-ncnn-vulkan, upscayl, a `stabilize` command (two-pass ffmpeg vid.stab: `stabilize [-s shakiness] [-m smoothing] clip.mp4`), gyroflow (gyro-metadata stabilizer), losslesscut, shotcut, kdenlive, yt-dlp/parabolic, plus intel-media-driver (iHD) for VA-API encode. HandBrake stays in `daily-driver.nix` |
 | `videoproc-wine.nix` | `programs.videoprocWine.enable`: **experimental** `videoproc` wrapper running VideoProc Converter AI under Wine staging in its own prefix (`install`, `debug`, `winetricks`, `reset`). See `docs/videoproc-wine.md` |
 
 ## Module Architecture

@@ -14,7 +14,7 @@ This document provides a brief overview of all host configurations in this repos
 | Purpose | Daily driver development laptop |
 | Key Features | Borg backup, 3D printing, Logitech support, multi-monitor, Input Leap KVM server, Immich machine learning worker |
 | Kali Linux | headless Docker container via the `kali` command, no VM layer needed (`docs/kali-docker.md`) |
-| Video | `video-tools.nix` (ffmpeg, video2x, upscayl, kdenlive, VA-API) and the experimental `videoproc` Wine wrapper (`docs/videoproc-wine.md`) |
+| Video | `video-tools.nix` (ffmpeg, video2x, upscayl, `stabilize`/gyroflow, kdenlive, VA-API) and the experimental `videoproc` Wine wrapper (`docs/videoproc-wine.md`) |
 | Variants | `latitude-xfce`, `latitude-kde`, `latitude-minimal` |
 | Tailscale tags | `tag:mgmt-admin` (SSH to all infra as scott), `tag:backup-client` (borg to nas01), `tag:container` (Immich ML) |
 

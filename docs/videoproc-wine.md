@@ -41,8 +41,8 @@ full path.
    (see `video-tools.nix`).
 5. **AI features** (Super Resolution, Frame Interpolation, Stabilization).
    Probably use DirectML/ONNX on a Windows GPU device; expect them to fail or
-   fall back to very slow CPU. The native equivalents are `video2x` and
-   `upscayl`.
+   fall back to very slow CPU. The native equivalents are `video2x`,
+   `upscayl`, and `stabilize` / `gyroflow` for stabilization.
 
 Things that help if you get stuck: `videoproc winetricks vcrun2022`,
 `videoproc winetricks corefonts`, and `videoproc reset` to start from a clean

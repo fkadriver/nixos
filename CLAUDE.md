@@ -121,7 +121,7 @@ modules `dnclient.nix`/`nebula.nix` are in `archive/modules/`; see
 - `3d-printing.nix` - OrcaSlicer, FreeCAD, OpenSCAD, Blender, MeshLab, SolveSpace, f3d
 - `home-design.nix` - Sweet Home 3D for interior design and floor plans (with plugin installer)
 - `vscode.nix` - VSCode with gnome-keyring integration
-- `video-tools.nix` - ffmpeg, video2x/Real-ESRGAN/upscayl AI upscaling, losslesscut, kdenlive, yt-dlp, Intel VA-API (latitude)
+- `video-tools.nix` - ffmpeg, video2x/Real-ESRGAN/upscayl AI upscaling, `stabilize` (ffmpeg vid.stab) + gyroflow, losslesscut, kdenlive, yt-dlp, Intel VA-API (latitude)
 - `videoproc-wine.nix` - Experimental `videoproc` Wine wrapper for VideoProc Converter AI (latitude; see `docs/videoproc-wine.md`)
 - `syncthing.nix` - File synchronization service
 - `tailscale.nix` - VPN with firewall configuration
