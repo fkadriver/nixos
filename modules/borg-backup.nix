@@ -385,7 +385,13 @@ in
 
     services.borgbackup.jobs."system" = {
       # Auto-include the canary dir so the restore test works regardless of `paths`.
-      paths = cfg.paths ++ optional cfg.restoreTest.enable canaryDir;
+      # Also auto-include the sops-nix age key dir (/var/lib/sops-nix) on hosts
+      # that use sops-nix, so a restored host can decrypt secrets immediately
+      # instead of needing a new key + `sops updatekeys` (added 2026-11-21).
+      paths = cfg.paths
+        ++ optional cfg.restoreTest.enable canaryDir
+        ++ optional (config ? sops && config.sops.age.keyFile != null)
+          (dirOf config.sops.age.keyFile);
       exclude = cfg.exclude;
       repo = cfg.repository;
       # The job runs under ProtectSystem=strict; canaryDir must be listed here

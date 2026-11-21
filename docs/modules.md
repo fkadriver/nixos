@@ -127,6 +127,9 @@ Some modules provide custom options:
 ### borg-backup.nix
 - Repository path, backup paths, exclusions
 - Pruning schedule (daily, weekly, monthly retention)
+- **sops-nix age key**: on hosts using sops-nix, the key's dir (`/var/lib/sops-nix`)
+  is auto-added to `paths`, so a restored host can decrypt secrets without a new
+  key + `sops updatekeys`
 - Schedule configuration
 - **Weekly restore verification** (`restoreTest`, on by default): a canary file is
   refreshed before every backup (its dir is auto-added to `paths`), and a weekly
