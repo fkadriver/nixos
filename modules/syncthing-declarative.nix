@@ -214,14 +214,18 @@ in
         # key from config.xml on every attempt. A rebuild that changes the
         # Syncthing settings restarts it right as this unit runs. A single
         # attempt got curl 52 (empty reply), and curl --retry with a key read
-        # once kept getting 403, because the key changed across the restart.
+        # once kept getting 403, because the key changed across the restart
+        # (the old PUT below was wiping it).
         # Either way the unit failed and `nixos-rebuild switch` exited 4
         # (nas01, 2026-11-21).
         ok=false
         for i in $(seq 1 30); do
           API_KEY=$(${pkgs.libxml2}/bin/xmllint --xpath 'string(configuration/gui/apikey)' \
             "${config.services.syncthing.configDir}/config.xml" 2>/dev/null || true)
-          if [ -n "$API_KEY" ] && $CURL -X PUT -H "X-API-Key: $API_KEY" \
+          # PATCH, not PUT: PUT replaces the whole gui object, which wiped the
+          # API key (Syncthing then generated a new one) and could reset the
+          # other gui fields.
+          if [ -n "$API_KEY" ] && $CURL -X PATCH -H "X-API-Key: $API_KEY" \
               -H "Content-Type: application/json" -d "$BODY" \
               "http://127.0.0.1:8384/rest/config/gui" >/dev/null 2>&1; then
             ok=true
