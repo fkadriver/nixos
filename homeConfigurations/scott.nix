@@ -256,6 +256,18 @@ let
   # Ubuntu-era standalone home-manager setup was retired.)
   nixosModule = { ... }: {
     home-manager.users.scott = baseModule;
+
+    # On a fresh install neither ~/.local/state/nix/profiles nor
+    # /nix/var/nix/profiles/per-user/scott exists, so home-manager-scott
+    # fails with "Could not find suitable profile directory" (hit on the
+    # airbook's first rebuild, 2026-11-21). Each level is listed so the
+    # parents aren't created root-owned; "-" leaves existing modes alone.
+    systemd.tmpfiles.rules = [
+      "d /home/scott/.local - scott users -"
+      "d /home/scott/.local/state - scott users -"
+      "d /home/scott/.local/state/nix - scott users -"
+      "d /home/scott/.local/state/nix/profiles - scott users -"
+    ];
   };
 in
 (
