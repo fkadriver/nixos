@@ -136,7 +136,7 @@ Each host has a base configuration in `hosts/<hostname>/default.nix` with option
 **Current Hosts (NixOS):**
 
 - **latitude** - Dell Latitude 7480 laptop (default: Borg backup + 3D printing)
-- **airbook** - MacBook Air 7,2 back on NixOS (XFCE) after a forced macOS Tahoe upgrade (2026-11-20); Broadcom `wl` driver; reuses airbook-darwin's Syncthing identity. airbook-darwin is kept as a fallback
+- **airbook** - MacBook Air 7,2 back on NixOS (XFCE) after a forced macOS Tahoe upgrade (2026-11-20); Broadcom `wl` driver; uses the airbook-darwin Syncthing device name. airbook-darwin is kept as a fallback
 - **OTworkstation** - Dell Latitude 5480 (OT lab VM workstation, XFCE minimal, VMware + VirtualBox)
 - **vm01** - Dell Latitude E7270 (Service Tag: 7NYTSF2, Immich app + Postgres — library data lives on nas01 via NFS)
 - **nas01** - NAS server (ZFS raidz1 pool, NFS incl. Immich library export, Borg backup server, Syncthing hub, IDrive360 in Docker; converted from Ubuntu — see docs/nas01.md)

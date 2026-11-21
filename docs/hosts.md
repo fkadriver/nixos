@@ -134,7 +134,7 @@ macOS Tahoe upgrade; `airbook-darwin` below is kept as a fallback)
 | WiFi | Broadcom BCM4360 via unfree/insecure `broadcom-sta` (`wl`); open drivers blacklisted |
 | Disk | disko (`diskoConfigurations.airbook`): 1G EFI + LVM (8G swap + root). The SSD is `/dev/nvme0n1` (`/dev/sda` is the empty SD card reader) |
 | Bluetooth | SEENDA keyboard/mouse pairings deployed at activation (`hosts/airbook/bluetooth.nix`) |
-| Syncthing | Reuses the `airbook-darwin` device identity: copy `cert.pem`/`key.pem` from macOS `~/Library/Application Support/Syncthing/` to `~/.config/syncthing/` before first start |
+| Syncthing | Uses the `airbook-darwin` device name with its own ID (`ADVWXJD-…`); a reinstall of either OS means updating `deviceIds.airbook-darwin` in `modules/syncthing-declarative.nix` |
 | Backup | Borg to `nas01:/pool/borg/airbook` (new repo; `airbook-darwin`'s repo is left as is) |
 
 **Install:** boot the installer ISO, pick `airbook`, device `nvme0n1`. After first

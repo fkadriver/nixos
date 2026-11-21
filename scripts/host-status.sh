@@ -8,8 +8,8 @@
 # shell alias — see shell-aliases.nix). The current machine is checked
 # locally; the rest are checked over SSH in parallel.
 #
-# airbook is excluded — it's macOS/darwin and not reachable via SSH from
-# latitude (manual darwin-rebuild only).
+# airbook is included again since it went back to NixOS (2026-11-21) and
+# was tagged tag:device so Tailscale SSH from latitude is allowed.
 #
 # sands-bak01 is included but isn't NixOS (it's the dedicated hardware that
 # runs IDrive360, plain Ubuntu Server — see docs/idrive360.md) — it only
@@ -27,7 +27,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-HOSTS=(latitude log01 nas01 sands-bak01 otworkstation pihole01 pihole02 vm01)
+HOSTS=(latitude airbook log01 nas01 sands-bak01 otworkstation pihole01 pihole02 vm01)
 
 # Non-NixOS hosts: skip nixos-version/generation fields (nixos-rebuild
 # doesn't exist there), just report reachability/uptime/kernel/disk.

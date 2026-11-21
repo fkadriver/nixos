@@ -9,7 +9,9 @@ let
   # Device IDs - these are public identifiers, not secrets
   deviceIds = {
     latitude      = "B4FAPKC-JTGMKTY-SE223WL-W2Y3VTT-JHU65E4-X3FUZ2C-4N62X4T-IRI75QZ";
-    airbook-darwin = "MIWPTKO-AAFMDLU-BBWGY74-VIR6B2Y-H5OQAV2-COC7RKI-MSS3ZLB-XYBLYQB";
+    # Name kept from macOS days; now the NixOS airbook (fresh certs at the
+    # 2026-11-21 install — the macOS ID was MIWPTKO-AAFMDLU-...-XYBLYQB).
+    airbook-darwin = "ADVWXJD-FMYKEJK-GF5AKD3-2MZBW5J-PVBR7SQ-3OZQEB5-6XZE54M-5E3LEQX";
     nas01         = "A7GW6G2-42PAFDM-FULINO3-7DVGMM4-BQY726K-R5BSAV5-MMRGY4I-IYQO7AQ"; # updated 2026-08-22: T330 migration, fresh install regenerated syncthing certs
     iphone        = "SDE4XUA-P5E6GZF-EMPGWPV-POTQWCO-2VJKNC3-T2CQMJ4-4OJQTEU-SSUNDA4";
   };

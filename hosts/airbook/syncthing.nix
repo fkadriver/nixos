@@ -1,13 +1,11 @@
 { config, lib, pkgs, ... }: {
   services.syncthing-declarative = {
     enable = true;
-    # Deliberately the same Syncthing identity as macOS (airbook-darwin): only
-    # one OS runs on this hardware at a time, and reusing it means latitude
-    # and nas01 need no changes. Requires copying cert.pem + key.pem from
-    # macOS (~/Library/Application Support/Syncthing/) into
-    # ~/.config/syncthing/ BEFORE syncthing first starts here — otherwise a
-    # fresh device ID is generated and deviceIds.airbook-darwin in
-    # modules/syncthing-declarative.nix must be updated to match.
+    # Reuses the "airbook-darwin" device name so latitude/nas01 folder lists
+    # need no changes; only one OS runs on this hardware at a time. The macOS
+    # certs couldn't be recovered (FileVault), so the NixOS install has its
+    # own ID — deviceIds.airbook-darwin in modules/syncthing-declarative.nix
+    # was updated to it. Reinstalling either OS means updating that ID again.
     deviceName = "airbook-darwin";
 
     folders = {

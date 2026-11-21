@@ -167,7 +167,7 @@ Checks firmware updates (via fwupd) on every host with the fwupd module enabled 
 
 ### host-status.sh
 
-Queries every NixOS host over SSH (in parallel) and prints a table of uptime, NixOS version, current generation + build date, kernel version, and root filesystem usage. Covers latitude, otworkstation, vm01, nas01, log01, pihole01, pihole02 — airbook is excluded since it's macOS/darwin and not reachable via SSH from latitude.
+Queries every NixOS host over SSH (in parallel) and prints a table of uptime, NixOS version, current generation + build date, kernel version, and root filesystem usage. Covers latitude, airbook, otworkstation, vm01, nas01, log01, pihole01, pihole02 and sands-bak01.
 
 ```bash
 ./scripts/host-status.sh
