@@ -410,8 +410,62 @@ fi
 # file fresh every run, not a <localfile> tail - Wazuh's logcollector does
 # NOT reliably detect these files being rewritten in place (confirmed live
 # 2026-07-28 on the nas01-backup VM). See docs/idrive360.md in this repo.
+# Keep identical to wazuh-tailscale's config/wazuh_cluster/scripts/idrive360-status.sh
+# (Partial status and Scheduled-log selection added 2026-11-21).
 install -m 0755 /dev/stdin /usr/local/bin/wazuh-idrive360-status <<'STATUSEOF'
 #!/usr/bin/env bash
+# IDrive360 backup status reporter for Wazuh (log_format=command).
+# Deploy to /usr/local/bin/wazuh-idrive360-status on the nas01-backup VM.
+#
+# Wazuh's file-tailing localfile monitor cannot reliably detect IDrive360
+# rewriting lastOnlineBackupStatus.json in place — confirmed via live testing:
+# rewriting the file (including size increases) went undetected across a
+# fresh wazuh-agent restart and repeated waits. Wrapping the read in a
+# command means Wazuh always sees the CURRENT content fresh on every run,
+# regardless of how IDrive360 wrote it. Same pattern as wazuh-borg-status.
+#
+# The status= field alone is unreliable: IDrive360 1.3.0 has a vendor bug
+# where the backup engine's finalization step checks for a bare pid.txt
+# that the client never actually writes (only rotated pid.txt_N copies
+# exist), so it misreports status=Failure even when the transfer itself
+# completed successfully. To make Failure alerts triageable without SSHing
+# in, this script also parses the most recent run's log (Scheduled/Manual
+# or CDP, whichever is newer) for what was actually transferred. See
+# README.md in the fkadriver/idrive360 repo for the full writeup.
+#
+# size_backed_up is human-readable (e.g. "227.91MB", "3.66KB") straight from
+# the log, kept for alert descriptions. size_backed_up_mb is the same value
+# normalized to a plain MB float so it's aggregatable (Sum/time-series) in
+# the dashboard -- Wazuh's indexer template maps every data.* string field
+# as "keyword" (see config/wazuh_indexer/README.md), so a numeric-looking
+# string never becomes a numeric field on its own; it needs its own explicit
+# mapping, which is why this is a distinct field rather than a reformat of
+# size_backed_up -- see config/wazuh_indexer/apply-idrive360-size-mapping.sh.
+#
+# Which log: the status file describes the last Scheduled/Manual job (its "time" is
+# that job's end), so the numbers come from the newest *finished* log in
+# Backup/DefaultBackupSet/LOGS. Until 2026-11-21 this took the newest log by mtime
+# across Backup/ and CDP/. The hourly CDP log is appended all day, so it always won,
+# and a Failure was reported with the CDP sync's numbers (4 files, 0 failed) instead
+# of the failed job's.
+#
+# status=Partial: IDrive marks the whole job Failure if any file fails. Borg runs at
+# 00:00 on every host and rewrites its repos under /pool/borg (renamed hints.N/
+# index.N/integrity.N, lock files, compacted segments), so a long nightly job races
+# it and some files vanish mid-job ("No such file or directory", "Path not Found").
+# If files were backed up and *every* [FAILED] line is a vanished /pool/borg file, the
+# script reports Partial (rule 100414, level 5, dashboard only) instead of Failure.
+# Anything else stays Failure (rule 100411, level 12). See the homeassist repo,
+# docs/HOME_ASSISTANT.md, "IDrive360 vs Borg overlap" (2026-11-21).
+#
+# Output (one line, consumed by Wazuh agent localfile command):
+#   idrive360_backup: status=Success time=<epoch> files_backed_up=<n> size_backed_up=<size> size_backed_up_mb=<mb> files_failed=<n> log=<logfile>
+#   idrive360_backup: status=Failure time=<epoch> files_backed_up=<n> size_backed_up=<size> size_backed_up_mb=<mb> files_failed=<n> log=<logfile>
+#   idrive360_backup: status=Partial time=<epoch> files_backed_up=<n> size_backed_up=<size> size_backed_up_mb=<mb> files_failed=<n> log=<logfile> vanished=<n>
+#   idrive360_backup: status=Canceled time=<epoch> files_backed_up=<n> size_backed_up=<size> size_backed_up_mb=<mb> files_failed=<n> log=<logfile>
+#   idrive360_backup: status=UNKNOWN error=status_file_not_found
+#   idrive360_backup: status=UNKNOWN error=status_field_missing
+
 set -euo pipefail
 
 # Converts a "<number><unit>" string (B, KB, MB, GB, TB; case-insensitive,
@@ -449,17 +503,19 @@ if [ -z "$STATUS" ]; then
     exit 0
 fi
 
-# Report what was actually transferred in the most recent run (Scheduled/Manual
-# full backup or hourly CDP sync, whichever is newer) regardless of the status
-# field above -- that field is unreliable due to a vendor pid.txt bug that
-# misreports Failure even when the transfer itself succeeded (docs/idrive360.md).
-LATEST_LOG=$(ls -t /opt/IDrive360/idriveIt/user_profile/scott/*/Backup/DefaultBackupSet/LOGS/* /opt/IDrive360/idriveIt/user_profile/scott/*/CDP/DefaultBackupSet/LOGS/* 2>/dev/null | head -1) || true
+LOG_DIR=$(ls -d /opt/IDrive360/idriveIt/user_profile/scott/*/Backup/DefaultBackupSet/LOGS 2>/dev/null | head -1) || true
+LATEST_LOG=""
+if [ -n "$LOG_DIR" ]; then
+    # Newest finished Scheduled/Manual run (skip one still running).
+    LATEST_LOG=$(ls -t "$LOG_DIR"/* 2>/dev/null | grep -v '_Running_' | head -1) || true
+fi
 
 FILES_BACKED_UP="unknown"
 SIZE_BACKED_UP="unknown"
 SIZE_BACKED_UP_MB="unknown"
 FILES_FAILED="unknown"
 LOG_NAME="none"
+VANISHED=0
 
 if [ -n "$LATEST_LOG" ] && [ -f "$LATEST_LOG" ]; then
     LOG_NAME=$(basename "$LATEST_LOG")
@@ -472,9 +528,24 @@ if [ -n "$LATEST_LOG" ] && [ -f "$LATEST_LOG" ]; then
     fi
     PARSED=$(grep -oP '[Ff]ailed to backup\s*:?\s*\K[0-9]+' "$LATEST_LOG" | head -1) || true
     if [ -n "$PARSED" ]; then FILES_FAILED="$PARSED"; fi
+
+    # Failure where every failed file is a /pool/borg file that vanished mid-job.
+    if [ "$STATUS" = "Failure" ] && [[ "$FILES_BACKED_UP" =~ ^[0-9]+$ ]] \
+        && [ "$FILES_BACKED_UP" -gt 0 ]; then
+        TOTAL_FAILED_LINES=$(grep -c '\[FAILED\]' "$LATEST_LOG" || true)
+        VANISHED=$(grep '\[FAILED\] \[/pool/borg/' "$LATEST_LOG" \
+            | grep -c -E 'No such file or directory|Path not Found' || true)
+        if [ "$TOTAL_FAILED_LINES" -gt 0 ] && [ "$VANISHED" -eq "$TOTAL_FAILED_LINES" ]; then
+            STATUS="Partial"
+        fi
+    fi
 fi
 
-echo "idrive360_backup: status=${STATUS} time=${TIME} files_backed_up=${FILES_BACKED_UP} size_backed_up=${SIZE_BACKED_UP} size_backed_up_mb=${SIZE_BACKED_UP_MB} files_failed=${FILES_FAILED} log=${LOG_NAME}"
+if [ "$STATUS" = "Partial" ]; then
+    echo "idrive360_backup: status=Partial time=${TIME} files_backed_up=${FILES_BACKED_UP} size_backed_up=${SIZE_BACKED_UP} size_backed_up_mb=${SIZE_BACKED_UP_MB} files_failed=${FILES_FAILED} log=${LOG_NAME} vanished=${VANISHED}"
+else
+    echo "idrive360_backup: status=${STATUS} time=${TIME} files_backed_up=${FILES_BACKED_UP} size_backed_up=${SIZE_BACKED_UP} size_backed_up_mb=${SIZE_BACKED_UP_MB} files_failed=${FILES_FAILED} log=${LOG_NAME}"
+fi
 STATUSEOF
 
 install -m 0755 /dev/stdin /usr/local/bin/idrive360-wazuh-command.py <<'PYEOF'
