@@ -238,14 +238,9 @@ in
           exit 1
         fi
 
-        if $CURL -H "X-API-Key: $API_KEY" \
-            "http://127.0.0.1:8384/rest/config/restart-required" \
-            | ${pkgs.jq}/bin/jq -e .requiresRestart >/dev/null 2>&1; then
-          # Single attempt: Syncthing may drop this connection as it restarts,
-          # and a retry would restart it again.
-          $CURL -X POST -H "X-API-Key: $API_KEY" \
-            "http://127.0.0.1:8384/rest/system/restart" >/dev/null
-        fi
+        # No restart check: a GUI change applies live (Syncthing restarts just
+        # its API listener), so asking restart-required right after only
+        # raced that listener restart.
       '';
     };
   };
