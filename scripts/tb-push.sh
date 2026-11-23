@@ -53,10 +53,11 @@ done
 # options go *after* the host, where tailscale forwards them to ssh).
 run_on() {
     local host="$1"; shift
+    # </dev/null: otherwise ssh swallows stdin meant for the later prompts.
     if [[ "$host" == "$CURRENT_HOST" ]]; then
-        bash -c "$*"
+        bash -c "$*" </dev/null
     else
-        tailscale ssh "scott@${host}" "${SSH_OPTS[@]}" "$*"
+        tailscale ssh "scott@${host}" "${SSH_OPTS[@]}" "$*" </dev/null
     fi
 }
 
