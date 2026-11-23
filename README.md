@@ -227,6 +227,7 @@ Defined in `modules/shell-aliases.nix` (every host):
 
 Fleet-management aliases are scoped to the hosts that actually administer the fleet, not every host:
 - `nix-sync`, `fw-check`, `host-status` - daily-driver machines only (`modules/daily-driver.nix`; latitude and airbook)
+- `tb-push` - daily-driver machines only; copies the Thunderbird profile (`~/.thunderbird`) from one daily driver to the other(s), after confirming Thunderbird is closed on all of them (`scripts/tb-push.sh`)
 - `deploy-piholes` - `modules/deploy-pihole.nix`; latitude and vm01 only (vm01 is the aarch64 cross-build host)
 - `<host>-h` (e.g. `latitude-h`, `nas01-h`, `vm01-h`) - daily-driver machines only; same targets as the Tailscale SSH shortcuts above but through [Herdr](https://herdr.dev) (`pkgs.herdr`, installed by `daily-driver.nix`) instead of plain `tailscale ssh`. Herdr attaches to a persistent remote session the way `tmux attach` attaches to a local one.
 

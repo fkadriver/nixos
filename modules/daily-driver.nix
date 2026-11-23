@@ -140,12 +140,20 @@
     '';
 
     programs.firefox.enable = true;
+    # Thunderbird accounts/settings are not declared in Nix: the profile is set
+    # up once and copied between daily drivers with `tb-push` (below), or
+    # restored from borg on a rebuilt host.
     programs.thunderbird.enable = true;
 
     environment.systemPackages = with pkgs; [
       python3Minimal
       claude-code
       herdr  # terminal workspace manager for AI coding agents; see the -h aliases
+
+      # tb-push: copy ~/.thunderbird from one daily driver to the others over
+      # Tailscale SSH, refusing while Thunderbird runs on any of them
+      # (source: scripts/tb-push.sh).
+      (writeShellScriptBin "tb-push" (builtins.readFile ../scripts/tb-push.sh))
       # Claude desktop app is macOS/Windows only — no official Linux build or
       # nixpkgs package, so it lives on airbook-darwin (brew cask "claude") only.
 
