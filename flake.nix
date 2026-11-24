@@ -115,6 +115,7 @@
         latitude-minimal = import ./hosts/latitude/minimal.nix flakeContext;
         latitude-xfce = import ./hosts/latitude/xfce.nix flakeContext;
         airbook = import ./hosts/airbook flakeContext;
+        airbook-kde = import ./hosts/airbook/kde.nix flakeContext;
         vm01 = import ./hosts/vm01 flakeContext;
         log01 = import ./hosts/log01 flakeContext;
         nas01 = import ./hosts/nas01 flakeContext;
