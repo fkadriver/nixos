@@ -173,6 +173,20 @@ EOF
 
     echo "Generated $i keychains in $WORKDIR"
   '';
+
+  # Shell function for activation scripts: `userDir a/b/c` makes
+  # /home/scott/a/b/c, with every level owned by scott (see below).
+  userDirFn = ''
+    userDir() {
+      local d=/home/scott part
+      local IFS=/
+      for part in $1; do
+        d="$d/$part"
+        [ -d "$d" ] || mkdir "$d"
+        chown scott:users "$d"
+      done
+    }
+  '';
 in
 {
   options.my.printing = {
@@ -223,10 +237,18 @@ in
     # "only if not already a symlink" guard left the link on the previous
     # store path after a rev bump, which then dangled once GC removed it.
     # The store path stays alive because it's referenced from this script.
+    #
+    # These run as root, so a plain `mkdir -p` makes every missing parent
+    # root-owned. On a fresh install that was ~/.local/share itself, which
+    # then broke anything else writing there (Heroic's umu-launcher, so
+    # MTGA wouldn't start on airbook). userDir creates each level as scott
+    # and also repairs levels an earlier root mkdir left behind.
     system.activationScripts.openscadBosl2 = {
+      deps = [ "users" ];
       text = ''
+        ${userDirFn}
         OPENSCAD_LIB="/home/scott/.local/share/OpenSCAD/libraries"
-        mkdir -p "$OPENSCAD_LIB"
+        userDir .local/share/OpenSCAD/libraries
         if [ "$(readlink "$OPENSCAD_LIB/BOSL2" 2>/dev/null)" != "${bosl2}" ]; then
           rm -rf "$OPENSCAD_LIB/BOSL2"
           ln -sfn ${bosl2} "$OPENSCAD_LIB/BOSL2"
@@ -238,11 +260,13 @@ in
     # Symlink orca-settings repo as OrcaSlicer user config (runs after each rebuild).
     # No-op if the repo hasn't been cloned yet.
     system.activationScripts.orcaSettings = {
+      deps = [ "users" ];
       text = ''
+        ${userDirFn}
         REPO="/home/scott/git/orca-settings"
         ORCA_DIR="/home/scott/.config/OrcaSlicer"
         if [ -d "$REPO" ]; then
-          mkdir -p "$ORCA_DIR"
+          userDir .config/OrcaSlicer
           if [ ! -L "$ORCA_DIR/user" ]; then
             rm -rf "$ORCA_DIR/user"
             ln -sfn "$REPO" "$ORCA_DIR/user"
