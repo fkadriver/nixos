@@ -39,9 +39,72 @@ let
     X-XFCE-Commands=ghostty
     X-XFCE-CommandsWithParameter=ghostty -e "%s"
   '';
+  # XFCE's stock bottom panel sits on the same edge as Plank and does the same
+  # job, so remove it. xfconf only falls back to the system panel layout when
+  # a user has none, so this runs at each login against the user's own
+  # config instead; once the panel is gone it's a no-op. It matches the stock
+  # panel by its exact plugin list, not by number — XFCE reuses free panel
+  # numbers, so a panel added later could be "panel-2" too and must survive.
+  # Undo with: xfce4-panel --quit; pkill xfconfd; restore a backup of
+  # ~/.config/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml; xfce4-panel &
+  removeStockBottomPanel = pkgs.writeShellApplication {
+    name = "xfce-remove-stock-bottom-panel";
+    runtimeInputs = [ pkgs.xfconf pkgs.xfce4-panel pkgs.coreutils pkgs.gnugrep pkgs.procps pkgs.util-linux ];
+    text = ''
+      q() { xfconf-query -c xfce4-panel "$@"; }
+      ints() { grep -E '^[0-9]+$' || true; }
+
+      # On a fresh account the panel writes its default layout as it starts,
+      # possibly after this does.
+      for _ in $(seq 30); do q -p /panels >/dev/null 2>&1 && break; sleep 1; done
+      q -p /panels >/dev/null 2>&1 || exit 0
+
+      stock="showdesktop separator launcher launcher launcher launcher separator directorymenu "
+      keep=() remove=()
+      for p in $(q -p /panels | ints); do
+        types=""
+        for id in $(q -p "/panels/panel-$p/plugin-ids" 2>/dev/null | ints); do
+          types+="$(q -p "/plugins/plugin-$id" 2>/dev/null) "
+        done
+        if [ "$types" = "$stock" ]; then remove+=("$p"); else keep+=("$p"); fi
+      done
+
+      # Nothing to do, or it's the only panel left: leave it.
+      [ "''${#remove[@]}" -gt 0 ] && [ "''${#keep[@]}" -gt 0 ] || exit 0
+
+      args=()
+      for p in "''${keep[@]}"; do args+=(-t int -s "$p"); done
+      q -p /panels --force-array "''${args[@]}"
+      for p in "''${remove[@]}"; do
+        for id in $(q -p "/panels/panel-$p/plugin-ids" | ints); do
+          q -p "/plugins/plugin-$id" -r -R
+          rm -rf "$HOME/.config/xfce4/panel/launcher-$id"
+        done
+        q -p "/panels/panel-$p" -r -R
+      done
+
+      # -r only comes back if xfce4-session restarts the panel; a panel
+      # started outside session management just quits. Start one ourselves
+      # if none is back (a second instance exits on its own).
+      xfce4-panel -r || true
+      for _ in $(seq 10); do pgrep -x xfce4-panel >/dev/null && exit 0; sleep 1; done
+      setsid xfce4-panel >/dev/null 2>&1 &
+    '';
+  };
 in
 {
   environment.systemPackages = [ pkgs.plank ghosttyHelper ];
+
+  environment.etc."xdg/autostart/xfce-remove-stock-bottom-panel.desktop".text = ''
+    [Desktop Entry]
+    Type=Application
+    Name=Remove XFCE stock bottom panel
+    Comment=Plank replaces it (hosts/airbook/desktop.nix)
+    Exec=${lib.getExe removeStockBottomPanel}
+    OnlyShowIn=XFCE;
+    NoDisplay=true
+    Terminal=false
+  '';
 
   # Start the dock with the XFCE session.
   environment.etc."xdg/autostart/plank.desktop".text = ''

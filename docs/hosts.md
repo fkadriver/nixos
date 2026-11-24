@@ -131,7 +131,7 @@ macOS Tahoe upgrade; `airbook-darwin` below is kept as a fallback)
 | | |
 |---|---|
 | Desktop | XFCE (`laptop-xfce`, which pulls in `daily-driver`). `airbook-kde` is a Plasma 6 (Wayland) variant using latitude's `laptop-kde`; shared config is in `hosts/airbook/base.nix`, and both keep hostname `airbook` |
-| Dock / default apps | XFCE variant only: Plank at the bottom, autohide, 48px (Firefox, Thunderbird, Ghostty, Thunar). Defaults: Firefox, Thunderbird, Ghostty, Thunar, Mousepad (text), Evince (PDF), Ristretto (images), mpv (audio/video). System-level defaults in `hosts/airbook/desktop.nix`; GUI changes saved per user take precedence |
+| Dock / default apps | XFCE variant only: Plank at the bottom, autohide, 48px (Firefox, Thunderbird, Ghostty, Thunar); a login script removes XFCE's stock bottom panel (matched by its plugin list), which would overlap it. Defaults: Firefox, Thunderbird, Ghostty, Thunar, Mousepad (text), Evince (PDF), Ristretto (images), mpv (audio/video). System-level defaults in `hosts/airbook/desktop.nix`; GUI changes saved per user take precedence |
 | WiFi | Broadcom BCM4360 via unfree/insecure `broadcom-sta` (`wl`); open drivers blacklisted |
 | Disk | disko (`diskoConfigurations.airbook`): 1G EFI + LVM (8G swap + root). The SSD is `/dev/nvme0n1` (`/dev/sda` is the empty SD card reader) |
 | Bluetooth | SEENDA keyboard/mouse pairings deployed at activation (`hosts/airbook/bluetooth.nix`) |
