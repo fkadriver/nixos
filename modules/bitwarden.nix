@@ -257,11 +257,20 @@ in
         CacheDirectory = "bitwarden-cli";
         CacheDirectoryMode = "0700";
         Environment = "HOME=/var/cache/bitwarden-cli";
+        # Retry when Bitwarden isn't reachable yet. After a power cut every host
+        # boots before the internet is back; on 2026-11-24 the sync failed at boot
+        # (exit 52) and log01's wazuh-docker, which `requires` it, never started.
+        # RestartMode=direct keeps the unit activating between attempts instead of
+        # passing through "failed", so units that require it wait rather than fail.
+        Restart = "on-failure";
+        RestartMode = "direct";
+        RestartSec = "60s";
       };
 
       unitConfig = {
-        StartLimitBurst = 3;
-        StartLimitIntervalSec = 300;
+        # ~10 attempts over ~10 minutes, then give up (the 6h timer still retries).
+        StartLimitBurst = 10;
+        StartLimitIntervalSec = 900;
       };
     };
 
