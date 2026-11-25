@@ -48,6 +48,20 @@
       settings.PasswordAuthentication = false;
     };
 
+    # MTGA is the Heroic/Epic app "stargazer". Heroic only makes a ~/Desktop
+    # shortcut for it, not a menu entry, so declare one. Its icon is the one
+    # Heroic caches at install time (user state; the launcher shows a generic icon if
+    # it's missing). On this GPU MTGA also needs PROTON_USE_WINED3D=1 in its
+    # Heroic settings: GE-Proton's DXVK needs Vulkan 1.3, which Broadwell's
+    # HD 6000 lacks, so the game crashes at startup without it.
+    environment.systemPackages = [ (pkgs.makeDesktopItem {
+      name = "mtga";
+      desktopName = "Magic: The Gathering Arena";
+      exec = ''heroic --no-gui "heroic://launch?appName=stargazer&runner=legendary"'';
+      icon = "/home/scott/.config/heroic/icons/stargazer.jpg";
+      categories = [ "Game" ];
+    }) ];
+
     system.stateVersion = "26.11";
   };
 }

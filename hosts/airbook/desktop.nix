@@ -16,10 +16,9 @@ let
     { item = "thunderbird"; desktop = "thunderbird.desktop"; }
     { item = "ghostty"; desktop = "com.mitchellh.ghostty.desktop"; }
     { item = "thunar"; desktop = "thunar.desktop"; }
-    # MTGA (Heroic/Epic app "stargazer") goes here once its Heroic setup is
-    # done. Heroic makes no menu entry for it, so it'll need a makeDesktopItem
-    # with exec: heroic --no-gui "heroic://launch?appName=stargazer&runner=legendary"
+    { item = "mtga"; desktop = "mtga.desktop"; }   # from base.nix
   ];
+
 
   dockItem = app: pkgs.writeText "${app.item}.dockitem" ''
     [PlankDockItemPreferences]
