@@ -94,10 +94,11 @@
 	nixdir = "cd ~/git/nixos";
         nix-update = "nix flake update";
 
-        # NixOS system shortcuts with automatic hostname detection
+        # NixOS system shortcuts: rebuilds the running flake config, read
+        # from /etc/nixos-flake-attr (set in flake.nix), else the hostname
         # Never updates flake.lock: an uncommitted bump leaves the tree dirty and
         # makes nix-sync skip the host. Bump fleet-wide with nix-sync --update-lock.
-        nix-rebuild = "_d=$PWD; [ \"$_d\" != \"$HOME/git/nixos\" ] && cd ~/git/nixos; GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=accept-new' git pull && sudo nixos-rebuild switch --flake ~/git/nixos#$(hostname); [ \"$_d\" != \"$HOME/git/nixos\" ] && cd -; unset _d; source ~/.bashrc";
+        nix-rebuild = "_d=$PWD; [ \"$_d\" != \"$HOME/git/nixos\" ] && cd ~/git/nixos; GIT_SSH_COMMAND='ssh -o StrictHostKeyChecking=accept-new' git pull && sudo nixos-rebuild switch --flake ~/git/nixos#$(cat /etc/nixos-flake-attr 2>/dev/null || hostname); [ \"$_d\" != \"$HOME/git/nixos\" ] && cd -; unset _d; source ~/.bashrc";
         # nix-sync, fw-check, host-status: daily-driver only (modules/daily-driver.nix)
 
         # Tmux shortcuts

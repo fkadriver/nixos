@@ -109,7 +109,16 @@
         scott = scottHome;
       };
 
-      nixosConfigurations = {
+      # Each config records its own flake attribute name in
+      # /etc/nixos-flake-attr, so nix-rebuild and nix-sync rebuild the
+      # variant that's actually running. The hostname can't tell them
+      # apart: airbook and airbook-kde are both "airbook", latitude and
+      # latitude-xfce both "latitude". Bootstrap configs are left out on
+      # purpose — rebuilding one should move to the full config (by
+      # hostname), not rebuild the bootstrap.
+      nixosConfigurations = builtins.mapAttrs (name: cfg: cfg.extendModules {
+        modules = [{ environment.etc."nixos-flake-attr".text = name; }];
+      }) {
         latitude = import ./hosts/latitude flakeContext;
         OTworkstation = import ./hosts/OTworkstation flakeContext;
         latitude-minimal = import ./hosts/latitude/minimal.nix flakeContext;

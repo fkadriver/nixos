@@ -12,6 +12,9 @@ sudo nixos-rebuild switch --flake .#<hostname>
 # Available NixOS hostnames: latitude, latitude-xfce,
 # latitude-minimal, airbook, airbook-kde, OTworkstation, vm01, nas01, log01, pihole01, pihole02
 # Note: latitude-kde merged into latitude; latitude-minimal kept as fallback
+# Variants share a hostname (airbook/airbook-kde, latitude/latitude-xfce), so
+# check which one is running before rebuilding: cat /etc/nixos-flake-attr
+# (set for every config in flake.nix; nix-rebuild and nix-sync use it).
 
 # Examples:
 sudo nixos-rebuild switch --flake .#latitude

@@ -55,7 +55,8 @@ HOSTS=(latitude airbook otworkstation nas01 log01 vm01)
 REPO_PATH='~/git/nixos'
 SSH_OPTS=(-o ConnectTimeout=5 -o BatchMode=yes)
 
-# Flake config name per host (only needed where it differs from the hostname)
+# Flake config name per host (only needed where it differs from the hostname).
+# Only a fallback: apply_host uses the host's /etc/nixos-flake-attr first.
 declare -A FLAKE_CONFIG=(
     [otworkstation]="OTworkstation"
 )
@@ -333,7 +334,10 @@ apply_host() {
         fi
     fi
 
-    local rebuild_cmd="cd ${REPO_PATH} && sudo nixos-rebuild switch --flake .#${config}"
+    # Prefer the config the host is actually running (/etc/nixos-flake-attr,
+    # set in flake.nix): airbook may be running airbook-kde, latitude may be
+    # running latitude-xfce. \$( ) is evaluated on the target host.
+    local rebuild_cmd="cd ${REPO_PATH} && sudo nixos-rebuild switch --flake .#\$(cat /etc/nixos-flake-attr 2>/dev/null || echo ${config})"
 
     if ! confirm "Apply config on [$host]?"; then
         echo -e "${YELLOW}[$host] skipped${NC}"
