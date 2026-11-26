@@ -89,6 +89,33 @@
             command = "/run/current-system/sw/bin/env BORG_PASSCOMMAND=* /nix/store/*/bin/borg *";
             options = [ "NOPASSWD" ];
           }
+          # systemctl: start/stop/restart/status units without a password
+          # (e.g. `sudo systemctl start borg-status` on nas01).
+          {
+            command = "/run/current-system/sw/bin/systemctl *";
+            options = [ "NOPASSWD" ];
+          }
+          {
+            command = "/nix/store/*/bin/systemctl *";
+            options = [ "NOPASSWD" ];
+          }
+          # ...but keep the shutdown-type verbs password-gated, matching the
+          # reboot-only policy above. These must stay AFTER the systemctl
+          # rules: sudoers uses the last matching entry. Guards against
+          # accidents, not a security boundary — reordered flags such as
+          # `systemctl -i poweroff` don't match.
+          {
+            command = "/run/current-system/sw/bin/systemctl poweroff*";
+            options = [ "PASSWD" ];
+          }
+          {
+            command = "/run/current-system/sw/bin/systemctl halt*";
+            options = [ "PASSWD" ];
+          }
+          {
+            command = "/run/current-system/sw/bin/systemctl kexec*";
+            options = [ "PASSWD" ];
+          }
         ];
       }
     ];
