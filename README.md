@@ -207,7 +207,7 @@ sudo systemctl status rsyslog
 
 ## Hardware Notes
 
-- **MacBook Air 7,2 (airbook)**: Back on NixOS (`airbook`, KDE Plasma; `airbook-xfce` variant) after a forced macOS Tahoe upgrade; the old nix-darwin config is archived in `archive/hosts/airbook-darwin/`. Broadcom BCM4360 WiFi needs the unfree/insecure `broadcom-sta` (`wl`) driver, included in both the installer ISO and `hosts/airbook/hardware.nix`.
+- **MacBook Air 7,2 (airbook)**: Back on NixOS (`airbook`, KDE Plasma; `airbook-xfce` variant) after a forced macOS Tahoe upgrade; the old nix-darwin config was deleted (last present in commit `2ef6a2e`). Broadcom BCM4360 WiFi needs the unfree/insecure `broadcom-sta` (`wl`) driver, included in both the installer ISO and `hosts/airbook/hardware.nix`.
 - **vm01**: Immich library data lives on nas01 (NFS-mounted at `/mnt/nas01/immich-library`) — the old 1TB USB drive at `/mnt/immich` was removed (failing hardware)
 
 ## Logitech Device Management

@@ -25,7 +25,7 @@
         cyberchef = "docker run -d -p 8080:8080 humangod/cyberchef";
 
         # Tailscale SSH shortcuts
-        # (airbook has no sshd — see archive/hosts/airbook-darwin/home.nix)
+        # (Tailscale SSH: airbook's sshd is loopback-only)
         nas01 = "tailscale ssh nas01";
         backup = "tailscale ssh sands-bak01";
         log01 = "tailscale ssh log01";

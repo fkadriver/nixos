@@ -35,21 +35,6 @@ secrets paths were adjusted for its new location. Resume path in
 #### hyprland.nix
 Latitude host configuration for Hyprland desktop. Archived along with the Hyprland modules.
 
-### hosts/airbook-darwin/
-
-nix-darwin config for the MacBook Air 7,2 on macOS. Archived 2026-11-26: the
-airbook runs NixOS again (`hosts/airbook`) and darwin is no longer an option.
-Its flake inputs (`nixpkgs-darwin` on 26.05, `nix-darwin-26.05`) and the
-`darwinConfigurations.airbook-darwin` output were removed from `flake.nix`;
-restoring it means adding those back. The NixOS airbook still uses the
-`airbook-darwin` Syncthing device name, and nas01 keeps the old
-`/pool/borg/airbook-darwin` repo.
-
-### claude-commands/sync-darwin.md
-
-The `/sync-darwin` Claude Code command that mirrored daily-driver changes into
-the darwin config. Archived with it.
-
 ### pkgs/idrive-e360/
 
 #### Dockerfile & docker-compose.yml

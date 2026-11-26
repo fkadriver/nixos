@@ -1,7 +1,7 @@
 { inputs, ... }@flakeContext:
 # MacBook Air 7,2 on NixOS (restored 2026-11-20 from archive/hosts/airbook
-# after a forced macOS Tahoe upgrade; the nix-darwin config was archived
-# to archive/hosts/airbook-darwin on 2026-11-26).
+# after a forced macOS Tahoe upgrade; the nix-darwin airbook-darwin config
+# was deleted on 2026-11-26, last present in commit 2ef6a2e).
 #
 # Default: Plasma 6 (Wayland, SDDM) via laptop-kde, as on latitude. Tried as
 # airbook-kde from 2026-11-23 and made the default 2026-11-26 (the lag on 8 GB

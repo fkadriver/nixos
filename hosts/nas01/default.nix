@@ -4,10 +4,16 @@ let
   # modules/smart-monitor.nix (imported above) — was nas01-only inline here.
 
   # Checks each borg repo's index mtime; logs OK or STALE for Wazuh.
+  # Retired repos that no host writes to anymore are skipped (they'd log
+  # STALE forever). airbook-darwin: the macOS-era airbook repo, last written
+  # 2026-11-18, kept only as a cold copy — delete it if pool space runs low
+  # (see docs/nas01.md).
+  retiredBorgRepos = [ "airbook-darwin" ];
   borgStatusScript = pkgs: pkgs.writeShellScript "borg-status" ''
     LOG=/var/log/borg-status.log
     REPOS_DIR=/pool/borg
     STALE_HOURS=48
+    RETIRED=" ${builtins.concatStringsSep " " retiredBorgRepos} "
     if [ ! -d "$REPOS_DIR" ]; then
       echo "$(date '+%b %d %H:%M:%S') nas01 borg-status: ERROR repos_dir not found" >> "$LOG"
       exit 0
@@ -15,6 +21,7 @@ let
     for repo in "$REPOS_DIR"/*/; do
       [ -d "$repo" ] || continue
       host=$(basename "$repo")
+      case "$RETIRED" in *" $host "*) continue ;; esac
       mod=$(${pkgs.coreutils}/bin/stat -c "%Y" "$repo"index.* 2>/dev/null | sort -n | tail -1)
       if [ -z "$mod" ]; then
         echo "$(date '+%b %d %H:%M:%S') nas01 borg-status: host=$host status=NOINDEX" >> "$LOG"

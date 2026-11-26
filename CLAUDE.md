@@ -136,7 +136,7 @@ Each host has a base configuration in `hosts/<hostname>/default.nix` with option
 **Current Hosts (NixOS):**
 
 - **latitude** - Dell Latitude 7480 laptop (default: Borg backup + 3D printing)
-- **airbook** - MacBook Air 7,2 back on NixOS after a forced macOS Tahoe upgrade (2026-11-20); Broadcom `wl` driver; uses the airbook-darwin Syncthing device name (kept from its macOS days). Default is KDE Plasma 6 (since 2026-11-26, previously the `airbook-kde` variant); `airbook-xfce` is the XFCE + Plank variant; shared config lives in `hosts/airbook/base.nix`. The old nix-darwin config was archived to `archive/hosts/airbook-darwin/` (2026-11-26)
+- **airbook** - MacBook Air 7,2 back on NixOS after a forced macOS Tahoe upgrade (2026-11-20); Broadcom `wl` driver; uses the airbook-darwin Syncthing device name (kept from its macOS days). Default is KDE Plasma 6 (since 2026-11-26, previously the `airbook-kde` variant); `airbook-xfce` is the XFCE + Plank variant; shared config lives in `hosts/airbook/base.nix`. The old nix-darwin `airbook-darwin` config was deleted on 2026-11-26 (last present in commit `2ef6a2e`); its borg repo `/pool/borg/airbook-darwin` stays on nas01 as a cold copy that can be deleted if space runs low
 - **OTworkstation** - Dell Latitude 5480 (OT lab VM workstation, XFCE minimal, VMware + VirtualBox)
 - **vm01** - Dell Latitude E7270 (Service Tag: 7NYTSF2, Immich app + Postgres — library data lives on nas01 via NFS)
 - **nas01** - NAS server (ZFS raidz1 pool, NFS incl. Immich library export, Borg backup server, Syncthing hub, IDrive360 in Docker; converted from Ubuntu — see docs/nas01.md)
@@ -270,12 +270,12 @@ A separate, non-Nix work MacBook mirrors the terminal *look* of
 `airbook-darwin` — same starship prompt layout and the Dracula ("vampire")
 iTerm2 color profile — via a plain Homebrew + dotfiles bootstrap script
 (`starship.toml`, `.tmux.conf`, a marked block in `.zshrc`, and the Dracula
-iTerm2 Dynamic Profile JSON from `archive/hosts/airbook-darwin/home.nix`). Deliberately
+iTerm2 Dynamic Profile JSON from the deleted airbook-darwin `home.nix`). Deliberately
 excludes Nix/nix-darwin and every home-infra-specific alias (Tailscale SSH
 shortcuts, borg, IDrive360) since it's a work device, not part of this
 personal flake. The script isn't checked into this repo (it was handed to the
-user directly); `archive/hosts/airbook-darwin/home.nix` is the source of truth if it
-needs to be regenerated.
+user directly); the source of truth if it needs to be regenerated is the
+airbook-darwin config in git history: `git show 2ef6a2e:hosts/airbook-darwin/home.nix`.
 
 ## Common Development Tasks
 

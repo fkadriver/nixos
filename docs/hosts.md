@@ -74,7 +74,7 @@ Then add to `.sops.yaml` and run `sops updatekeys secrets/secrets.yaml`.
 | Storage | 500GB SATA HDD (OS), 3x 4TB HGST ZFS RAIDZ1 (`/pool`, incl. borg repos + `pool/photos` Immich library), WD 18TB (confirmed healthy 2026-08-22, kept `nofail`; automount-at-boot fixed 2026-09-04) |
 | Storage controller | Dell HBA330 (true HBA passthrough, `mpt3sas`) — replaced the stock PERC H730 RAID-on-chip card |
 | Key Features | ZFS (autoScrub/TRIM), NFS, syncthing-declarative, hd-idle spindown, Wazuh agent, IDrive360 in Docker |
-| Borg Repos | `/pool/borg/{nas01,latitude,vm01,log01,airbook,airbook-darwin}` |
+| Borg Repos | `/pool/borg/{nas01,latitude,vm01,log01,airbook,OTworkstation,sands-bak01}`, plus retired `airbook-darwin` (delete if space runs low) |
 
 **Note:** Headless server. ZFS pool and WD drive are not disko-managed — they survive OS reinstalls (`zpool import -f pool` once after install). IDrive360 runs in an `ubuntu:24.04` container because its installer self-updates at runtime. Borg's `BORG_RSH` uses `tailscale ssh` rather than pinned OpenSSH, so a future host-key rotation (e.g. another hardware swap) won't need manual re-pinning. See [nas01.md](nas01.md) for full reference, including the T330 migration history.
 
@@ -126,8 +126,8 @@ Then add to `.sops.yaml` and run `sops updatekeys secrets/secrets.yaml`.
 
 ### airbook
 **Apple MacBook Air 7,2** - NixOS with KDE Plasma 6 (restored 2026-11-20 after a
-forced macOS Tahoe upgrade; the nix-darwin `airbook-darwin` config was archived
-to `archive/hosts/airbook-darwin/` on 2026-11-26)
+forced macOS Tahoe upgrade; the nix-darwin `airbook-darwin` config was deleted
+on 2026-11-26, last present in commit `2ef6a2e`)
 
 | | |
 |---|---|
@@ -137,7 +137,7 @@ to `archive/hosts/airbook-darwin/` on 2026-11-26)
 | Disk | disko (`diskoConfigurations.airbook`): 1G EFI + LVM (8G swap + root). The SSD is `/dev/nvme0n1` (`/dev/sda` is the empty SD card reader) |
 | Bluetooth | SEENDA keyboard/mouse pairings deployed at activation (`hosts/airbook/bluetooth.nix`) |
 | Syncthing | Uses the `airbook-darwin` device name (kept from macOS so latitude/nas01 folder lists didn't change) with its own ID (`ADVWXJD-…`); a reinstall means updating `deviceIds.airbook-darwin` in `modules/syncthing-declarative.nix` |
-| Backup | Borg to `nas01:/pool/borg/airbook` (new repo; the old `airbook-darwin` repo is left as is) |
+| Backup | Borg to `nas01:/pool/borg/airbook` (new repo since 2026-11-23). The old `airbook-darwin` repo (359G, last written 2026-11-18) is kept as a cold copy, skipped by nas01's `borg-status`; **delete it if `/pool` runs low on space** |
 | Builds | `distributed-builds` peer: fetches fleet-built paths from other hosts (e.g. orca-slicer from latitude) and offloads builds to latitude/vm01. sshd runs on loopback only, like latitude |
 
 **Install:** boot the installer ISO, pick `airbook`, device `nvme0n1`. After first

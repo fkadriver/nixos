@@ -643,8 +643,11 @@ Client-side `BORG_REMOTE_PATH` is `/run/current-system/sw/bin/borg` (set by `mod
 | latitude | `/pool/borg/latitude` |
 | vm01 | `/pool/borg/vm01` |
 | log01 | `/pool/borg/log01` |
-| airbook-darwin | `/pool/borg/airbook-darwin` |
+| airbook (NixOS) | `/pool/borg/airbook` |
+| OTworkstation | `/pool/borg/OTworkstation` |
+| sands-bak01 | `/pool/borg/sands-bak01` |
 | nas01 (itself, local — no SSH) | `/pool/borg/nas01` — `/home` + decommissioned `nas01-backup` VM disk |
+| *(retired)* airbook-darwin | `/pool/borg/airbook-darwin` — macOS-era airbook, last written 2026-11-18, 359G. Cold copy only: no client writes it and `borg-status` skips it (`retiredBorgRepos` in `hosts/nas01/default.nix`). **Safe to delete if `/pool` runs low:** `sudo rm -rf /pool/borg/airbook-darwin` |
 
 nas01's own job is the same `services.borg-backup` module as the other
 hosts, just pointed at a local path instead of `ssh://...`. No
