@@ -8,13 +8,64 @@ let
   # splitting just the app list would create Qt/KDE-frameworks version skew
   # against the shell they load into.
   pkgsNixos = inputs.nixpkgs-nixos.legacyPackages.${pkgs.stdenv.hostPlatform.system};
+
+  pinnedApps = config.desktop.kde.pinnedApps;
+
+  # Plasma desktop script: set the launchers of every task manager widget
+  # (icon-only or full) on every panel. `applications:<id>.desktop` resolves
+  # through XDG_DATA_DIRS, so pins survive rebuilds and GC — pinning from the
+  # GUI stores `file:///nix/store/...-system-path/...`, which goes stale.
+  pinScript = pkgs.writeText "plasma-pinned-apps.js" ''
+    var launchers = ${builtins.toJSON (map (id: "applications:${id}.desktop") pinnedApps)};
+    panels().forEach(function (panel) {
+      panel.widgets().forEach(function (w) {
+        if (w.type == "org.kde.plasma.icontasks" || w.type == "org.kde.plasma.taskmanager") {
+          w.currentConfigGroup = ["General"];
+          w.writeConfig("launchers", launchers);
+        }
+      });
+    });
+  '';
 in
 {
   imports = [
     inputs.self.nixosModules.daily-driver
   ];
 
+  options.desktop.kde.pinnedApps = lib.mkOption {
+    type = lib.types.listOf lib.types.str;
+    # Captured from latitude's live panel 2026-11-26; shared by every KDE host.
+    default = [
+      "org.kde.konsole"
+      "thunderbird"
+      "org.kde.dolphin"
+      "org.kde.krdc"
+      "firefox"
+      "com.mitchellh.ghostty"
+    ];
+    description = ''
+      Desktop file IDs (without `.desktop`) pinned to the Plasma taskbar, left
+      to right. Applied at every Plasma login, so pins changed in the GUI are
+      reset; change this list instead. Set to `[ ]` to leave the taskbar alone.
+    '';
+  };
+
   config = {
+    systemd.user.services.plasma-pinned-apps = lib.mkIf (pinnedApps != [ ]) {
+      description = "Pin declared apps to the Plasma taskbar";
+      # plasma-plasmashell is Type=dbus, so after it the shell's D-Bus API is up.
+      after = [ "plasma-plasmashell.service" ];
+      requisite = [ "plasma-plasmashell.service" ];
+      wantedBy = [ "plasma-workspace.target" ];
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = pkgs.writeShellScript "plasma-pinned-apps" ''
+          exec ${pkgs.kdePackages.qttools}/bin/qdbus org.kde.plasmashell /PlasmaShell \
+            org.kde.PlasmaShell.evaluateScript "$(< ${pinScript})"
+        '';
+      };
+    };
+
     # Set boot label
     system.nixos.label = "KDE";
 
@@ -59,6 +110,7 @@ in
       kdePackages.dolphin
       kdePackages.konsole
       kdePackages.kate
+      kdePackages.krdc             # remote desktop client (VNC/RDP), e.g. nas01-backup; pinned
       kdePackages.kcmutils
       kdePackages.kscreen
       kdePackages.plasma-systemmonitor
