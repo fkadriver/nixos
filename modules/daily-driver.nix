@@ -251,6 +251,8 @@
       isRegistered = ''${pkgs.gnugrep}/bin/grep -qx 'registered = true' "${prefs}" 2>/dev/null'';
     in {
       description = "Go Hass Agent — report sensors to Home Assistant";
+      # pw-dump feeds the mic/webcam-in-use sensors.
+      path = [ pkgs.pipewire ];
       wantedBy = [ "graphical-session.target" ];
       after = [ "graphical-session.target" ];
       serviceConfig = {
