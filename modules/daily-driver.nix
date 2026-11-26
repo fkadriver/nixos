@@ -133,6 +133,19 @@
       };
     };
 
+    # keyd grabs the built-in keyboard and re-emits it as "keyd virtual
+    # keyboard", which libinput treats as external, so disable-while-typing
+    # never pairs it with the touchpad (palms brush the trackpad mid-typing,
+    # very noticeable on airbook's big Apple trackpad). Marking the virtual
+    # keyboard internal restores DWT under both X11 and Wayland (KWin reads
+    # libinput quirks directly; services.libinput.* above is X11-only).
+    environment.etc."libinput/local-overrides.quirks".text = ''
+      [keyd virtual keyboard]
+      MatchUdevType=keyboard
+      MatchName=keyd virtual keyboard
+      AttrKeyboardIntegration=internal
+    '';
+
     # Enable keyboard backlight control for laptops (Dell, Lenovo, etc.)
     services.udev.extraRules = ''
       # Allow members of video group to control keyboard backlight
