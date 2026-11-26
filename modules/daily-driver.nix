@@ -161,6 +161,7 @@
     environment.systemPackages = with pkgs; [
       python3Minimal
       claude-code
+      muse-code  # Meta's terminal coding agent (`muse`; unfree, allowed in common.nix)
       herdr  # terminal workspace manager for AI coding agents; see the -h aliases
 
       # tb-push: copy ~/.thunderbird from one daily driver to the others over
