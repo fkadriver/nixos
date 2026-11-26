@@ -177,12 +177,14 @@
       # the machine with HA as a device and reports sensors (battery, network,
       # power, app state) and receives notifications.
       #
-      # One-time registration, with a long-lived access token from HA →
+      # Registration is automatic at login (the go-hass-agent unit below uses
+      # the sops token home-assistant/agent_token). Manual equivalent, with a
+      # long-lived access token from HA →
       # profile → security (HA listens on port 80, not 8123; this is HA's
       # advertised external URL, so it also works off-LAN over Tailscale):
       #   go-hass-agent register \
       #     --server https://homeassistant.warthog-royal.ts.net --token <token>
-      # After that the go-hass-agent user service below starts it at login.
+      # The go-hass-agent user service below then starts it at login.
       go-hass-agent
 
       # nixpkgs' go-hass-agent ships only the binary — upstream's own packages
@@ -231,17 +233,37 @@
       '')
     ];
 
-    # Start go-hass-agent at login, but only once it has been registered with
-    # HA: before registration there is no preferences.toml and the agent exits,
-    # so the ExecCondition keeps the unit quietly inactive instead of
-    # crash-looping on every fresh machine. See the registration command in the
-    # go-hass-agent entry above.
-    systemd.user.services.go-hass-agent = {
+    # HA long-lived access token for go-hass-agent registration (HA → profile
+    # → security). One token shared by every daily driver; the agent also
+    # keeps its own copy in preferences.toml once registered.
+    sops.secrets."home-assistant/agent_token".owner = "scott";
+
+    # Start go-hass-agent at login, registering it with HA first if needed.
+    # "Registered" means `registered = true` in preferences.toml: an
+    # unregistered first run also writes that file (just a [device] section),
+    # so its mere existence proves nothing (latitude sat unregistered behind
+    # that check 2026-11-19..26). If HA is unreachable, register fails and the
+    # unit retries via Restart. Without the token (sops not set up yet) the
+    # ExecCondition keeps the unit inactive instead of serving the web form.
+    systemd.user.services.go-hass-agent = let
+      prefs = "$HOME/.config/go-hass-agent/preferences.toml";
+      token = config.sops.secrets."home-assistant/agent_token".path;
+      isRegistered = ''${pkgs.gnugrep}/bin/grep -qx 'registered = true' "${prefs}" 2>/dev/null'';
+    in {
       description = "Go Hass Agent — report sensors to Home Assistant";
       wantedBy = [ "graphical-session.target" ];
       after = [ "graphical-session.target" ];
       serviceConfig = {
-        ExecCondition = "${pkgs.coreutils}/bin/test -f %h/.config/go-hass-agent/preferences.toml";
+        ExecCondition = pkgs.writeShellScript "go-hass-agent-can-run" ''
+          ${isRegistered} || [ -r ${token} ]
+        '';
+        ExecStartPre = pkgs.writeShellScript "go-hass-agent-register" ''
+          ${isRegistered} && exit 0
+          # --force: an unregistered first run leaves a partial config behind.
+          exec ${pkgs.go-hass-agent}/bin/go-hass-agent register --force \
+            --server https://homeassistant.warthog-royal.ts.net \
+            --token "$(< ${token})"
+        '';
         ExecStart = "${pkgs.go-hass-agent}/bin/go-hass-agent run";
         Restart = "on-failure";
         RestartSec = 30;

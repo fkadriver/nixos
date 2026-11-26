@@ -334,11 +334,12 @@ sops updatekeys secrets/secrets.yaml
   natively here. See `docs/kali-docker.md`.
 - **Home Assistant**: no official Linux client, so `daily-driver.nix` installs
   the community companion agent `go-hass-agent` plus two desktop entries ("Home
-  Assistant Agent", "Home Assistant" dashboard in Firefox). The agent needs a
-  one-time `go-hass-agent register --server https://homeassistant.warthog-royal.ts.net
-  --token <long-lived token>`; the `systemd.user.services.go-hass-agent` unit
-  stays inactive (ExecCondition on `~/.config/go-hass-agent/preferences.toml`)
-  until that is done, then starts it at login.
+  Assistant Agent", "Home Assistant" dashboard in Firefox). The
+  `systemd.user.services.go-hass-agent` unit registers the agent at login with
+  the long-lived token in sops (`home-assistant/agent_token`, shared by all
+  daily drivers) unless `preferences.toml` already says `registered = true`,
+  then runs it. Manual equivalent: `go-hass-agent register --force --server
+  https://homeassistant.warthog-royal.ts.net --token <token>`.
 
 ### Dell Latitude E7270 (vm01)
 - **Purpose**: Immich app + Postgres (frontend/database only — library data lives on nas01)
