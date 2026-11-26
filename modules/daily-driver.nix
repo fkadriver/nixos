@@ -188,14 +188,17 @@
       go-hass-agent
 
       # nixpkgs' go-hass-agent ships only the binary — upstream's own packages
-      # include a .desktop file, so add the launcher entries by hand: one to run
-      # the agent (its first run serves the registration form on
-      # http://localhost:8223), one for HA's web dashboard.
+      # include a .desktop file, so add the launcher entries by hand: one to
+      # start the agent, one for HA's web dashboard. The agent entry starts
+      # the systemd unit below rather than running the binary: a second copy
+      # can't bind the agent's port (8223) and crashes the unit (airbook had
+      # a menu-launched copy blocking it, 2026-11-26). Starting an
+      # already-running unit does nothing.
       (makeDesktopItem {
         name = "go-hass-agent";
         desktopName = "Home Assistant Agent";
         comment = "Report this machine's sensors to Home Assistant";
-        exec = "${go-hass-agent}/bin/go-hass-agent run";
+        exec = "systemctl --user start go-hass-agent.service";
         categories = [ "Utility" ];
       })
       (makeDesktopItem {
