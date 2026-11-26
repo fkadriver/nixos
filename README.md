@@ -10,9 +10,6 @@ A modular NixOS configuration for laptops and servers with automated installatio
 # Apply configuration to current system
 sudo nixos-rebuild switch --flake .#<hostname>
 
-# macOS (nix-darwin)
-sudo darwin-rebuild switch --flake .#airbook-darwin
-
 # Test in VM before applying
 nix build .#nixosConfigurations.<hostname>.config.system.build.vm
 ./result/bin/run-<hostname>-nixos-vm
@@ -34,7 +31,6 @@ nix build .#nixosConfigurations.<hostname>.config.system.build.vm
 | `installer` | N/A | N/A | Bootable installation ISO |
 | `airbook` | MacBook Air 7,2 | KDE Plasma | Daily driver (NixOS again, 2026-11) |
 | `airbook-xfce` | MacBook Air 7,2 | XFCE | Lighter variant (Plank dock) |
-| `airbook-darwin` | MacBook Air 7,2 | macOS | nix-darwin (kept as fallback) |
 
 See [docs/hosts.md](docs/hosts.md) for detailed host documentation.
 
@@ -52,7 +48,6 @@ See [docs/hosts.md](docs/hosts.md) for detailed host documentation.
 │   ├── pihole01/         # Primary Pi-hole DNS (RPi 3B)
 │   ├── pihole02/         # Secondary Pi-hole DNS (RPi 3B)
 │   ├── airbook/          # MacBook Air 7,2 NixOS (KDE; xfce.nix variant)
-│   ├── airbook-darwin/   # MacBook Air 7,2 macOS (nix-darwin)
 │   └── installer/        # Installation ISO
 ├── modules/               # Auto-discovered NixOS modules
 ├── homeConfigurations/    # Standalone Home Manager config (scott.nix)
@@ -212,7 +207,7 @@ sudo systemctl status rsyslog
 
 ## Hardware Notes
 
-- **MacBook Air 7,2 (airbook / airbook-darwin)**: Moving back to NixOS (`airbook`, KDE Plasma; `airbook-xfce` variant) after a forced macOS Tahoe upgrade; the nix-darwin config stays as a fallback. Broadcom BCM4360 WiFi needs the unfree/insecure `broadcom-sta` (`wl`) driver, included in both the installer ISO and `hosts/airbook/hardware.nix`.
+- **MacBook Air 7,2 (airbook)**: Back on NixOS (`airbook`, KDE Plasma; `airbook-xfce` variant) after a forced macOS Tahoe upgrade; the old nix-darwin config is archived in `archive/hosts/airbook-darwin/`. Broadcom BCM4360 WiFi needs the unfree/insecure `broadcom-sta` (`wl`) driver, included in both the installer ISO and `hosts/airbook/hardware.nix`.
 - **vm01**: Immich library data lives on nas01 (NFS-mounted at `/mnt/nas01/immich-library`) — the old 1TB USB drive at `/mnt/immich` was removed (failing hardware)
 
 ## Logitech Device Management
@@ -222,7 +217,7 @@ Logitech devices on `latitude` are managed by [Solaar](https://github.com/pwr-So
 ## Shell Aliases
 
 Defined in `modules/shell-aliases.nix` (every host):
-- `nix-rebuild` - Pull latest and rebuild current host (NixOS) or darwin (airbook)
+- `nix-rebuild` - Pull latest and rebuild the current host
 - `smart [drive]` - Full SMART report for all drives, or just one (e.g. `smart sda`)
 - `ts-info [host]` - Show enabled Tailscale features (SSH, exit-node option, routes, tags) for self, or a peer by hostname
 

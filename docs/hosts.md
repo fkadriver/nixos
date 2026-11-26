@@ -126,7 +126,8 @@ Then add to `.sops.yaml` and run `sops updatekeys secrets/secrets.yaml`.
 
 ### airbook
 **Apple MacBook Air 7,2** - NixOS with KDE Plasma 6 (restored 2026-11-20 after a
-forced macOS Tahoe upgrade; `airbook-darwin` below is kept as a fallback)
+forced macOS Tahoe upgrade; the nix-darwin `airbook-darwin` config was archived
+to `archive/hosts/airbook-darwin/` on 2026-11-26)
 
 | | |
 |---|---|
@@ -135,30 +136,14 @@ forced macOS Tahoe upgrade; `airbook-darwin` below is kept as a fallback)
 | WiFi | Broadcom BCM4360 via unfree/insecure `broadcom-sta` (`wl`); open drivers blacklisted |
 | Disk | disko (`diskoConfigurations.airbook`): 1G EFI + LVM (8G swap + root). The SSD is `/dev/nvme0n1` (`/dev/sda` is the empty SD card reader) |
 | Bluetooth | SEENDA keyboard/mouse pairings deployed at activation (`hosts/airbook/bluetooth.nix`) |
-| Syncthing | Uses the `airbook-darwin` device name with its own ID (`ADVWXJD-…`); a reinstall of either OS means updating `deviceIds.airbook-darwin` in `modules/syncthing-declarative.nix` |
-| Backup | Borg to `nas01:/pool/borg/airbook` (new repo; `airbook-darwin`'s repo is left as is) |
+| Syncthing | Uses the `airbook-darwin` device name (kept from macOS so latitude/nas01 folder lists didn't change) with its own ID (`ADVWXJD-…`); a reinstall means updating `deviceIds.airbook-darwin` in `modules/syncthing-declarative.nix` |
+| Backup | Borg to `nas01:/pool/borg/airbook` (new repo; the old `airbook-darwin` repo is left as is) |
 | Builds | `distributed-builds` peer: fetches fleet-built paths from other hosts (e.g. orca-slicer from latitude) and offloads builds to latitude/vm01. sshd runs on loopback only, like latitude |
 
 **Install:** boot the installer ISO, pick `airbook`, device `nvme0n1`. After first
 boot, add `sudo age-keygen -y /var/lib/sops-nix/key.txt` to `.sops.yaml` and run
 `sops updatekeys secrets/secrets.yaml`, then rebuild so Bitwarden secrets
 (SSH keys, borg passphrase) can decrypt.
-
-## macOS Hosts (nix-darwin)
-
-### airbook-darwin
-**Apple MacBook Air 7,2** - macOS with nix-darwin
-
-| | |
-|---|---|
-| Purpose | Declarative macOS package/settings management |
-| Homebrew Casks | Bitwarden, Firefox, Ghostty, iTerm2, Rectangle, VSCode, Pocket Casts, Home Assistant, 3D printing apps |
-| Services | Tailscale VPN, Syncthing, Input Leap KVM client (connects to latitude) |
-| Kali Linux | headless container on a dedicated `colima` VM via the `kali` command (`docs/kali-docker.md`) |
-| Settings | Dark mode, Touch ID sudo, dock/keyboard/trackpad preferences |
-| Claude Code | memory-sync hooks installed to `~/.claude/` (`hosts/airbook-darwin/claude-hooks/`); registration stays in the user-managed `~/.claude/settings.json` |
-
-**Rebuild:** `sudo darwin-rebuild switch --flake ~/git/nixos#airbook-darwin`
 
 ## Quick Reference
 
@@ -175,17 +160,14 @@ boot, add `sudo age-keygen -y /var/lib/sops-nix/key.txt` to `.sops.yaml` and run
 | `pihole01` | RPi 3B | None | Primary Pi-hole DNS |
 | `pihole02` | RPi 3B | None | Secondary Pi-hole DNS |
 | `installer` | ISO | N/A | Installation media |
-| `airbook` | Laptop | XFCE | MacBook Air 7,2 (NixOS) |
-| `airbook-darwin` | macOS | N/A | nix-darwin on Mac (fallback) |
+| `airbook` | Laptop | KDE | MacBook Air 7,2 |
+| `airbook-xfce` | Laptop | XFCE | MacBook Air 7,2 variant |
 
 ## Building Configurations
 
 ```bash
 # NixOS
 sudo nixos-rebuild switch --flake .#<hostname>
-
-# macOS (nix-darwin)
-sudo darwin-rebuild switch --flake .#airbook-darwin
 
 # Build VM for testing
 nix build .#nixosConfigurations.<hostname>.config.system.build.vm

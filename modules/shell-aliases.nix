@@ -1,18 +1,15 @@
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }:
 # MAINTENANCE: When updating aliases here, also update:
-#   - Darwin: hosts/airbook-darwin/home.nix
-#             (programs.bash.shellAliases / programs.zsh.shellAliases)
 #   - Standalone home-manager: homeConfigurations/scott.nix
 #             (shares the tailscale/git/tmux/util aliases, not the nix-*/idrive/temps ones)
 # Rebuild aliases by host:
-#   nix-rebuild  → every NixOS host incl. airbook (nixos-rebuild); airbook-darwin's
-#                  darwin-rebuild variant lives in hosts/airbook-darwin/home.nix
+#   nix-rebuild  → every NixOS host incl. airbook (nixos-rebuild)
 {
   config = {
     environment = {
       # git-sync: pull every repo under ~/git and print a report
-      # (source: scripts/git-sync.sh; also on airbook-darwin and
+      # (source: scripts/git-sync.sh; also on
       # sands-bak01 via hosts/sands-bak01/setup.sh).
       systemPackages = [
         (pkgs.writeShellScriptBin "git-sync" (builtins.readFile ../scripts/git-sync.sh))
@@ -28,7 +25,7 @@
         cyberchef = "docker run -d -p 8080:8080 humangod/cyberchef";
 
         # Tailscale SSH shortcuts
-        # (airbook has no sshd — see hosts/airbook-darwin/home.nix)
+        # (airbook has no sshd — see archive/hosts/airbook-darwin/home.nix)
         nas01 = "tailscale ssh nas01";
         backup = "tailscale ssh sands-bak01";
         log01 = "tailscale ssh log01";

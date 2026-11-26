@@ -3,8 +3,8 @@
 
 let
   # Headless Kali Linux in a Docker container — the NixOS counterpart to
-  # airbook-darwin's colima-based setup (hosts/airbook-darwin/default.nix,
-  # docs/kali-docker.md). Same image and wrapper interface; no VM layer here
+  # the archived airbook-darwin colima setup
+  # (archive/hosts/airbook-darwin/default.nix, docs/kali-docker.md). Same image and wrapper interface; no VM layer here
   # because NixOS daily drivers already run the Docker daemon natively
   # (virtualisation.docker.enable, modules/common.nix) — colima exists on
   # macOS purely to give it a Linux VM to run that daemon in.

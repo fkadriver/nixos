@@ -18,9 +18,6 @@ sudo nixos-rebuild switch --flake .#<hostname>
 
 # Examples:
 sudo nixos-rebuild switch --flake .#latitude
-
-# macOS (nix-darwin) - requires sudo for system changes
-sudo darwin-rebuild switch --flake .#airbook-darwin
 ```
 
 ### Build VM for Testing
@@ -139,15 +136,12 @@ Each host has a base configuration in `hosts/<hostname>/default.nix` with option
 **Current Hosts (NixOS):**
 
 - **latitude** - Dell Latitude 7480 laptop (default: Borg backup + 3D printing)
-- **airbook** - MacBook Air 7,2 back on NixOS after a forced macOS Tahoe upgrade (2026-11-20); Broadcom `wl` driver; uses the airbook-darwin Syncthing device name. Default is KDE Plasma 6 (since 2026-11-26, previously the `airbook-kde` variant); `airbook-xfce` is the XFCE + Plank variant; shared config lives in `hosts/airbook/base.nix`. airbook-darwin is kept as a fallback
+- **airbook** - MacBook Air 7,2 back on NixOS after a forced macOS Tahoe upgrade (2026-11-20); Broadcom `wl` driver; uses the airbook-darwin Syncthing device name (kept from its macOS days). Default is KDE Plasma 6 (since 2026-11-26, previously the `airbook-kde` variant); `airbook-xfce` is the XFCE + Plank variant; shared config lives in `hosts/airbook/base.nix`. The old nix-darwin config was archived to `archive/hosts/airbook-darwin/` (2026-11-26)
 - **OTworkstation** - Dell Latitude 5480 (OT lab VM workstation, XFCE minimal, VMware + VirtualBox)
 - **vm01** - Dell Latitude E7270 (Service Tag: 7NYTSF2, Immich app + Postgres — library data lives on nas01 via NFS)
 - **nas01** - NAS server (ZFS raidz1 pool, NFS incl. Immich library export, Borg backup server, Syncthing hub, IDrive360 in Docker; converted from Ubuntu — see docs/nas01.md)
 - **log01** - Shuttle Zingbox GL014G128W10, 128GB SSD (syslog collector — rsyslog UDP/TCP 514)
 - **installer** - Bootable ISO with automated installation script
-
-**Current Hosts (macOS/nix-darwin):**
-- **airbook-darwin** - MacBook Air 7,2 running macOS with nix-darwin
 
 ## Secrets Management with sops-nix
 
@@ -184,17 +178,10 @@ sops updatekeys secrets/secrets.yaml
 - Other secrets (Tailscale auth keys, WiFi passwords, etc.) are stored encrypted in `secrets.yaml` and deployed via sops-nix
 - Reference sops secrets via `config.sops.secrets."path/to/secret".path`
 
-**macOS (darwin) Systems:**
-- SSH keys are deployed via sops-nix (stored in `secrets.yaml` under `ssh/` prefix)
-- The `bitwarden.nix` module is NixOS-specific and doesn't work on darwin
-- sops-nix is used for both SSH keys and service secrets
-- Age key stored at `/var/root/.config/sops/age/keys.txt` on darwin
-
 **What's in secrets.yaml:**
-- **SSH keys** - deployed via sops-nix on darwin systems (stored under `ssh/` prefix)
+- **SSH keys** under the `ssh/` prefix (used by the archived airbook-darwin config)
 - Bitwarden login credentials (for the bitwarden CLI on NixOS)
 - Service secrets (Tailscale auth keys, WiFi passwords, etc.)
-- Note: NixOS systems fetch SSH keys from Bitwarden via `bitwarden.nix` module, while darwin systems get them from `secrets.yaml` via sops-nix
 
 ## Disko and Installation
 
@@ -236,93 +223,7 @@ sudo nixos-install --flake github:fkadriver/nixos#<hostname>
 sudo reboot
 ```
 
-## macOS with nix-darwin
-
-### Initial Setup on macOS
-```bash
-# 1. Install Nix (multi-user installation)
-sh <(curl -L https://nixos.org/nix/install)
-
-# 2. Enable flakes
-mkdir -p ~/.config/nix
-echo "experimental-features = nix-command flakes" >> ~/.config/nix/nix.conf
-
-# 3. Clone the config repository
-git clone https://github.com/fkadriver/nixos ~/git/nixos
-
-# 4. Bootstrap nix-darwin (first time only, requires sudo)
-sudo nix --extra-experimental-features 'nix-command flakes' run nix-darwin -- switch --flake ~/git/nixos#airbook-darwin
-
-# 5. Subsequent rebuilds (also require sudo for system changes)
-sudo darwin-rebuild switch --flake ~/git/nixos#airbook-darwin
-```
-
-### Darwin Configuration Structure
-- `hosts/airbook-darwin/default.nix` - Main darwin system configuration
-- `hosts/airbook-darwin/home.nix` - Home Manager user configuration
-
-### What nix-darwin Manages
-- **System packages**: CLI tools installed via Nix (age, sops, htop, go, nodejs, python3)
-- **Homebrew**: GUI apps and services
-  - Casks: Bitwarden, Firefox, Ghostty, Home Assistant, iTerm2, Pocket Casts, Rectangle, Scroll Reverser, VSCode
-  - 3D Printing: OrcaSlicer, FreeCAD (OpenSCAD, PrusaSlicer, Blender, MeshLab, Inkscape dropped in the 2026-09-04 cask trim)
-  - Brews: syncthing, bitwarden-cli
-- **Fonts**: 3D printing fonts (EB Garamond, Libre Baskerville, Old Standard, Junicode, Inter, Source Sans)
-- **macOS settings**: Dock, Finder, keyboard, trackpad, dark mode, Touch ID for sudo
-- **Services**: Tailscale VPN, Syncthing (via Homebrew)
-- **Kali Linux**: headless Kali in a Docker container on a dedicated `colima` VM,
-  via the `kali` wrapper command (no Docker Desktop; `docker-client` is CLI-only).
-  See `docs/kali-docker.md`
-- **Home Manager**: Shell config (bash, zsh, starship), SSH config, dotfiles. Not VS Code: that is the `visual-studio-code` cask, with extensions/settings from VS Code's own GitHub Settings Sync (`programs.vscode` was dropped 2026-11-15 — nixpkgs' x86_64-darwin vscode 1.144.0 is broken, and it only duplicated the cask)
-- **Secrets**: SSH keys deployed via sops-nix from encrypted secrets.yaml
-
-### Useful Aliases
-- `nix-rebuild` - Runs `cd ~/git/nixos && git pull && sudo darwin-rebuild switch --flake ~/git/nixos#airbook-darwin; cd -`
-
-### Secrets Management on macOS
-After first darwin-rebuild, get the machine's age key:
-```bash
-# macOS stores the key in a different location than NixOS
-sudo age-keygen -y /var/root/.config/sops/age/keys.txt
-
-# Add this key to .sops.yaml, then re-encrypt secrets
-export SOPS_AGE_KEY_FILE=~/.config/sops/age/keys.txt
-sops updatekeys secrets/secrets.yaml
-```
-
-**Important Notes:**
-- SSH keys are **automatically deployed** via sops-nix on macOS
-- The `bitwarden.nix` module is NixOS-specific and doesn't work on darwin
-- sops-nix deploys both SSH keys and service secrets on darwin
-- After `darwin-rebuild`, SSH keys are automatically installed to `~/.ssh/`
-
 ## Hardware-Specific Notes
-
-### MacBook Air 7,2 (airbook-darwin)
-- **CPU**: Intel Core i5-5250U/i7-5650U (Broadwell)
-- **Configuration**: `airbook-darwin` - macOS with nix-darwin (NixOS config archived)
-- **macOS config includes**:
-  - GUI apps: Bitwarden, Firefox, Ghostty, Home Assistant, iTerm2, Rectangle, Scroll Reverser, VSCode
-  - Services: Tailscale VPN, Syncthing file sync
-  - System settings: Dark mode, Touch ID sudo, dock/keyboard/trackpad preferences
-  - Bluetooth: SEENDA keyboard and mouse (manual pairing required)
-  - Power policy: never sleeps while on wall power (`pmset -c sleep 0` plus the
-    `com.local.ac-no-sleep` daemon toggling `disablesleep` with the power source,
-    which is what also defeats lid-close sleep); normal battery timers kept. The
-    02:00 borg backup skips entirely unless on wall power. See
-    `docs/airbook-borg-debug.md`.
-  - Kali Linux: container, not a VM. `kali` starts a dedicated colima profile
-    (2 CPU / 3 GiB / 40 GiB, `qemu` VM type) and drops into a
-    `kali-linux-headless` container; `~/kali` is mounted at `/root/work`. No GUI
-    tools and no USB Wi-Fi passthrough — those need the installed VMware Fusion
-    25. Defined inline in `hosts/airbook-darwin/default.nix`, not a module. See
-    `docs/kali-docker.md`.
-  - Home Assistant: official companion app (`home-assistant` cask). Sign in with
-    HA's advertised internal URL `http://192.168.21.21` — HA listens on **port
-    80, not 8123** — and it picks up the external
-    `https://homeassistant.warthog-royal.ts.net` from HA afterwards. Registers
-    the Mac as an HA device (same as the work Mac's `Work_MAC`). HA's own config
-    lives in the separate `homeassist` repo, not this flake.
 
 ### Dell Latitude 7480 (latitude)
 - **Service Tag**: 3BLBPQ2
@@ -330,7 +231,7 @@ sops updatekeys secrets/secrets.yaml
 - **Logitech support**: Mouse button tools (xdotool, xbindkeys)
 - **Kali Linux**: headless Kali in a Docker container via the `kali` wrapper command
   (`modules/kali-docker.nix`, imported by `daily-driver.nix`) — same image and
-  interface as airbook-darwin's, no VM layer needed since Docker already runs
+  interface as the archived airbook-darwin setup, no VM layer needed since Docker already runs
   natively here. See `docs/kali-docker.md`.
 - **Home Assistant**: no official Linux client, so `daily-driver.nix` installs
   the community companion agent `go-hass-agent` plus two desktop entries ("Home
@@ -369,11 +270,11 @@ A separate, non-Nix work MacBook mirrors the terminal *look* of
 `airbook-darwin` — same starship prompt layout and the Dracula ("vampire")
 iTerm2 color profile — via a plain Homebrew + dotfiles bootstrap script
 (`starship.toml`, `.tmux.conf`, a marked block in `.zshrc`, and the Dracula
-iTerm2 Dynamic Profile JSON from `hosts/airbook-darwin/home.nix`). Deliberately
+iTerm2 Dynamic Profile JSON from `archive/hosts/airbook-darwin/home.nix`). Deliberately
 excludes Nix/nix-darwin and every home-infra-specific alias (Tailscale SSH
 shortcuts, borg, IDrive360) since it's a work device, not part of this
 personal flake. The script isn't checked into this repo (it was handed to the
-user directly); `hosts/airbook-darwin/home.nix` is the source of truth if it
+user directly); `archive/hosts/airbook-darwin/home.nix` is the source of truth if it
 needs to be regenerated.
 
 ## Common Development Tasks
@@ -427,4 +328,3 @@ This keeps documentation in sync with code changes and helps future development.
 - **Secrets are in git**: Encrypted with sops-nix using age keys
 - **No manual filesystem config**: All disk layouts are declarative via disko
 - **Home Manager**: Configured for user "scott" in `homeConfigurations/scott.nix`
-- **macOS support**: MacBook Air can run macOS with nix-darwin (`airbook-darwin`)

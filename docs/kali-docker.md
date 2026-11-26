@@ -1,5 +1,8 @@
 # Kali Linux in Docker (airbook + NixOS daily drivers)
 
+> **Note (2026-11-26):** `airbook-darwin` is archived (`archive/hosts/airbook-darwin/`);
+> its colima setup below is kept for reference. Only the NixOS side is live.
+
 Kali runs as a **container**, not a desktop VM, on both `airbook-darwin` and
 the NixOS daily drivers (latitude, via `modules/kali-docker.nix`, imported by
 `daily-driver.nix`). One command (`kali`) brings up the stack; everything is

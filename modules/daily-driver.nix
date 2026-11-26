@@ -44,9 +44,7 @@
       # useful from any daily driver, not tied to one host. Agent runs on
       # sands-bak01 (dedicated hardware, migrated off the nas01-backup VM,
       # which was decommissioned 2026-09-26 — see MIGRATION.md in the
-      # idrive360 repo). airbook-darwin can't import NixOS modules, so it
-      # carries its own copy in hosts/airbook-darwin/home.nix — keep the
-      # two in sync.
+      # idrive360 repo).
       #
       # Single-window remote view of just the IDrive360 GUI, no VNC — attaches
       # over SSH to the idrive360-xpra seamless session on sands-bak01.
@@ -61,8 +59,7 @@
       # instead of a plain `tailscale ssh`. Herdr attaches to a persistent
       # remote session the way `tmux attach` attaches to a local one. Kept
       # here rather than shell-aliases.nix because the herdr binary is only
-      # installed on daily-driver hosts, mirrored on airbook-darwin in
-      # home.nix (which carries its own herdr package — see default.nix).
+      # installed on daily-driver hosts.
       nas01-h = "herdr --remote nas01";
       backup-h = "herdr --remote sands-bak01";
       log01-h = "herdr --remote log01";
@@ -169,7 +166,7 @@
       # (source: scripts/tb-push.sh).
       (writeShellScriptBin "tb-push" (builtins.readFile ../scripts/tb-push.sh))
       # Claude desktop app is macOS/Windows only — no official Linux build or
-      # nixpkgs package, so it lives on airbook-darwin (brew cask "claude") only.
+      # nixpkgs package.
 
       # GPU-accelerated terminal emulator. Its terminfo entry already ships
       # system-wide via enableAllTerminfo in common.nix, so tmux and SSH'd-into
@@ -180,14 +177,14 @@
       mpv
 
       # Pocket Casts: nixpkgs' Electron wrapper around play.pocketcasts.com
-      # (no official Linux client). airbook-darwin uses the official cask.
+      # (no official Linux client).
       pocket-casts
       handbrake  # Video transcoding
       discord
 
       # Home Assistant: there is no official HA desktop/companion client for
       # Linux, so this is the community one (joshuar/go-hass-agent) — same role
-      # as the "home-assistant" companion cask on airbook-darwin: it registers
+      # as the official "home-assistant" companion app on macOS: it registers
       # the machine with HA as a device and reports sensors (battery, network,
       # power, app state) and receives notifications.
       #

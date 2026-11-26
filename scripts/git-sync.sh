@@ -3,8 +3,7 @@
 # print a status report. Submodules are updated with their parent repo.
 # Returns you to the directory you started in.
 #
-# Packaged as `git-sync` by modules/shell-aliases.nix and
-# hosts/airbook-darwin/default.nix.
+# Packaged as `git-sync` by modules/shell-aliases.nix.
 #
 # Usage: git-sync [root-dir]     (default: ~/git)
 set -u

@@ -9,9 +9,6 @@
     # for common.nix and security-relevant modules (kernel, tailscale, borg,
     # bitwarden) where freshness matters more than cache-hit rate.
     nixpkgs-nixos.url = "github:NixOS/nixpkgs/nixos-unstable";
-    # Darwin-specific: nixpkgs-unstable moved to 26.11pre and dropped x86_64-darwin.
-    # 26.05 is the last supported branch (through end of 2026) for MacBookAir7,2.
-    nixpkgs-darwin.url = "github:NixOS/nixpkgs/nixpkgs-26.05-darwin";
     home-manager = {
       url = "flake:home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -40,12 +37,6 @@
     tether = {
       url = "github:zackb/tether";
       inputs.nixpkgs.follows = "nixpkgs";
-    };
-    nix-darwin = {
-      # Track nix-darwin-26.05 to match nixpkgs-26.05-darwin (branches must line up
-      # or the "nix-darwin YY.MM with Nixpkgs YY.MM" assertion aborts activation).
-      url = "github:nix-darwin/nix-darwin/nix-darwin-26.05";
-      inputs.nixpkgs.follows = "nixpkgs-darwin";
     };
   };
   outputs = inputs:
@@ -180,11 +171,6 @@
             nixosModules.disko-config
           ];
         }).config;
-      };
-
-      # macOS configurations using nix-darwin
-      darwinConfigurations = {
-        airbook-darwin = import ./hosts/airbook-darwin flakeContext;
       };
     };
 }

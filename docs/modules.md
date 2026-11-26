@@ -17,7 +17,7 @@ This document provides a high-level overview of all available modules in this re
 | `laptop-xfce.nix` | Full XFCE desktop with development tools, gaming support, media tools |
 | `laptop-kde.nix` | Full KDE Plasma 6 with Windows 11-like taskbar, gaming, KDE Connect. Taskbar pins are declared in `desktop.kde.pinnedApps` (Konsole, Thunderbird, Dolphin, KRDC, Firefox, Ghostty by default; latitude and airbook). A `plasma-pinned-apps` user service writes them as `applications:<id>.desktop` at each Plasma login, which resets any pins changed in the GUI. Pinning from the GUI saves `/nix/store` paths, which stop working after GC. `[ ]` turns it off |
 | `laptop-minimal.nix` | Minimal XFCE for testing (no WiFi auto-config, no Bitwarden) |
-| `daily-driver.nix` | Shared configuration for Scott's daily-driver machines (applications, fonts, 3D printing). Also carries the `nix-sync`/`fw-check`/`host-status` fleet-management aliases and the IDrive360 client shortcuts (`idrive-app`, `idrive-start`/`stop`/`restart`, plus an `idrive-status` script and the `xpra` client they need — all point at `sands-bak01`, dedicated hardware, not a VM). Installs `herdr` (nixpkgs) for the `<host>-h` aliases (`herdr --remote <host>`), and Meta's `muse-code` terminal coding agent (`muse`; unfree). Thunderbird is installed but its accounts are not declared in Nix: the `tb-push` command (`scripts/tb-push.sh`) copies `~/.thunderbird` between daily drivers over Tailscale SSH, prompting for source/destinations and refusing while Thunderbird is running (or the host is unreachable) on any of them; each destination's old profile is moved to `~/.thunderbird.pre-tb-push-<time>`. Also the Home Assistant client side: `go-hass-agent` (community Linux companion agent — no official Linux client), its desktop entries, and a `systemd.user.services.go-hass-agent` unit that registers the agent at login with the sops token `home-assistant/agent_token` (skipped once `preferences.toml` has `registered = true`; inactive if the secret is missing); airbook-darwin's counterpart is the `home-assistant` cask. Imported via `laptop-kde.nix`/`laptop-xfce.nix` → latitude; mirrored by hand in `hosts/airbook-darwin/home.nix` |
+| `daily-driver.nix` | Shared configuration for Scott's daily-driver machines (applications, fonts, 3D printing). Also carries the `nix-sync`/`fw-check`/`host-status` fleet-management aliases and the IDrive360 client shortcuts (`idrive-app`, `idrive-start`/`stop`/`restart`, plus an `idrive-status` script and the `xpra` client they need — all point at `sands-bak01`, dedicated hardware, not a VM). Installs `herdr` (nixpkgs) for the `<host>-h` aliases (`herdr --remote <host>`), and Meta's `muse-code` terminal coding agent (`muse`; unfree). Thunderbird is installed but its accounts are not declared in Nix: the `tb-push` command (`scripts/tb-push.sh`) copies `~/.thunderbird` between daily drivers over Tailscale SSH, prompting for source/destinations and refusing while Thunderbird is running (or the host is unreachable) on any of them; each destination's old profile is moved to `~/.thunderbird.pre-tb-push-<time>`. Also the Home Assistant client side: `go-hass-agent` (community Linux companion agent — no official Linux client), its desktop entries, and a `systemd.user.services.go-hass-agent` unit that registers the agent at login with the sops token `home-assistant/agent_token` (skipped once `preferences.toml` has `registered = true`; inactive if the secret is missing). Imported via `laptop-kde.nix`/`laptop-xfce.nix` → latitude and airbook |
 
 ## Pi-hole Modules
 
@@ -46,7 +46,7 @@ This document provides a high-level overview of all available modules in this re
 |--------|-------------|
 | `bitwarden.nix` | Generic Bitwarden/sops-nix secrets management module |
 | `bitwarden-scott.nix` | Scott-specific Bitwarden SSH key deployment |
-| `kali-docker.nix` | Headless Kali Linux (`kali-linux-headless`) in a Docker container via the `kali` wrapper command — NixOS counterpart to airbook-darwin's colima-based setup, minus the VM layer since the Docker daemon already runs natively. Imported by `daily-driver.nix`. See `docs/kali-docker.md` |
+| `kali-docker.nix` | Headless Kali Linux (`kali-linux-headless`) in a Docker container via the `kali` wrapper command — NixOS counterpart to the archived airbook-darwin colima setup, minus the VM layer since the Docker daemon already runs natively. Imported by `daily-driver.nix`. See `docs/kali-docker.md` |
 
 ## Backup & Sync
 
@@ -138,7 +138,5 @@ Some modules provide custom options:
   verifies it, and puts it back. Results are logged to `/var/log/borg-restore.log`
   in a `borg_restore: status=OK|ERROR …` line and shipped to Wazuh via
   `services.wazuh-agent.extraLocalFiles`. Fully self-contained — enabling
-  `services.borg-backup` on any host activates it automatically. (airbook/darwin
-  mirrors this via launchd in `hosts/airbook-darwin/default.nix`, since darwin
-  can't consume the NixOS module.) The manager-side `borg_restore` decoder/rule
+  `services.borg-backup` on any host activates it automatically. The manager-side `borg_restore` decoder/rule
   lives in the `wazuh-tailscale` repo.

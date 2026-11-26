@@ -82,7 +82,7 @@ let
             cyberchef = "docker run -d -p 8080:8080 humangod/cyberchef";
 
             # Tailscale SSH to other hosts
-            # (airbook has no sshd — see hosts/airbook-darwin/home.nix)
+            # (airbook has no sshd — see archive/hosts/airbook-darwin/home.nix)
             latitude = "tailscale ssh latitude";
             backup   = "tailscale ssh sands-bak01";
             vm01     = "tailscale ssh vm01";
