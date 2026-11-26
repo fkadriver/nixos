@@ -112,7 +112,7 @@
       # Each config records its own flake attribute name in
       # /etc/nixos-flake-attr, so nix-rebuild and nix-sync rebuild the
       # variant that's actually running. The hostname can't tell them
-      # apart: airbook and airbook-kde are both "airbook", latitude and
+      # apart: airbook and airbook-xfce are both "airbook", latitude and
       # latitude-xfce both "latitude". Bootstrap configs are left out on
       # purpose — rebuilding one should move to the full config (by
       # hostname), not rebuild the bootstrap.
@@ -124,7 +124,7 @@
         latitude-minimal = import ./hosts/latitude/minimal.nix flakeContext;
         latitude-xfce = import ./hosts/latitude/xfce.nix flakeContext;
         airbook = import ./hosts/airbook flakeContext;
-        airbook-kde = import ./hosts/airbook/kde.nix flakeContext;
+        airbook-xfce = import ./hosts/airbook/xfce.nix flakeContext;
         vm01 = import ./hosts/vm01 flakeContext;
         log01 = import ./hosts/log01 flakeContext;
         nas01 = import ./hosts/nas01 flakeContext;

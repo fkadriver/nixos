@@ -335,7 +335,7 @@ apply_host() {
     fi
 
     # Prefer the config the host is actually running (/etc/nixos-flake-attr,
-    # set in flake.nix): airbook may be running airbook-kde, latitude may be
+    # set in flake.nix): airbook may be running airbook-xfce, latitude may be
     # running latitude-xfce. \$( ) is evaluated on the target host.
     local rebuild_cmd="cd ${REPO_PATH} && sudo nixos-rebuild switch --flake .#\$(cat /etc/nixos-flake-attr 2>/dev/null || echo ${config})"
 

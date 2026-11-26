@@ -1,6 +1,6 @@
 # Shared airbook config, imported by both desktop variants:
-#   default.nix -> airbook     (XFCE + Plank dock)
-#   kde.nix     -> airbook-kde (Plasma 6, as on latitude)
+#   default.nix -> airbook      (Plasma 6, as on latitude)
+#   xfce.nix    -> airbook-xfce (XFCE + Plank dock)
 # Both keep hostName "airbook", so Tailscale, Syncthing, Borg and the
 # distributed-builds host key pin are the same whichever one is booted.
 # The desktop module (laptop-xfce / laptop-kde) also pulls in daily-driver.

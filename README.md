@@ -32,7 +32,8 @@ nix build .#nixosConfigurations.<hostname>.config.system.build.vm
 | `pihole01` | Raspberry Pi 3B | Headless | Primary Pi-hole DNS |
 | `pihole02` | Raspberry Pi 3B | Headless | Secondary Pi-hole DNS |
 | `installer` | N/A | N/A | Bootable installation ISO |
-| `airbook` | MacBook Air 7,2 | XFCE | Daily driver (NixOS again, 2026-11) |
+| `airbook` | MacBook Air 7,2 | KDE Plasma | Daily driver (NixOS again, 2026-11) |
+| `airbook-xfce` | MacBook Air 7,2 | XFCE | Lighter variant (Plank dock) |
 | `airbook-darwin` | MacBook Air 7,2 | macOS | nix-darwin (kept as fallback) |
 
 See [docs/hosts.md](docs/hosts.md) for detailed host documentation.
@@ -50,7 +51,7 @@ See [docs/hosts.md](docs/hosts.md) for detailed host documentation.
 │   ├── log01/            # Centralized syslog collector
 │   ├── pihole01/         # Primary Pi-hole DNS (RPi 3B)
 │   ├── pihole02/         # Secondary Pi-hole DNS (RPi 3B)
-│   ├── airbook/          # MacBook Air 7,2 NixOS (XFCE)
+│   ├── airbook/          # MacBook Air 7,2 NixOS (KDE; xfce.nix variant)
 │   ├── airbook-darwin/   # MacBook Air 7,2 macOS (nix-darwin)
 │   └── installer/        # Installation ISO
 ├── modules/               # Auto-discovered NixOS modules
@@ -211,7 +212,7 @@ sudo systemctl status rsyslog
 
 ## Hardware Notes
 
-- **MacBook Air 7,2 (airbook / airbook-darwin)**: Moving back to NixOS (`airbook`, XFCE) after a forced macOS Tahoe upgrade; the nix-darwin config stays as a fallback. Broadcom BCM4360 WiFi needs the unfree/insecure `broadcom-sta` (`wl`) driver, included in both the installer ISO and `hosts/airbook/hardware.nix`.
+- **MacBook Air 7,2 (airbook / airbook-darwin)**: Moving back to NixOS (`airbook`, KDE Plasma; `airbook-xfce` variant) after a forced macOS Tahoe upgrade; the nix-darwin config stays as a fallback. Broadcom BCM4360 WiFi needs the unfree/insecure `broadcom-sta` (`wl`) driver, included in both the installer ISO and `hosts/airbook/hardware.nix`.
 - **vm01**: Immich library data lives on nas01 (NFS-mounted at `/mnt/nas01/immich-library`) — the old 1TB USB drive at `/mnt/immich` was removed (failing hardware)
 
 ## Logitech Device Management
