@@ -12,9 +12,10 @@
 # without a VLAN firewall hole, and binding 0.0.0.0 avoids racing tailscale0
 # coming up at boot.
 #
-# Passwords are generated on the host on first start (/var/lib/nut-passwords,
-# root-only), not kept in sops: nothing but upsd and its clients need them.
-# Read the HA one with `sudo cat /var/lib/nut-passwords/homeassistant`.
+# Passwords are generated on the host on first start (/var/lib/nut-passwords),
+# not kept in sops: nothing but upsd and its clients need them. upsmon's is
+# root-only; the read-only homeassistant one is wheel-readable
+# (`cat /var/lib/nut-passwords/homeassistant`).
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }:
 
@@ -93,14 +94,17 @@ in
         RemainAfterExit = true;
       };
       script = ''
-        install -d -m 0700 ${pwDir}
+        install -d -m 0750 -g wheel ${pwDir}
         for u in upsmon homeassistant; do
           f=${pwDir}/$u
           if [ ! -s "$f" ]; then
             ${pkgs.openssl}/bin/openssl rand -hex 16 > "$f"
-            chmod 0600 "$f"
           fi
         done
+        chmod 0600 ${pwDir}/upsmon
+        # Read-only account: wheel can read it to paste into HA without sudo.
+        chgrp wheel ${pwDir}/homeassistant
+        chmod 0640 ${pwDir}/homeassistant
       '';
     };
 
