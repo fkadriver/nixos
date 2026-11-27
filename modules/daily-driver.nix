@@ -16,11 +16,30 @@
     inputs.self.nixosModules.vscode
     inputs.self.nixosModules.pdf
     inputs.self.nixosModules."kali-docker"
+    inputs.tether.nixosModules.tether
     inputs.home-manager.nixosModules.home-manager
     (inputs.self.homeConfigurations.scott).nixosModule
   ];
 
   config = {
+
+    # Tether: wireless iPhone clipboard/file/SMS/notification bridge. Replaces
+    # iphone.nix's USB-only libimobiledevice/ifuse setup (which never actually
+    # worked), so that is switched off. Moved here from hosts/latitude on
+    # 2026-11-26 so airbook gets it too; both laptops' adapter is hci0.
+    services.iphone-usb.enable = false;
+    programs.tether = {
+      enable = true;
+      wifi = {
+        enable = true;
+        openFirewall = true;
+      };
+      bluetooth = {
+        enable = true;
+        adapters = [ "hci0" ];
+      };
+      extensions = [ "firefox" "thunderbird" ];
+    };
 
     # Fonts: managed by modules/font.nix
     my.fonts = {
