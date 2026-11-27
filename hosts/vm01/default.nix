@@ -39,10 +39,14 @@ let
       inputs.self.nixosModules.disk-usage-monitor
       inputs.self.nixosModules.fwupd
       inputs.self.nixosModules.shutdown-listener
+      inputs.self.nixosModules.nut-server
     ];
 
     config = {
       services.shutdownListener.enable = true;
+
+      # Closet UPS USB is on vm01 for now; moves to nas01 later (see module).
+      services.nutServer.enable = true;
 
       # Home-manager configuration
       home-manager.useGlobalPkgs = true;
