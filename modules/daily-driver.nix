@@ -1,6 +1,37 @@
 { inputs, ... }@flakeContext:
 { config, lib, pkgs, ... }:
 
+let
+  # wtfi2 — live, visual network path diagnostic that pinpoints which hop
+  # (host/Wi-Fi/gateway/uplink/WAN/DNS/captive-portal) is breaking the
+  # connection (https://github.com/kanywst/wtfi2). Not in nixpkgs; shipped
+  # upstream only as a prebuilt glibc-dynamic binary, so fetch the release
+  # tarball and autoPatchelf it.
+  wtfi2Version = "0.10.0";
+  wtfi2 = pkgs.stdenv.mkDerivation {
+    pname = "wtfi2";
+    version = wtfi2Version;
+    src = pkgs.fetchurl {
+      url = "https://github.com/kanywst/wtfi2/releases/download/v${wtfi2Version}/wtfi2-x86_64-unknown-linux-gnu.tar.xz";
+      hash = "sha256-eDySR+Y+330AnxIaAYD9lUqTEpje2gxrMlb1YbNTozI=";
+    };
+    nativeBuildInputs = [ pkgs.autoPatchelfHook ];
+    buildInputs = [ pkgs.stdenv.cc.cc.lib ];
+    sourceRoot = "wtfi2-x86_64-unknown-linux-gnu";
+    dontConfigure = true;
+    dontBuild = true;
+    installPhase = ''
+      install -Dm755 wtfi $out/bin/wtfi
+    '';
+    meta = {
+      description = "Live, visual network path diagnostic that pinpoints exactly where your connection dies";
+      homepage = "https://github.com/kanywst/wtfi2";
+      license = lib.licenses.mit;
+      platforms = [ "x86_64-linux" ];
+      mainProgram = "wtfi";
+    };
+  };
+in
 {
   imports = [
     inputs.self.nixosModules.games
@@ -17,6 +48,12 @@
     inputs.self.nixosModules.pdf
     inputs.self.nixosModules."kali-docker"
     inputs.tether.nixosModules.tether
+    # Wazuh agent + the SMART / disk-usage feeds it ships (moved from latitude
+    # 2026-11-26 so every daily driver is monitored).
+    inputs.self.nixosModules.wazuh-agent
+    inputs.self.nixosModules.smart-monitor
+    inputs.self.nixosModules.disk-usage-monitor
+    inputs.self.nixosModules.mcp-nixos
     inputs.home-manager.nixosModules.home-manager
     (inputs.self.homeConfigurations.scott).nixosModule
   ];
@@ -174,7 +211,76 @@
     # restored from borg on a rebuilt host.
     programs.thunderbird.enable = true;
 
+    services.wazuh-agent = {
+      enable = true;
+      manager = "wazuh.warthog-royal.ts.net";
+      enrollmentPasswordFile = "/run/bitwarden-secrets/wazuh_agent_enrollment_password";
+    };
+
+    # mcp-nixos MCP server for Claude Code (NixOS/home-manager option lookups)
+    programs.mcp-nixos.enable = true;
+
+    # Default text editor for .txt and .conf files. mkDefault so a host can
+    # pick its own (airbook-xfce uses Mousepad, hosts/airbook/desktop.nix).
+    xdg.mime.defaultApplications = {
+      "text/plain" = lib.mkDefault "geany.desktop";
+      "text/x-config" = lib.mkDefault "geany.desktop";
+    };
+
+    # Syncthing Tray, preconfigured with this host's and nas01's Syncthing.
+    sops.secrets."syncthing_nas01_apikey" = {
+      owner = "scott";
+    };
+
+    systemd.user.services.syncthingtray = {
+      description = "Syncthing Tray";
+      wantedBy = [ "graphical-session.target" ];
+      after = [ "graphical-session.target" ];
+      serviceConfig = {
+        ExecStartPre = pkgs.writeShellScript "syncthingtray-configure" ''
+          LOCAL_KEY=$(${pkgs.gnugrep}/bin/grep -oP '(?<=<apikey>)[^<]+' \
+            "$HOME/.config/syncthing/config.xml")
+          NAS01_KEY=$(cat /run/secrets/syncthing_nas01_apikey)
+
+          ${pkgs.python3}/bin/python3 - "$LOCAL_KEY" "$NAS01_KEY" <<'PYEOF'
+import configparser, sys, os
+local_key, nas01_key = sys.argv[1], sys.argv[2]
+path = os.path.join(os.environ['HOME'], '.config', 'syncthingtray.ini')
+config = configparser.RawConfigParser()
+config.optionxform = str
+if os.path.exists(path):
+    config.read(path)
+if not config.has_section('tray'):
+    config.add_section('tray')
+for key, val in [
+    (r'connections\1\apiKey',       f'@ByteArray({local_key})'),
+    (r'connections\1\syncthingUrl', 'http://localhost:8384'),
+    (r'connections\1\autoConnect',  'true'),
+    (r'connections\1\label',        '${config.networking.hostName}'),
+    (r'connections\2\apiKey',       f'@ByteArray({nas01_key})'),
+    (r'connections\2\syncthingUrl', 'http://nas01.warthog-royal.ts.net:8384'),
+    (r'connections\2\autoConnect',  'true'),
+    (r'connections\2\label',        'nas01'),
+    (r'connections\size',           '2'),
+]:
+    config.set('tray', key, val)
+with open(path, 'w') as f:
+    config.write(f, space_around_delimiters=False)
+PYEOF
+        '';
+        ExecStart = "${pkgs.syncthingtray-minimal}/bin/syncthingtray --wait";
+        Restart = "on-failure";
+        RestartSec = 3;
+      };
+    };
+
     environment.systemPackages = with pkgs; [
+      anki
+      geany
+      gimp
+      git-lfs  # GRFICSv3 OT lab (large Docker image assets)
+      syncthingtray-minimal
+      wtfi2    # network path diagnostic TUI (binary: wtfi)
       python3Minimal
       claude-code
       muse-code  # Meta's terminal coding agent (`muse`; unfree, allowed in common.nix)

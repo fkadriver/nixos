@@ -1,45 +1,12 @@
 { inputs, ... }@flakeContext:
 let
   nixosModule = { config, lib, pkgs, tsDockerSidecarStart, ... }:
-    let
-      # wtfi2 — live, visual network path diagnostic that pinpoints which hop
-      # (host/Wi-Fi/gateway/uplink/WAN/DNS/captive-portal) is breaking the
-      # connection (https://github.com/kanywst/wtfi2). Not in nixpkgs; shipped
-      # upstream only as a prebuilt glibc-dynamic binary, so fetch the release
-      # tarball and autoPatchelf it.
-      wtfi2Version = "0.10.0";
-      wtfi2 = pkgs.stdenv.mkDerivation {
-        pname = "wtfi2";
-        version = wtfi2Version;
-        src = pkgs.fetchurl {
-          url = "https://github.com/kanywst/wtfi2/releases/download/v${wtfi2Version}/wtfi2-x86_64-unknown-linux-gnu.tar.xz";
-          hash = "sha256-eDySR+Y+330AnxIaAYD9lUqTEpje2gxrMlb1YbNTozI=";
-        };
-        nativeBuildInputs = [ pkgs.autoPatchelfHook ];
-        buildInputs = [ pkgs.stdenv.cc.cc.lib ];
-        sourceRoot = "wtfi2-x86_64-unknown-linux-gnu";
-        dontConfigure = true;
-        dontBuild = true;
-        installPhase = ''
-          install -Dm755 wtfi $out/bin/wtfi
-        '';
-        meta = {
-          description = "Live, visual network path diagnostic that pinpoints exactly where your connection dies";
-          homepage = "https://github.com/kanywst/wtfi2";
-          license = lib.licenses.mit;
-          platforms = [ "x86_64-linux" ];
-          mainProgram = "wtfi";
-        };
-      };
-    in {
+    {
     imports = [
       ./hardware.nix
       ./syncthing.nix
       inputs.self.nixosModules.common
       inputs.self.nixosModules.tsauth
-      inputs.self.nixosModules.wazuh-agent
-      inputs.self.nixosModules.smart-monitor
-      inputs.self.nixosModules.disk-usage-monitor
       inputs.self.nixosModules.laptop-kde
       inputs.self.nixosModules.logitech
       inputs.self.nixosModules.multi-monitor
@@ -52,7 +19,6 @@ let
       inputs.self.nixosModules.screen-recording
       inputs.self.nixosModules.forscan
       inputs.self.nixosModules.esphome-flash
-      inputs.self.nixosModules.mcp-nixos
       inputs.self.nixosModules.fwupd
     ];
     config = {
@@ -62,7 +28,6 @@ let
 
       services.forscan.enable = true;
       services.esphomeFlash.enable = true;
-      programs.mcp-nixos.enable = true;
 
       # NFS mounts for nas01 shares via Tailscale
       fileSystems."/mnt/nas01/SANS" = {
@@ -131,12 +96,6 @@ let
         };
       };
 
-      services.wazuh-agent = {
-        enable = true;
-        manager = "wazuh.warthog-royal.ts.net";
-        enrollmentPasswordFile = "/run/bitwarden-secrets/wazuh_agent_enrollment_password";
-      };
-
       # Borg backup to nas01
       services.borg-backup = {
         enable = true;
@@ -166,77 +125,12 @@ let
           StrictHostKeyChecking yes
       '';
 
-      # VMware Workstation for SANS ICS310 RELICS VM (VMware .vmx format)
-      # git-lfs for GRFICSv3 OT lab (large Docker image assets)
       environment.systemPackages = [
-        pkgs.anki
-        pkgs.geany
-        pkgs.gimp
-        pkgs.git-lfs
-        # pkgs.input-leap
-        pkgs.syncthingtray-minimal
         pkgs.x2goclient  # remote X sessions to OTworkstation
-        wtfi2            # network path diagnostic TUI (binary: wtfi)
       ];
 
       # idrive-* client shortcuts (and the xpra client they need) live in
       # modules/daily-driver.nix — they apply to any daily driver, not just this host.
-
-      sops.secrets."syncthing_nas01_apikey" = {
-        owner = "scott";
-      };
-
-      systemd.user.services.syncthingtray = {
-        description = "Syncthing Tray";
-        wantedBy = [ "graphical-session.target" ];
-        after = [ "graphical-session.target" ];
-        serviceConfig = {
-          ExecStartPre = pkgs.writeShellScript "syncthingtray-configure" ''
-            LOCAL_KEY=$(${pkgs.gnugrep}/bin/grep -oP '(?<=<apikey>)[^<]+' \
-              "$HOME/.config/syncthing/config.xml")
-            NAS01_KEY=$(cat /run/secrets/syncthing_nas01_apikey)
-
-            ${pkgs.python3}/bin/python3 - "$LOCAL_KEY" "$NAS01_KEY" <<'PYEOF'
-import configparser, sys, os
-local_key, nas01_key = sys.argv[1], sys.argv[2]
-path = os.path.join(os.environ['HOME'], '.config', 'syncthingtray.ini')
-config = configparser.RawConfigParser()
-config.optionxform = str
-if os.path.exists(path):
-    config.read(path)
-if not config.has_section('tray'):
-    config.add_section('tray')
-for key, val in [
-    (r'connections\1\apiKey',       f'@ByteArray({local_key})'),
-    (r'connections\1\syncthingUrl', 'http://localhost:8384'),
-    (r'connections\1\autoConnect',  'true'),
-    (r'connections\1\label',        'latitude'),
-    (r'connections\2\apiKey',       f'@ByteArray({nas01_key})'),
-    (r'connections\2\syncthingUrl', 'http://nas01.warthog-royal.ts.net:8384'),
-    (r'connections\2\autoConnect',  'true'),
-    (r'connections\2\label',        'nas01'),
-    (r'connections\size',           '2'),
-]:
-    config.set('tray', key, val)
-with open(path, 'w') as f:
-    config.write(f, space_around_delimiters=False)
-PYEOF
-          '';
-          ExecStart = "${pkgs.syncthingtray-minimal}/bin/syncthingtray --wait";
-          Restart = "on-failure";
-          RestartSec = 3;
-        };
-      };
-
-      # # Input Leap server: allow connections on LAN and via Tailscale
-      # # Port 24800 is the default Input Leap/Barrier port
-      # networking.firewall.allowedTCPPorts = [ 24800 ];
-
-      # Default text editor for .txt and .conf files
-      xdg.mime.defaultApplications = {
-        "text/plain" = "geany.desktop";
-        "text/x-config" = "geany.desktop";
-      };
 
       # xrdp — new X11 KDE session per connection, Tailscale-only
       # xrdp-sesman embeds the startwm.sh path in sesman.ini at build time, so it
@@ -286,19 +180,6 @@ PYEOF
           "${xrdpSession}";
       };
       networking.firewall.interfaces."tailscale0".allowedTCPPorts = [ 3389 ];
-
-      # # Input Leap server: share latitude's keyboard/mouse with airbook-darwin
-      # # Config at ~/.config/InputLeap/input-leap.conf (deployed via home-manager)
-      # systemd.user.services.input-leap-server = {
-      #   description = "Input Leap keyboard/mouse sharing server";
-      #   wantedBy = [ "graphical-session.target" ];
-      #   after = [ "graphical-session.target" "network.target" ];
-      #   serviceConfig = {
-      #     ExecStart = "${pkgs.input-leap}/bin/input-leaps --no-daemon";
-      #     Restart = "on-failure";
-      #     RestartSec = 3;
-      #   };
-      # };
 
       # Immich Machine Learning Docker Compose stack
       systemd.services.immich-ml-docker = {
