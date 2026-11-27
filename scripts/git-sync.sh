@@ -73,6 +73,105 @@ done
 
 popd >/dev/null   # back to where we started
 
+# --- Claude Code project memories --------------------------------------------
+# Claude keeps each project's memory in ~/.claude/projects/<slug>/memory/ (slug =
+# the project's path with / turned into -), which stays on the host it was
+# written on. This merges them with the private claude-memory repo
+# (~/.claude/shared-memory, under projects/<slug>/), so every host ends up with
+# the same memories.
+#
+# Each file is merged three ways against its copy from the last sync on this
+# host (~/.claude/.memory-sync-base/<slug>/): a change on one side wins
+# (deletions too); edits on both sides go through `git merge-file`, by union
+# for the MEMORY.md indexes. On a real conflict the repo's version is kept and
+# this host's is saved next to it as <name>.conflict-<host>.md, which isn't
+# synced, so merge it by hand.
+mem_same() {  # both missing, or both present with the same bytes
+  { [ ! -e "$1" ] && [ ! -e "$2" ]; } || { [ -e "$1" ] && [ -e "$2" ] && cmp -s "$1" "$2"; }
+}
+
+mem_put() {  # mem_put SRC DEST...: copy SRC to each DEST, or delete them if SRC is gone
+  local src=$1 dst; shift
+  for dst in "$@"; do
+    if [ ! -e "$src" ]; then rm -f "$dst"
+    elif ! cmp -s "$src" "$dst" 2>/dev/null; then cp "$src" "$dst"
+    fi
+  done
+}
+
+sync_claude_memory() {
+  local repo="$HOME/.claude/shared-memory" projects="$HOME/.claude/projects"
+  local bases="$HOME/.claude/.memory-sync-base" host tmp empty out
+  host=$(hostname -s)
+  [ -d "$repo/.git" ] || { mem_status="${Y}SKIP${N}  no ~/.claude/shared-memory clone"; return 2; }
+  if ! out=$(git -C "$repo" pull --rebase -q 2>&1); then
+    mem_status="${R}FAIL${N}  pull: $(printf '%s\n' "$out" | tail -1)"; return 1
+  fi
+
+  local slugs=() d s
+  shopt -s nullglob
+  for d in "$projects"/*/memory "$repo"/projects/*; do
+    [ -d "$d" ] && [ ! -L "$d" ] || continue
+    s=${d%/memory}; s=${s##*/}
+    slugs+=("$s")
+  done
+  mapfile -t slugs < <(printf '%s\n' "${slugs[@]}" | grep . | sort -u)
+
+  tmp=$(mktemp -d); empty="$tmp/empty"; : > "$empty"
+  local changed=0 notes=() ldir bdir rdir name f l b r res rc
+  local -a union
+  for s in "${slugs[@]}"; do
+    ldir="$projects/$s/memory" rdir="$repo/projects/$s" bdir="$bases/$s"
+    mkdir -p "$ldir" "$rdir" "$bdir"
+    for name in $( { for f in "$ldir"/*.md "$rdir"/*.md "$bdir"/*.md; do basename "$f"; done; } \
+                   | grep -v '\.conflict-.*\.md$' | sort -u ); do
+      l="$ldir/$name" b="$bdir/$name" r="$rdir/$name"
+      if mem_same "$l" "$r"; then res=$l
+      elif mem_same "$l" "$b"; then res=$r     # changed only in the repo
+      elif mem_same "$r" "$b"; then res=$l     # changed only here
+      elif [ ! -e "$l" ]; then res=$r          # deleted here, edited there: keep the edit
+      elif [ ! -e "$r" ]; then res=$l          # and the other way round
+      else
+        union=(); [ "$name" = MEMORY.md ] && union=(--union)
+        [ -e "$b" ] || b=$empty
+        git merge-file -p "${union[@]}" "$l" "$b" "$r" > "$tmp/$name"; rc=$?
+        if [ "$rc" -eq 0 ]; then res="$tmp/$name"
+        else
+          cp "$l" "$ldir/${name%.md}.conflict-$host.md"
+          notes+=("$s/$name (this host's copy: ${name%.md}.conflict-$host.md)")
+          res=$r
+        fi
+      fi
+      if [ "$res" = "$l" ]; then mem_put "$res" "$r" "$bdir/$name"
+      elif [ "$res" = "$r" ]; then mem_put "$res" "$l" "$bdir/$name"
+      else mem_put "$res" "$l" "$r" "$bdir/$name"
+      fi
+    done
+    rmdir "$rdir" 2>/dev/null || true   # don't leave empty project dirs in the repo
+  done
+  rm -rf "$tmp"
+
+  if [ -n "$(git -C "$repo" status --porcelain -- projects 2>/dev/null)" ]; then
+    git -C "$repo" add -A -- projects
+    changed=$(git -C "$repo" diff --cached --name-only | wc -l)
+    git -C "$repo" commit -q -m "auto: sync project memories [$host]"
+    if ! git -C "$repo" push -q 2>/dev/null; then
+      { git -C "$repo" pull --rebase -q && git -C "$repo" push -q; } 2>/dev/null \
+        || { mem_status="${R}FAIL${N}  push (run git-sync again)"; return 1; }
+    fi
+  fi
+  if [ ${#notes[@]} -gt 0 ]; then
+    mem_status="${Y}CONFLICT${N} ${notes[*]}"; return 3
+  fi
+  mem_status="${G}OK${N}    ${#slugs[@]} projects, $changed file(s) pushed"
+}
+
+printf '%s→ claude memories%s\n' "$D" "$N" >&2
+mem_status=""
+sync_claude_memory; rc=$?
+case $rc in 0) ;; 2) n_skip=$((n_skip+1)) ;; *) n_fail=$((n_fail+1)) ;; esac
+report+=("$(printf '%-40s %-18s %s' "~/.claude memories" "" "$mem_status")")
+
 echo
 printf '%s%-40s %-18s %s%s\n' "$B" "REPO" "BRANCH" "RESULT" "$N"
 printf '%s\n' "${report[@]}"

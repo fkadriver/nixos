@@ -8,7 +8,7 @@ This document provides a high-level overview of all available modules in this re
 |--------|-------------|
 | `common.nix` | Server-safe base configuration with CLI tools, tmux, git, docker, direnv, auditd, rsyslog forwarding to log01, logrotate (7-day). Imports `tailscale.nix` and `shell-aliases.nix` |
 | `user-scott.nix` | User account configuration (wheel, networkmanager, docker groups). Passwordless sudo for `nixos-rebuild`, `nix`, `tailscale`, `borg`, `reboot` and `systemctl` — except `systemctl poweroff/halt/kexec`, which stay password-gated like shutdown/poweroff |
-| `shell-aliases.nix` | System-wide shell aliases (`nas01`, `slap`, `log01`, `gpc`, rebuild commands), plus the `git-sync` command (`scripts/git-sync.sh`: pull every repo under `~/git` and print a report; also installed on airbook-darwin and, via `setup.sh`, sands-bak01). Fleet-management aliases (`nix-sync`, `fw-check`, `host-status`, `deploy-piholes`) live in `daily-driver.nix` / `deploy-pihole.nix` instead — see those entries |
+| `shell-aliases.nix` | System-wide shell aliases (`nas01`, `slap`, `log01`, `gpc`, rebuild commands), plus the `git-sync` command (`scripts/git-sync.sh`: pull every repo under `~/git` and print a report, then three-way merge each Claude Code project memory (`~/.claude/projects/*/memory`) with the private `claude-memory` repo (`~/.claude/shared-memory/projects/`); also installed on airbook-darwin and, via `setup.sh`, sands-bak01). Fleet-management aliases (`nix-sync`, `fw-check`, `host-status`, `deploy-piholes`) live in `daily-driver.nix` / `deploy-pihole.nix` instead — see those entries |
 
 ## Desktop Environment Modules
 
