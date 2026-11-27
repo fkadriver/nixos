@@ -254,7 +254,7 @@ in {
             behind = "⇣\${count}";
             diverged = "⇕⇡\${ahead_count}⇣\${behind_count}";
             untracked = "?\${count}";
-            stashed = "$";
+            stashed = "\\$";  # \$ = literal $ (bare $ starts a starship variable)
             modified = "!\${count}";
             staged = "+\${count}";
             renamed = "»\${count}";
