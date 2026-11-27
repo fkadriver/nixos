@@ -282,6 +282,8 @@ PYEOF
       syncthingtray-minimal
       wtfi2    # network path diagnostic TUI (binary: wtfi)
       python3Minimal
+      wl-clipboard  # wl-copy/wl-paste (gh auth login, etc.; KDE is Wayland)
+      xclip         # X11 sessions (airbook-xfce, latitude-xfce)
       claude-code
       muse-code  # Meta's terminal coding agent (`muse`; unfree, allowed in common.nix)
       herdr  # terminal workspace manager for AI coding agents; see the -h aliases
