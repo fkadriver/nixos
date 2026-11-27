@@ -24,7 +24,7 @@ This document provides a high-level overview of all available modules in this re
 | Module | Description |
 |--------|-------------|
 | `pihole.nix` | Pi-hole FTL + web UI, slim base config (replaces `common` for Pi hosts): tailscale, shell-aliases, git, vim, curl, wget, htop, tmux, starship, rsyslog forwarding to log01. Manages sops secrets for the admin password hash. DNS query logs (`/var/log/pihole/pihole.log`) are tailed in real time via rsyslog `imfile` (inotify mode) and streamed to log01 via TCP. FTL process logs (startup, errors) are sent to syslog via `misc.syslog = true`. |
-| `deploy-pihole.nix` | Adds the `deploy-piholes` alias (`scripts/deploy-piholes.sh`). Imported only by `hosts/latitude` and `hosts/vm01` — the two machines actually used to build/deploy Pi-hole updates (vm01 is the aarch64 cross-build host, see `pi-builder.nix`/`distributed-builds.nix`) |
+| `deploy-pihole.nix` | Adds the `deploy-piholes` alias (`scripts/deploy-piholes.sh`) and pins the piholes' SSH host keys in `/etc/ssh/ssh_known_hosts` for the script's plain ssh/`--target-host` calls (update after a pihole reinstall). Imported only by `hosts/latitude` and `hosts/vm01` — the two machines actually used to build/deploy Pi-hole updates (vm01 is the aarch64 cross-build host, see `pi-builder.nix`/`distributed-builds.nix`) |
 
 ## Networking Modules
 
